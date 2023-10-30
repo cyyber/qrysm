@@ -178,6 +178,7 @@ go_library(
         "cloners.go",
         "sync_committee_mainnet.go",
         "sync_committee_minimal.go",  # keep
+        "sync_committee_betanet.go",  # keep
         ":ssz_generated_files",  # keep
     ],
     embed = [
@@ -221,6 +222,7 @@ ssz_proto_files(
         "//conditions:default": "mainnet",
         "//proto:ssz_mainnet": "mainnet",
         "//proto:ssz_minimal": "minimal",
+        "//proto:ssz_betanet": "betanet",
     }),
 )
 
