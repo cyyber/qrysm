@@ -9,6 +9,9 @@ def _go_test_transition_impl(settings, attr):
     if attr.eth_network == "minimal":
         settings["//proto:network"] = "minimal"
         settings["@io_bazel_rules_go//go/config:tags"] += ["minimal"]
+    if attr.eth_network == "betanet":
+        settings["//proto:network"] = "betanet"
+        settings["@io_bazel_rules_go//go/config:tags"] += ["betanet"]
     elif attr.eth_network == "mainnet":  # Default / optional
         settings["//proto:network"] = "mainnet"
         settings["@io_bazel_rules_go//go/config:tags"] += ["mainnet"]

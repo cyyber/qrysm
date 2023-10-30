@@ -17,6 +17,11 @@ var (
 		Name:  "minimal-config",
 		Usage: "Use minimal config with parameters as defined in the spec.",
 	}
+	// BetanetConfigFlag declares to use the betanet config for running Ethereum consensus.
+	BetanetConfigFlag = &cli.BoolFlag{
+		Name:  "betanet-config",
+		Usage: "Use betanet config with parameters as defined in the spec.",
+	}
 	// E2EConfigFlag declares to use a testing specific config for running Ethereum consensus in end-to-end testing.
 	E2EConfigFlag = &cli.BoolFlag{
 		Name:  "e2e-config",

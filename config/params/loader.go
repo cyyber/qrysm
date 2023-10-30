@@ -25,6 +25,18 @@ func isMinimal(lines []string) bool {
 	return false
 }
 
+func isBetanet(lines []string) bool {
+	for _, l := range lines {
+		if strings.HasPrefix(l, "PRESET_BASE: 'betanet'") ||
+			strings.HasPrefix(l, `PRESET_BASE: "betanetl"`) ||
+			strings.HasPrefix(l, "PRESET_BASE: betanet") ||
+			strings.HasPrefix(l, "# Betanet preset") {
+			return true
+		}
+	}
+	return false
+}
+
 func UnmarshalConfig(yamlFile []byte, conf *BeaconChainConfig) (*BeaconChainConfig, error) {
 	// To track if config name is defined inside config file.
 	hasConfigName := false
@@ -33,6 +45,8 @@ func UnmarshalConfig(yamlFile []byte, conf *BeaconChainConfig) (*BeaconChainConf
 	if conf == nil {
 		if isMinimal(lines) {
 			conf = MinimalSpecConfig().Copy()
+		} else if isBetanet(lines) {
+			conf = BetanetConfig().Copy()
 		} else {
 			// Default to using mainnet.
 			conf = MainnetConfig().Copy()

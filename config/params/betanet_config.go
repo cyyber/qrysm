@@ -10,10 +10,10 @@ import (
 
 // BetanetConfig returns the configuration to be used in the beta network.
 func BetanetConfig() *BeaconChainConfig {
-	if mainnetBeaconConfig.ForkVersionSchedule == nil {
-		mainnetBeaconConfig.InitializeForkSchedule()
+	if betanetBeaconConfig.ForkVersionSchedule == nil {
+		betanetBeaconConfig.InitializeForkSchedule()
 	}
-	return mainnetBeaconConfig
+	return betanetBeaconConfig
 }
 
 var betanetNetworkConfig = &NetworkConfig{
@@ -182,8 +182,8 @@ var betanetBeaconConfig = &BeaconChainConfig{
 	MaxPeersToSync:                 15,
 	SlotsPerArchivedPoint:          2048,
 	GenesisCountdownInterval:       time.Minute,
-	ConfigName:                     MainnetName,
-	PresetBase:                     "mainnet",
+	ConfigName:                     BetanetName,
+	PresetBase:                     "betanet",
 	BeaconStateFieldCount:          21,
 	BeaconStateAltairFieldCount:    24,
 	BeaconStateBellatrixFieldCount: 25,

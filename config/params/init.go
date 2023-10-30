@@ -5,6 +5,7 @@ func init() {
 		MainnetConfig(),
 		PraterConfig(),
 		MinimalSpecConfig(),
+		BetanetConfig(),
 		E2ETestConfig(),
 		E2EMainnetTestConfig(),
 		InteropConfig(),

@@ -10,6 +10,7 @@ import (
 type Flags struct {
 	// Configuration related flags.
 	MinimalConfig  bool // MinimalConfig as defined in the spec.
+	BetanetConfig  bool // BetanetConfig as defined in the spec.
 	MaxRPCPageSize int  // MaxRPCPageSize is used for a cap of page sizes in RPC requests.
 }
 
@@ -71,6 +72,13 @@ func newConfig(ctx *cli.Context) (*Flags, error) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
 		if err := params.SetActive(params.MinimalSpecConfig().Copy()); err != nil {
+			return nil, err
+		}
+	}
+	if ctx.Bool(BetanetConfigFlag.Name) {
+		log.Warn("Using betanet config")
+		cfg.BetanetConfig = true
+		if err := params.SetActive(params.BetanetConfig().Copy()); err != nil {
 			return nil, err
 		}
 	}
