@@ -39,6 +39,7 @@ go_library(
     ] + select({
         "//config:mainnet": ["beacon_state_mainnet.go"],
         "//config:minimal": ["beacon_state_minimal.go"],
+        "//config:betanet": ["beacon_state_betanet.go"],
     }),
     importpath = "github.com/theQRL/qrysm/v4/beacon-chain/state/state-native",
     visibility = ["//visibility:public"],

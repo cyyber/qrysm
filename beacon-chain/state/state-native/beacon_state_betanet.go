@@ -1,4 +1,4 @@
-//go:build !minimal,!betanet
+//go:build betanet
 
 package state_native
 

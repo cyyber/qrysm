@@ -23,6 +23,22 @@ mainnet = {
     "withdrawal.size": "16",
 }
 
+betanet = {
+    "block_roots.size": "8192,32",  # SLOTS_PER_HISTORICAL_ROOT, [32]byte
+    "state_roots.size": "8192,32",  # SLOTS_PER_HISTORICAL_ROOT, [32]byte
+    "eth1_data_votes.size": "2048",  # SLOTS_PER_ETH1_VOTING_PERIOD
+    "randao_mixes.size": "65536,32",  # EPOCHS_PER_HISTORICAL_VECTOR, [32]byte
+    "previous_epoch_attestations.max": "4096",  # MAX_ATTESTATIONS * SLOTS_PER_EPOCH
+    "current_epoch_attestations.max": "4096",  # MAX_ATTESTATIONS * SLOTS_PER_EPOCH
+    "slashings.size": "8192",  # EPOCHS_PER_SLASHINGS_VECTOR
+    "sync_committee_bits.size": "64", #SYNC_COMMITTEE_SIZE
+    "sync_committee_bytes.size": "64",
+    "sync_committee_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector512",
+    "sync_committee_aggregate_bytes.size": "16",
+    "sync_committee_aggregate_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector128",
+    "withdrawal.size": "16",
+}
+
 minimal = {
     "block_roots.size": "64,32",
     "state_roots.size": "64,32",
@@ -50,6 +66,8 @@ def _ssz_proto_files_impl(ctx):
         subs = mainnet
     elif (ctx.attr.config.lower() == "minimal"):
         subs = minimal
+    elif (ctx.attr.config.lower() == "betanet"):
+        subs = betanet
     else:
         fail("%s is an unknown configuration" % ctx.attr.config)
 

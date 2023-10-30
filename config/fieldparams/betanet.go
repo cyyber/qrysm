@@ -1,4 +1,4 @@
-//go:build !minimal,!betanet
+//go:build betanet
 
 package field_params
 
@@ -13,7 +13,7 @@ const (
 	PreviousEpochAttestationsLength       = 4096          // MAX_ATTESTATIONS * SLOTS_PER_EPOCH
 	CurrentEpochAttestationsLength        = 4096          // MAX_ATTESTATIONS * SLOTS_PER_EPOCH
 	SlashingsLength                       = 8192          // EPOCHS_PER_SLASHINGS_VECTOR
-	SyncCommitteeLength                   = 512           // SYNC_COMMITTEE_SIZE
+	SyncCommitteeLength                   = 64            // SYNC_COMMITTEE_SIZE
 	RootLength                            = 32            // RootLength defines the byte length of a Merkle root.
 	BLSSignatureLength                    = 96            // BLSSignatureLength defines the byte length of a BLSSignature.
 	BLSPubkeyLength                       = 48            // BLSPubkeyLength defines the byte length of a BLSSignature.

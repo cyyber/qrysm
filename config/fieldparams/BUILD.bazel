@@ -5,6 +5,7 @@ go_library(
     srcs = select({
         "//config:mainnet": ["mainnet.go"],
         "//config:minimal": ["minimal.go"],
+        "//config:betanet": ["betanet.go"],
     }),
     importpath = "github.com/theQRL/qrysm/v4/config/fieldparams",
     visibility = ["//visibility:public"],
