@@ -34,9 +34,9 @@ betanet = {
     "sync_committee_bits.size": "64", #SYNC_COMMITTEE_SIZE
     "sync_committee_bytes.size": "8",
     "sync_committee_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector64",
-    "sync_committee_aggregate_bytes.size": "16",
-    "sync_committee_aggregate_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector128",
-    "withdrawal.size": "16",
+    "sync_committee_aggregate_bytes.size": "1",
+    "sync_committee_aggregate_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector8",
+    "withdrawal.size": "4",
 }
 
 minimal = {
