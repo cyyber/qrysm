@@ -198,14 +198,14 @@ var betanetBeaconConfig = &BeaconChainConfig{
 	SafetyDecay: 10,
 
 	// Fork related values.
-	GenesisEpoch:         genesisForkEpoch,
-	GenesisForkVersion:   []byte{0, 0, 0, 0},
-	AltairForkVersion:    []byte{1, 0, 0, 0},
-	AltairForkEpoch:      mainnetAltairForkEpoch,
-	BellatrixForkVersion: []byte{2, 0, 0, 0},
-	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
-	CapellaForkVersion:   []byte{3, 0, 0, 0},
-	CapellaForkEpoch:     194048,
+	//GenesisEpoch:         genesisForkEpoch,
+	GenesisForkVersion:   []byte{0, 0, 0, 2},
+	AltairForkVersion:    []byte{1, 0, 0, 2},
+	AltairForkEpoch:      math.MaxUint64,
+	BellatrixForkVersion: []byte{2, 0, 0, 2},
+	BellatrixForkEpoch:   math.MaxUint64,
+	CapellaForkVersion:   []byte{3, 0, 0, 2},
+	CapellaForkEpoch:     math.MaxUint64,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
