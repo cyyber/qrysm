@@ -9,7 +9,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"reflect"
 	"runtime"
 
 	"github.com/google/uuid"
@@ -71,36 +70,28 @@ func (k *Keystore) Decrypt(password string) [field_params.DilithiumSeedLength]by
 		panic(fmt.Errorf("passwordToDecryptionKey | reason %v", err))
 	}
 
-	binCipherMessage := misc.DecodeHex(k.Crypto.Cipher.Message)
-
-	checksum := CheckSumDecryptionKeyAndMessage(decryptionKey[16:32], binCipherMessage)
-	strChecksum := misc.EncodeHex(checksum[:])
-	if !reflect.DeepEqual(strChecksum, k.Crypto.Checksum.Message) {
-		panic(fmt.Errorf("checksum check failed | expected %s | found %s",
-			strChecksum, k.Crypto.Checksum.Message))
-	}
-
-	block, err := aes.NewCipher(decryptionKey[:16])
+	block, err := aes.NewCipher(decryptionKey[:])
 	if err != nil {
 		panic(fmt.Errorf("aes.NewCipher failed | reason %v", err))
 	}
 
-	var seed [field_params.DilithiumSeedLength]uint8
 	cipherText := misc.DecodeHex(k.Crypto.Cipher.Message)
-	if len(cipherText) != len(seed) {
-		panic(fmt.Errorf("invalid cipher text length | expected length %d | actual length %d",
-			len(seed), len(cipherText)))
-	}
 	aesIV, ok := k.Crypto.Cipher.Params["iv"]
 	if !ok {
 		panic(fmt.Errorf("aesIV not found in Cipher Params"))
 	}
 	binAESIV := misc.DecodeHex(aesIV.(string))
 
-	stream := cipher.NewCTR(block, binAESIV)
-	stream.XORKeyStream(seed[:], cipherText)
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		panic(err)
+	}
+	plainText, err := aesgcm.Open(nil, binAESIV, cipherText, nil)
+	if err != nil {
+		panic(err)
+	}
 
-	return seed
+	return [field_params.DilithiumSeedLength]byte(plainText)
 }
 
 func NewKeystoreFromJSON(data []uint8) *Keystore {
@@ -134,7 +125,7 @@ func Encrypt(seed [field_params.DilithiumSeedLength]uint8, password, path string
 		}
 	}
 	if aesIV == nil {
-		aesIV = make([]uint8, 16)
+		aesIV = make([]uint8, 12)
 		if _, err := io.ReadFull(rand.Reader, aesIV); err != nil {
 			return nil, err
 		}
@@ -145,14 +136,16 @@ func Encrypt(seed [field_params.DilithiumSeedLength]uint8, password, path string
 		return nil, err
 	}
 
-	block, err := aes.NewCipher(decryptionKey[:16])
+	block, err := aes.NewCipher(decryptionKey[:])
 	if err != nil {
 		return nil, err
 	}
 
-	cipherText := make([]byte, len(seed))
-	stream := cipher.NewCTR(block, aesIV)
-	stream.XORKeyStream(cipherText, seed[:])
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	cipherText := aesgcm.Seal(nil, aesIV, seed[:], nil)
 
 	d, err := dilithium.NewDilithiumFromSeed(seed)
 	if err != nil {
@@ -161,7 +154,7 @@ func Encrypt(seed [field_params.DilithiumSeedLength]uint8, password, path string
 	pk := d.GetPK()
 	return &Keystore{
 		UUID:   uuid.New().String(),
-		Crypto: NewKeystoreCrypto(salt, aesIV, cipherText, decryptionKey[16:]),
+		Crypto: NewKeystoreCrypto(salt, aesIV, cipherText),
 		PubKey: misc.EncodeHex(pk[:]),
 		Path:   path,
 	}, nil
