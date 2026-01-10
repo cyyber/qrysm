@@ -595,7 +595,7 @@ func TestService_ValidateDepositContainers(t *testing.T) {
 			name: "ordered containers",
 			ctrsFunc: func() []*qrysmpb.DepositContainer {
 				ctrs := make([]*qrysmpb.DepositContainer, 0)
-				for i := 0; i < 10; i++ {
+				for i := range 10 {
 					ctrs = append(ctrs, &qrysmpb.DepositContainer{Index: int64(i), ExecutionBlockHeight: uint64(i + 10)})
 				}
 				return ctrs
@@ -617,7 +617,7 @@ func TestService_ValidateDepositContainers(t *testing.T) {
 			name: "skipped containers",
 			ctrsFunc: func() []*qrysmpb.DepositContainer {
 				ctrs := make([]*qrysmpb.DepositContainer, 0)
-				for i := 0; i < 10; i++ {
+				for i := range 10 {
 					if i == 5 || i == 7 {
 						continue
 					}
@@ -742,7 +742,7 @@ func (s *slowRPCClient) BatchCall(b []rpc.BatchElem) error {
 	return nil
 }
 
-func (s *slowRPCClient) CallContext(_ context.Context, _ interface{}, _ string, _ ...interface{}) error {
+func (s *slowRPCClient) CallContext(_ context.Context, _ any, _ string, _ ...any) error {
 	panic("implement me")
 }
 
