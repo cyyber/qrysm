@@ -92,7 +92,7 @@ func BenchmarkCloneValidators_Proto(b *testing.B) {
 	validators := make([]*qrysmpb.Validator, 16384)
 	somePubKey := [field_params.MLDSA87PubkeyLength]byte{1, 2, 3}
 	someRoot := [32]byte{3, 4, 5}
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
 			PublicKey:                  somePubKey[:],
 			WithdrawalCredentials:      someRoot[:],
@@ -105,7 +105,7 @@ func BenchmarkCloneValidators_Proto(b *testing.B) {
 		}
 	}
 	b.StartTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		cloneValidatorsWithProto(validators)
 	}
 }
@@ -115,7 +115,7 @@ func BenchmarkCloneValidators_Manual(b *testing.B) {
 	validators := make([]*qrysmpb.Validator, 16384)
 	somePubKey := [field_params.MLDSA87PubkeyLength]byte{1, 2, 3}
 	someRoot := [32]byte{3, 4, 5}
-	for i := 0; i < len(validators); i++ {
+	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
 			PublicKey:                  somePubKey[:],
 			WithdrawalCredentials:      someRoot[:],
@@ -128,7 +128,7 @@ func BenchmarkCloneValidators_Manual(b *testing.B) {
 		}
 	}
 	b.StartTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		cloneValidatorsManually(validators)
 	}
 }
@@ -139,7 +139,7 @@ func BenchmarkStateClone_Proto(b *testing.B) {
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 	genesis := setupGenesisState(b, 64)
 	b.StartTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, ok := proto.Clone(genesis).(*qrysmpb.BeaconStateCapella)
 		assert.Equal(b, true, ok, "Entity is not of type *qrysmpb.BeaconState")
 	}
@@ -153,7 +153,7 @@ func BenchmarkStateClone_Manual(b *testing.B) {
 	st, err := statenative.InitializeFromProtoCapella(genesis)
 	require.NoError(b, err)
 	b.StartTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = st.ToProto()
 	}
 }
@@ -161,7 +161,7 @@ func BenchmarkStateClone_Manual(b *testing.B) {
 func cloneValidatorsWithProto(vals []*qrysmpb.Validator) []*qrysmpb.Validator {
 	var ok bool
 	res := make([]*qrysmpb.Validator, len(vals))
-	for i := 0; i < len(res); i++ {
+	for i := range res {
 		res[i], ok = proto.Clone(vals[i]).(*qrysmpb.Validator)
 		if !ok {
 			log.Debug("Entity is not of type *qrysmpb.Validator")
@@ -172,7 +172,7 @@ func cloneValidatorsWithProto(vals []*qrysmpb.Validator) []*qrysmpb.Validator {
 
 func cloneValidatorsManually(vals []*qrysmpb.Validator) []*qrysmpb.Validator {
 	res := make([]*qrysmpb.Validator, len(vals))
-	for i := 0; i < len(res); i++ {
+	for i := range res {
 		val := vals[i]
 		res[i] = &qrysmpb.Validator{
 			PublicKey:                  val.PublicKey,

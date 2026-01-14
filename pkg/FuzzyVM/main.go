@@ -103,7 +103,7 @@ func corpus(c *cli.Context) error {
 	ensureDirs(dir)
 	n := c.Int(countFlag.Name)
 
-	for i := 0; i < n; i++ {
+	for range n {
 		elem, err := fuzzer.CreateNewCorpusElement()
 		if err != nil {
 			fmt.Printf("Error while creating corpus: %v\n", err)
@@ -124,7 +124,7 @@ func run(c *cli.Context) error {
 		outputRootDir,
 		crashesDir,
 	}
-	for i := 0; i < 256; i++ {
+	for i := range 256 {
 		directories = append(directories, fmt.Sprintf("%v/%v", outputRootDir, common.Bytes2Hex([]byte{byte(i)})))
 	}
 	ensureDirs(directories...)

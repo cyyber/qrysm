@@ -118,7 +118,7 @@ func (a proposerAtts) sortByProfitabilityUsingMaxCover() (proposerAtts, error) {
 			return atts, nil
 		}
 		candidates := make([]*bitfield.Bitlist64, len(atts))
-		for i := 0; i < len(atts); i++ {
+		for i := range atts {
 			var err error
 			candidates[i], err = atts[i].AggregationBits.ToBitlist64()
 			if err != nil {
@@ -193,7 +193,7 @@ func (a proposerAtts) dedup() (proposerAtts, error) {
 
 	uniqAtts := make([]*qrysmpb.Attestation, 0, len(a))
 	for _, atts := range attsByDataRoot {
-		for i := 0; i < len(atts); i++ {
+		for i := range atts {
 			a := atts[i]
 			for j := i + 1; j < len(atts); j++ {
 				b := atts[j]
@@ -212,7 +212,7 @@ func (a proposerAtts) dedup() (proposerAtts, error) {
 					atts[i] = atts[len(atts)-1]
 					atts[len(atts)-1] = nil
 					atts = atts[:len(atts)-1]
-					i--
+					i-- //nolint:ineffassign // TODO: refactor outer range loop; decrement is currently ineffectual but retained for clarity.
 					break
 				}
 			}

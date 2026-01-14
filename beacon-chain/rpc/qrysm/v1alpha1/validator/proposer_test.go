@@ -81,11 +81,11 @@ func TestServer_GetBeaconBlock_Capella(t *testing.T) {
 	capellaSlot := primitives.Slot(fieldparams.SlotsPerEpoch + 1)
 
 	var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
-	blk := &qrysmpb.SignedBeaconBlockCapella{
-		Block: &qrysmpb.BeaconBlockCapella{
-			Slot:       capellaSlot + 1,
-			ParentRoot: parentRoot[:],
-			StateRoot:  genesis.Block.StateRoot,
+		blk := &qrysmpb.SignedBeaconBlockCapella{
+			Block: &qrysmpb.BeaconBlockCapella{
+				Slot:       capellaSlot + 1,
+				ParentRoot: parentRoot[:],
+				StateRoot:  genesis.Block.StateRoot,
 			Body: &qrysmpb.BeaconBlockBodyCapella{
 				RandaoReveal:  genesis.Block.Body.RandaoReveal,
 				Graffiti:      genesis.Block.Body.Graffiti,
@@ -100,11 +100,11 @@ func TestServer_GetBeaconBlock_Capella(t *testing.T) {
 					PrevRandao:    make([]byte, fieldparams.RootLength),
 					BaseFeePerGas: make([]byte, fieldparams.RootLength),
 					BlockHash:     make([]byte, fieldparams.RootLength),
+					},
 				},
 			},
-		},
-		Signature: genesis.Signature,
-	}
+			Signature: genesis.Signature, //nolint:unusedwrite // Signature is not used in this test.
+		}
 
 	blkRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -1891,7 +1891,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 			name: "invalid attestations",
 			inputAtts: func() []*qrysmpb.Attestation {
 				atts := make([]*qrysmpb.Attestation, 10)
-				for i := 0; i < len(atts); i++ {
+				for i := range atts {
 					atts[i] = util.HydrateAttestation(&qrysmpb.Attestation{
 						Data: &qrysmpb.AttestationData{
 							CommitteeIndex: primitives.CommitteeIndex(i),
@@ -1908,7 +1908,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 			name: "filter aggregates ok",
 			inputAtts: func() []*qrysmpb.Attestation {
 				atts := make([]*qrysmpb.Attestation, 10)
-				for i := 0; i < len(atts); i++ {
+				for i := range atts {
 					atts[i] = util.HydrateAttestation(&qrysmpb.Attestation{
 						Data: &qrysmpb.AttestationData{
 							CommitteeIndex: primitives.CommitteeIndex(i),
@@ -2097,8 +2097,8 @@ func TestProposer_GetSyncAggregate_OK(t *testing.T) {
 	require.NoError(t, err)
 	sigsLen := 8
 	sigs := make([][]byte, 0, sigsLen)
-	for i := 0; i < sigsLen; i++ {
-		sigs = append(sigs, priv.Sign([]byte(fmt.Sprintf("foo%d", i))).Marshal())
+	for i := range sigsLen {
+		sigs = append(sigs, priv.Sign(fmt.Appendf(nil, "foo%d", i)).Marshal())
 	}
 
 	r := params.BeaconConfig().ZeroHash
@@ -2246,15 +2246,15 @@ func BenchmarkServer_PrepareBeaconProposer(b *testing.B) {
 
 	f := bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
 	recipients := make([]*qrysmpb.PrepareBeaconProposerRequest_FeeRecipientContainer, 0)
-	for i := 0; i < 10000; i++ {
+	for i := range 10000 {
 		recipients = append(recipients, &qrysmpb.PrepareBeaconProposerRequest_FeeRecipientContainer{FeeRecipient: f, ValidatorIndex: primitives.ValidatorIndex(i)})
 	}
 
 	req := &qrysmpb.PrepareBeaconProposerRequest{
 		Recipients: recipients,
 	}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		_, err := proposerServer.PrepareBeaconProposer(ctx, req)
 		if err != nil {
 			b.Fatal(err)
