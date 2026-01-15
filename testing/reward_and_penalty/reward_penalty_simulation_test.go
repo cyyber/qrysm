@@ -128,8 +128,8 @@ func (s *Simulator) applyAndMeasure(action func() error) (reward uint64, penalty
 	return reward, penalty, nil
 }
 
-func (s *Simulator) processAttestation(slot primitives.Slot, commIndex primitives.CommitteeIndex, missProb float64) error {
-	attestation, err := createAttestation(s.ctx, s.state, slot, commIndex, missProb)
+func (s *Simulator) processAttestation(slot primitives.Slot, commIndex primitives.CommitteeIndex, missProb float64, targets map[int]bool) error {
+	attestation, err := createAttestation(s.ctx, s.state, slot, commIndex, missProb, targets)
 	if err != nil {
 		return err
 	}
@@ -205,7 +205,7 @@ func (s *Simulator) processSyncCommittee(missProb float64) (uint64, error) {
 	return earnedProposerReward, nil
 }
 
-func (s *Simulator) RunEpoch(epoch int, missProb float64, pendingReward *uint64) (EpochStats, error) {
+func (s *Simulator) RunEpoch(epoch int, missProb float64, pendingReward *uint64, targets map[int]bool) (EpochStats, error) {
 	cfg := params.BeaconConfig()
 	slotsPerEpoch := uint64(cfg.SlotsPerEpoch)
 	startSlot := s.state.Slot()
@@ -254,7 +254,7 @@ func (s *Simulator) RunEpoch(epoch int, missProb float64, pendingReward *uint64)
 			for c := range committeeCount {
 				commIndex := primitives.CommitteeIndex(c)
 				r, p, err := s.applyAndMeasure(func() error {
-					return s.processAttestation(attestationSlot, commIndex, missProb)
+					return s.processAttestation(attestationSlot, commIndex, missProb, targets)
 				})
 				if err != nil {
 					return stats, err
@@ -274,7 +274,7 @@ func (s *Simulator) RunEpoch(epoch int, missProb float64, pendingReward *uint64)
 		for c := range committeeCount {
 			commIndex := primitives.CommitteeIndex(c)
 			r, _, err := s.applyAndMeasure(func() error {
-				return s.processAttestation(lastEpochSlot, commIndex, missProb)
+				return s.processAttestation(lastEpochSlot, commIndex, missProb, targets)
 			})
 			if err != nil {
 				return stats, err
@@ -324,7 +324,7 @@ func (s *Simulator) RunEpoch(epoch int, missProb float64, pendingReward *uint64)
 	return stats, nil
 }
 
-func rewardAndPenaltySimulation(numValidators int, epochsToRun int, missStrategy MissStrategy) error {
+func rewardAndPenaltySimulation(numValidators int, epochsToRun int, missStrategy MissStrategy, targetValidators []int) error {
 	sim, err := NewSimulator(numValidators)
 	if err != nil {
 		return err
@@ -333,12 +333,26 @@ func rewardAndPenaltySimulation(numValidators int, epochsToRun int, missStrategy
 	initialSupply := getTotalRawBalance(sim.state)
 	pendingReward := uint64(0)
 
+	targetMap := make(map[int]bool)
+	targetInitialBalances := make(map[int]uint64)
+
+	for _, idx := range targetValidators {
+		if idx >= 0 && idx < numValidators {
+			targetMap[idx] = true
+			targetInitialBalances[idx] = sim.state.Balances()[idx]
+		}
+	}
+
 	printConfig()
+
+	if len(targetMap) > 0 {
+		fmt.Printf("TARGETING %d VALIDATORS (They will miss attestations)\n", len(targetMap))
+	}
 
 	for epoch := range epochsToRun {
 		missProb := missStrategy(epoch)
 
-		stats, err := sim.RunEpoch(epoch, missProb, &pendingReward)
+		stats, err := sim.RunEpoch(epoch, missProb, &pendingReward, targetMap)
 		if err != nil {
 			return err
 		}
@@ -347,6 +361,22 @@ func rewardAndPenaltySimulation(numValidators int, epochsToRun int, missStrategy
 		currentSupply := getTotalRawBalance(sim.state)
 
 		printDetailedEpochReport(epoch, currentSupply, initialSupply, stats, sim.metrics, sim.state)
+
+		if len(targetMap) > 0 {
+			toZond := func(val int64) float64 { return float64(val) / 1e9 }
+			fmt.Println("   [TARGETS REPORT]")
+			for idx := range targetMap {
+				currentBal := sim.state.Balances()[idx]
+				delta := int64(currentBal) - int64(targetInitialBalances[idx])
+				fmt.Printf("      -> Val #%d | Bal: %s Gwei (%.4f Zond) | Change: %s Gwei (%.4f Zond)\n",
+					idx,
+					formatWithCommas(int64(currentBal)),
+					toZond(int64(currentBal)),
+					formatWithCommas(delta),
+					toZond(delta))
+			}
+			fmt.Println("   ----------------------------------------------------------------")
+		}
 	}
 
 	sim.metrics.printFinalDetailedReport()
@@ -445,7 +475,7 @@ func setParticipationFlags(state state.BeaconState, numValidators int, value byt
 	return nil
 }
 
-func createAttestation(ctx context.Context, state state.BeaconState, slot primitives.Slot, commIndex primitives.CommitteeIndex, missProb float64) (*zondpb.Attestation, error) {
+func createAttestation(ctx context.Context, state state.BeaconState, slot primitives.Slot, commIndex primitives.CommitteeIndex, missProb float64, targetIndices map[int]bool) (*zondpb.Attestation, error) {
 	committee, err := helpers.BeaconCommitteeFromState(ctx, state, slot, commIndex)
 	if err != nil {
 		return nil, err
@@ -455,7 +485,10 @@ func createAttestation(ctx context.Context, state state.BeaconState, slot primit
 	aggregationBits := bitfield.NewBitlist(committeeSize)
 	activeParticipants := 0
 	for i := range committeeSize {
-		if rand.Float64() > missProb {
+		valID := int(committee[i])
+		isTarget := targetIndices[valID]
+
+		if !isTarget && rand.Float64() > missProb {
 			aggregationBits.SetBitAt(i, true)
 			activeParticipants++
 		}
@@ -556,7 +589,7 @@ func TestRewardAndPenaltySimulation(t *testing.T) {
 	epochsToRun := 250
 	missStrategy := func(epoch int) float64 { return 0.02 }
 
-	err := rewardAndPenaltySimulation(numValidators, epochsToRun, missStrategy)
+	err := rewardAndPenaltySimulation(numValidators, epochsToRun, missStrategy, nil)
 	require.NoError(t, err)
 }
 
@@ -565,7 +598,7 @@ func TestRewardAndPenaltyInactivityModeSimulation(t *testing.T) {
 	epochsToRun := 10
 	missStrategy := func(epoch int) float64 { return 0.40 }
 
-	err := rewardAndPenaltySimulation(numValidators, epochsToRun, missStrategy)
+	err := rewardAndPenaltySimulation(numValidators, epochsToRun, missStrategy, nil)
 	require.NoError(t, err)
 }
 
@@ -582,7 +615,7 @@ func TestRewardAndPenaltyDynamicScenario(t *testing.T) {
 		return 0.02
 	}
 
-	err := rewardAndPenaltySimulation(numValidators, epochsToRun, dynamicStrategy)
+	err := rewardAndPenaltySimulation(numValidators, epochsToRun, dynamicStrategy, nil)
 	require.NoError(t, err)
 }
 func TestVerifyAgainstPrivateTestnet(t *testing.T) {
@@ -591,6 +624,18 @@ func TestVerifyAgainstPrivateTestnet(t *testing.T) {
 
 	missStrategy := func(epoch int) float64 { return 0.0 }
 
-	err := rewardAndPenaltySimulation(numValidators, epochsToRun, missStrategy)
+	err := rewardAndPenaltySimulation(numValidators, epochsToRun, missStrategy, nil)
+	require.NoError(t, err)
+}
+
+func TestSpecificValidatorsMissAttestations(t *testing.T) {
+	numValidators := 512
+	epochsToRun := 10
+
+	targets := []int{10, 20, 30}
+
+	missStrategy := func(epoch int) float64 { return 0.0 }
+
+	err := rewardAndPenaltySimulation(numValidators, epochsToRun, missStrategy, targets)
 	require.NoError(t, err)
 }
