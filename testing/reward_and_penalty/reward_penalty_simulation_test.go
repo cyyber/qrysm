@@ -27,6 +27,14 @@ const (
 	SignatureLength        = 4627
 )
 
+type ValidatorStats struct {
+	AttestationReward  uint64
+	AttestationPenalty uint64
+	SyncReward         uint64
+	SyncPenalty        uint64
+	ProposerReward     uint64
+}
+
 type MissStrategy func(epoch int) float64
 
 type EpochStats struct {
@@ -62,8 +70,7 @@ func (m *SimulationMetrics) TotalBurned() uint64 {
 func (m *SimulationMetrics) printFinalDetailedReport() {
 	toZond := func(val uint64) float64 { return float64(val) / 1e9 }
 
-	fmt.Printf("\nBREAKDOWN:\n")
-
+	fmt.Printf("\nBREAKDOWN (GLOBAL):\n")
 	totalIssued := m.TotalIssued()
 	fmt.Printf("1. TOTAL ISSUED:   %20s Gwei (%.4f Zond)\n", formatWithCommas(int64(totalIssued)), toZond(totalIssued))
 	fmt.Printf("   ├─ Proposers:   %20s Gwei (%.4f Zond) [%.2f%%]\n",
@@ -75,15 +82,11 @@ func (m *SimulationMetrics) printFinalDetailedReport() {
 
 	totalBurned := m.TotalBurned()
 	burnedStr := strings.Replace(formatWithCommas(int64(totalBurned)), "+", "-", 1)
-
 	fmt.Printf("2. TOTAL BURNED:   %20s Gwei (%.4f Zond)\n", burnedStr, toZond(totalBurned))
-	fmt.Printf("   ├─ Proposers:   %20s Gwei (%.4f Zond) [%.2f%%]\n",
-		strings.Replace(formatWithCommas(int64(m.Stats.ProposerPenalty)), "+", "-", 1), toZond(m.Stats.ProposerPenalty), percentage(m.Stats.ProposerPenalty, totalBurned))
 	fmt.Printf("   ├─ Attesters:   %20s Gwei (%.4f Zond) [%.2f%%]\n",
 		strings.Replace(formatWithCommas(int64(m.Stats.AttesterPenalty)), "+", "-", 1), toZond(m.Stats.AttesterPenalty), percentage(m.Stats.AttesterPenalty, totalBurned))
 	fmt.Printf("   └─ Sync Comm:   %20s Gwei (%.4f Zond) [%.2f%%]\n",
 		strings.Replace(formatWithCommas(int64(m.Stats.SyncPenalty)), "+", "-", 1), toZond(m.Stats.SyncPenalty), percentage(m.Stats.SyncPenalty, totalBurned))
-
 	fmt.Printf("========================================\n")
 }
 
@@ -92,6 +95,7 @@ type Simulator struct {
 	state         state.BeaconState
 	numValidators int
 	metrics       *SimulationMetrics
+	valStats      map[int]*ValidatorStats
 }
 
 func NewSimulator(numValidators int) (*Simulator, error) {
@@ -99,15 +103,22 @@ func NewSimulator(numValidators int) (*Simulator, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	vStats := make(map[int]*ValidatorStats)
+	for i := 0; i < numValidators; i++ {
+		vStats[i] = &ValidatorStats{}
+	}
+
 	return &Simulator{
 		ctx:           context.Background(),
 		state:         s,
 		numValidators: numValidators,
 		metrics:       &SimulationMetrics{},
+		valStats:      vStats,
 	}, nil
 }
 
-func (s *Simulator) applyAndMeasure(action func() error) (reward uint64, penalty uint64, err error) {
+func (s *Simulator) applyAndMeasure(label string, action func() error) (reward uint64, penalty uint64, err error) {
 	balances := s.state.Balances()
 	prevBalances := make([]uint64, len(balances))
 	copy(prevBalances, balances)
@@ -119,10 +130,27 @@ func (s *Simulator) applyAndMeasure(action func() error) (reward uint64, penalty
 	newBalances := s.state.Balances()
 	for i, newBal := range newBalances {
 		oldBal := prevBalances[i]
+
 		if newBal > oldBal {
-			reward += (newBal - oldBal)
+			diff := newBal - oldBal
+			reward += diff
+			switch label {
+			case "SYNC":
+				s.valStats[i].SyncReward += diff
+			case "EPOCH":
+				s.valStats[i].AttestationReward += diff
+			case "PROPOSER":
+				s.valStats[i].ProposerReward += diff
+			}
 		} else if newBal < oldBal {
-			penalty += (oldBal - newBal)
+			diff := oldBal - newBal
+			penalty += diff
+			switch label {
+			case "SYNC":
+				s.valStats[i].SyncPenalty += diff
+			case "EPOCH":
+				s.valStats[i].AttestationPenalty += diff
+			}
 		}
 	}
 	return reward, penalty, nil
@@ -132,6 +160,9 @@ func (s *Simulator) processAttestation(slot primitives.Slot, commIndex primitive
 	attestation, err := createAttestation(s.ctx, s.state, slot, commIndex, missProb, targets)
 	if err != nil {
 		return err
+	}
+	if attestation == nil {
+		return nil
 	}
 
 	activeBal, err := helpers.TotalActiveBalance(s.state)
@@ -230,7 +261,7 @@ func (s *Simulator) RunEpoch(epoch int, missProb float64, pendingReward *uint64,
 		}
 
 		var proposerCut uint64
-		r, p, err := s.applyAndMeasure(func() error {
+		r, p, err := s.applyAndMeasure("SYNC", func() error {
 			var errInner error
 			proposerCut, errInner = s.processSyncCommittee(missProb)
 			return errInner
@@ -253,7 +284,8 @@ func (s *Simulator) RunEpoch(epoch int, missProb float64, pendingReward *uint64,
 			attestationSlot := currentSlot - 1
 			for c := range committeeCount {
 				commIndex := primitives.CommitteeIndex(c)
-				r, p, err := s.applyAndMeasure(func() error {
+
+				r, p, err := s.applyAndMeasure("PROPOSER", func() error {
 					return s.processAttestation(attestationSlot, commIndex, missProb, targets)
 				})
 				if err != nil {
@@ -273,7 +305,7 @@ func (s *Simulator) RunEpoch(epoch int, missProb float64, pendingReward *uint64,
 	if lastEpochSlot > 0 {
 		for c := range committeeCount {
 			commIndex := primitives.CommitteeIndex(c)
-			r, _, err := s.applyAndMeasure(func() error {
+			r, _, err := s.applyAndMeasure("PROPOSER", func() error {
 				return s.processAttestation(lastEpochSlot, commIndex, missProb, targets)
 			})
 			if err != nil {
@@ -300,13 +332,12 @@ func (s *Simulator) RunEpoch(epoch int, missProb float64, pendingReward *uint64,
 	balancesBefore := make([]uint64, len(s.state.Balances()))
 	copy(balancesBefore, s.state.Balances())
 
-	r, p, err := s.applyAndMeasure(func() error {
+	r, p, err := s.applyAndMeasure("EPOCH", func() error {
 		var err error
 		s.state, err = altair.ProcessEpoch(s.ctx, s.state)
 		return err
 	})
 	if err != nil {
-
 		return stats, err
 	}
 
@@ -334,19 +365,21 @@ func rewardAndPenaltySimulation(numValidators int, epochsToRun int, missStrategy
 	pendingReward := uint64(0)
 
 	targetMap := make(map[int]bool)
-	targetInitialBalances := make(map[int]uint64)
+	trackedValidators := make(map[int]bool)
+	initialBalances := make(map[int]uint64)
 
 	for _, idx := range targetValidators {
 		if idx >= 0 && idx < numValidators {
 			targetMap[idx] = true
-			targetInitialBalances[idx] = sim.state.Balances()[idx]
+			trackedValidators[idx] = true
+			initialBalances[idx] = sim.state.Balances()[idx]
 		}
 	}
 
 	printConfig()
 
 	if len(targetMap) > 0 {
-		fmt.Printf("TARGETING %d VALIDATORS (They will miss attestations)\n", len(targetMap))
+		fmt.Printf("TARGETING %d VALIDATORS (They miss ONLY attestations)\n", len(targetMap))
 	}
 
 	for epoch := range epochsToRun {
@@ -362,18 +395,30 @@ func rewardAndPenaltySimulation(numValidators int, epochsToRun int, missStrategy
 
 		printDetailedEpochReport(epoch, currentSupply, initialSupply, stats, sim.metrics, sim.state)
 
-		if len(targetMap) > 0 {
+		if len(trackedValidators) > 0 {
 			toZond := func(val int64) float64 { return float64(val) / 1e9 }
-			fmt.Println("   [TARGETS REPORT]")
-			for idx := range targetMap {
+			fmt.Println("   [TRACKED VALIDATORS REPORT (Cumulative)]")
+			for idx := range trackedValidators {
 				currentBal := sim.state.Balances()[idx]
-				delta := int64(currentBal) - int64(targetInitialBalances[idx])
-				fmt.Printf("      -> Val #%d | Bal: %s Gwei (%.4f Zond) | Change: %s Gwei (%.4f Zond)\n",
+				delta := int64(currentBal) - int64(initialBalances[idx])
+				vStat := sim.valStats[idx]
+
+				netProp := int64(vStat.ProposerReward)
+				netAtt := int64(vStat.AttestationReward) - int64(vStat.AttestationPenalty)
+				netSync := int64(vStat.SyncReward) - int64(vStat.SyncPenalty)
+
+				fmt.Printf("      -> Val #%d | Bal: %s Gwei (%.4f Zond) | Change: %s Gwei\n",
 					idx,
 					formatWithCommas(int64(currentBal)),
 					toZond(int64(currentBal)),
-					formatWithCommas(delta),
-					toZond(delta))
+					formatWithCommas(delta))
+
+				fmt.Printf("         ├─ Proposers: %18s Gwei (%.4f Zond)\n",
+					formatWithCommas(netProp), toZond(netProp))
+				fmt.Printf("         ├─ Attesters: %18s Gwei (%.4f Zond)\n",
+					formatWithCommas(netAtt), toZond(netAtt))
+				fmt.Printf("         └─ Sync Comm: %18s Gwei (%.4f Zond)\n",
+					formatWithCommas(netSync), toZond(netSync))
 			}
 			fmt.Println("   ----------------------------------------------------------------")
 		}
@@ -492,6 +537,10 @@ func createAttestation(ctx context.Context, state state.BeaconState, slot primit
 			aggregationBits.SetBitAt(i, true)
 			activeParticipants++
 		}
+	}
+
+	if activeParticipants == 0 {
+		return nil, nil
 	}
 
 	mockSignatures := make([][]byte, activeParticipants)
@@ -618,6 +667,7 @@ func TestRewardAndPenaltyDynamicScenario(t *testing.T) {
 	err := rewardAndPenaltySimulation(numValidators, epochsToRun, dynamicStrategy, nil)
 	require.NoError(t, err)
 }
+
 func TestVerifyAgainstPrivateTestnet(t *testing.T) {
 	numValidators := 512
 	epochsToRun := 10
