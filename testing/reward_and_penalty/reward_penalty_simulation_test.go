@@ -689,3 +689,14 @@ func TestSpecificValidatorsMissAttestations(t *testing.T) {
 	err := rewardAndPenaltySimulation(numValidators, epochsToRun, missStrategy, targets)
 	require.NoError(t, err)
 }
+
+func TestRewardAndPenaltyInactivityModeAndMissAttestations(t *testing.T) {
+	numValidators := 3000
+	epochsToRun := 10
+
+	targets := []int{10, 20, 30}
+	missStrategy := func(epoch int) float64 { return 0.40 }
+
+	err := rewardAndPenaltySimulation(numValidators, epochsToRun, missStrategy, targets)
+	require.NoError(t, err)
+}
