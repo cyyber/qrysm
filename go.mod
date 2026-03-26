@@ -61,7 +61,7 @@ require (
 	github.com/status-im/keycard-go v0.2.0
 	github.com/stretchr/testify v1.10.0
 	github.com/theQRL/go-bitfield v0.0.0-20231204084259-f3b877be8f63
-	github.com/theQRL/go-qrl v0.0.0-20260307180808-7c1264fd90ea
+	github.com/theQRL/go-qrl v0.0.0-20260326130240-9e0b977aa22d
 	github.com/theQRL/go-qrllib v0.0.0-20251008091143-a411d9a85341
 	github.com/thomaso-mirodin/intmath v0.0.0-20160323211736-5dc6d854e46e
 	github.com/trailofbits/go-mutexasserts v0.0.0-20250212181730-4c2b8e9e784b
