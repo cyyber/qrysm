@@ -165,7 +165,11 @@ func signedDeposit(
 	publicKey []byte,
 	balance uint64,
 ) (*qrysmpb.Deposit, error) {
-	descriptor := walletmldsa87.NewMLDSA87Descriptor().ToDescriptor()
+	d, err := walletmldsa87.NewMLDSA87Descriptor()
+	if err != nil {
+		return nil, err
+	}
+	descriptor := d.ToDescriptor()
 	withdrawalAddr, err := pqcrypto.PublicKeyAndDescriptorToAddress(publicKey, descriptor)
 	if err != nil {
 		return nil, err
@@ -313,7 +317,11 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*qrysmpb.D
 		}
 		privKeys = append(privKeys, secretKeys[:len(secretKeys)-1]...)
 
-		descriptor := walletmldsa87.NewMLDSA87Descriptor().ToDescriptor()
+		d, err := walletmldsa87.NewMLDSA87Descriptor()
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not create deterministic deposit descriptor")
+		}
+		descriptor := d.ToDescriptor()
 		addr1, err := pqcrypto.PublicKeyAndDescriptorToAddress(publicKeys[1].Marshal(), descriptor)
 		if err != nil {
 			return nil, nil, err

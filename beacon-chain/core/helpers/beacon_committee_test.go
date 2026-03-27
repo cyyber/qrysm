@@ -665,6 +665,8 @@ func TestBeaconCommitteeFromState_UpdateCacheForPreviousEpoch(t *testing.T) {
 }
 
 func TestPrecomputeProposerIndices_Ok(t *testing.T) {
+	ClearCache()
+	defer ClearCache()
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{

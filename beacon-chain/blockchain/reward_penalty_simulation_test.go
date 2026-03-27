@@ -106,7 +106,11 @@ func TestReceiveBlock_Simulation(t *testing.T) {
 			"Validator %d balance decreased: %d -> %d", i, genesis.Balances()[i], bal)
 	}
 	for i, val := range s.headState(ctx).Validators() {
-		descriptor := walletmldsa87.NewMLDSA87Descriptor().ToDescriptor()
+		d, err := walletmldsa87.NewMLDSA87Descriptor()
+		if err != nil {
+			t.Fatal(err)
+		}
+		descriptor := d.ToDescriptor()
 		withdrawalAddr, err := pqcrypto.PublicKeyAndDescriptorToAddress(val.PublicKey, descriptor)
 		if err != nil {
 			t.Fatal(err)
@@ -158,7 +162,9 @@ func TestReceiveBlock_Simulation_MissedDuties(t *testing.T) {
 	// Target validator index
 	targetIdx := primitives.ValidatorIndex(16)
 	val := genesis.Validators()[targetIdx]
-	descriptor := walletmldsa87.NewMLDSA87Descriptor().ToDescriptor()
+	d, err := walletmldsa87.NewMLDSA87Descriptor()
+	require.NoError(t, err)
+	descriptor := d.ToDescriptor()
 	targetAddr, err := pqcrypto.PublicKeyAndDescriptorToAddress(val.PublicKey, descriptor)
 	require.NoError(t, err)
 	t.Logf("Target validator address: %x", targetAddr)
@@ -331,7 +337,9 @@ func TestReceiveBlock_Simulation_MissedDuties_WithLeak(t *testing.T) {
 	// Target validator index
 	targetIdx := primitives.ValidatorIndex(16)
 	val := genesis.Validators()[targetIdx]
-	descriptor := walletmldsa87.NewMLDSA87Descriptor().ToDescriptor()
+	d, err := walletmldsa87.NewMLDSA87Descriptor()
+	require.NoError(t, err)
+	descriptor := d.ToDescriptor()
 	targetAddr, err := pqcrypto.PublicKeyAndDescriptorToAddress(val.PublicKey, descriptor)
 	require.NoError(t, err)
 	t.Logf("Target validator address: %x", targetAddr)

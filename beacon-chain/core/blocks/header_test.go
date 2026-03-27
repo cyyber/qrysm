@@ -28,6 +28,7 @@ func init() {
 }
 
 func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
+	helpers.ClearCache()
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
@@ -148,6 +149,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 }
 
 func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
+	helpers.ClearCache()
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
@@ -188,6 +190,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 }
 
 func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
+	helpers.ClearCache()
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
@@ -231,6 +234,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 }
 
 func TestProcessBlockHeader_OK(t *testing.T) {
+	helpers.ClearCache()
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
@@ -291,6 +295,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 }
 
 func TestBlockSignatureSet_OK(t *testing.T) {
+	helpers.ClearCache()
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
