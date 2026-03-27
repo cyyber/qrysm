@@ -30,7 +30,11 @@ func SignatureFromBytes(sig []byte) (common.Signature, error) {
 
 func (s *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
 	sig := *s.s
-	return ml_dsa_87.Verify(msg, sig[:], pubKey.(*PublicKey).p, ml_dsa_87.NewMLDSA87Descriptor())
+	d, err := ml_dsa_87.NewMLDSA87Descriptor()
+	if err != nil {
+		return false
+	}
+	return ml_dsa_87.Verify(msg, sig[:], pubKey.(*PublicKey).p, d)
 }
 
 func VerifySignature(sig []byte, msg [32]byte, pubKey common.PublicKey) (bool, error) {
