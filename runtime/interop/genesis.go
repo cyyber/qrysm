@@ -16,7 +16,7 @@ import (
 const defaultTestChainId int64 = 1337
 const defaultMixhash = "0x0000000000000000000000000000000000000000000000000000000000000000"
 const defaultParenthash = "0x0000000000000000000000000000000000000000000000000000000000000000"
-const defaultTestAccountBalance = "100000000000000000000000000000"
+const defaultTestAccountBalance = "80000000000000000000000000000"
 
 var defaultTestAccountAddress, _ = common.NewAddressFromString("Qaf84bc06703edfc371a0177ac8b482622d5ad242")
 var defaultCoinbase, _ = common.NewAddressFromString("Q0000000000000000000000000000000000000000")
