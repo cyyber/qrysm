@@ -18,7 +18,7 @@ const defaultMixhash = "0x000000000000000000000000000000000000000000000000000000
 const defaultParenthash = "0x0000000000000000000000000000000000000000000000000000000000000000"
 const defaultTestAccountBalance = "80000000000000000000000000"
 
-var defaultTestAccountAddress, _ = common.NewAddressFromString("Qaf84bc06703edfc371a0177ac8b482622d5ad242")
+var defaultTestAccountAddress, _ = common.NewAddressFromString("Qc0e6dd0e844e0048dcb0bd3fdcc44a970beca38d")
 var defaultCoinbase, _ = common.NewAddressFromString("Q0000000000000000000000000000000000000000")
 
 // DepositContractCode is the compiled deposit contract code, via https://github.com/protolambda/merge-genesis-tools
