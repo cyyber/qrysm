@@ -261,10 +261,36 @@ func (s *Store) DeleteBlock(ctx context.Context, root [32]byte) error {
 			return ErrDeleteJustifiedAndFinalized
 		}
 
-		if err := tx.Bucket(blocksBucket).Delete(root[:]); err != nil {
+		// Look up the block to find its slot and parent root for index cleanup.
+		enc := tx.Bucket(blocksBucket).Get(root[:])
+		if enc == nil {
+			// Block not found, nothing to delete.
+			return nil
+		}
+		blk, err := unmarshalBlock(ctx, enc)
+		if err != nil {
 			return err
 		}
-		if err := tx.Bucket(blockParentRootIndicesBucket).Delete(root[:]); err != nil {
+
+		// Clean up slot->root index entry.
+		slotKey := bytesutil.SlotToBytesBigEndian(blk.Block().Slot())
+		slotIndices := map[string][]byte{
+			string(blockSlotIndicesBucket): slotKey,
+		}
+		if err := deleteValueForIndices(ctx, slotIndices, root[:], tx); err != nil {
+			return err
+		}
+
+		// Clean up parent root->child root index entry.
+		parentRoot := blk.Block().ParentRoot()
+		parentIndices := map[string][]byte{
+			string(blockParentRootIndicesBucket): parentRoot[:],
+		}
+		if err := deleteValueForIndices(ctx, parentIndices, root[:], tx); err != nil {
+			return err
+		}
+
+		if err := tx.Bucket(blocksBucket).Delete(root[:]); err != nil {
 			return err
 		}
 		s.blockCache.Del(string(root[:]))
