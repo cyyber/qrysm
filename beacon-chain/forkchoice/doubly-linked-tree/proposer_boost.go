@@ -15,7 +15,12 @@ func (f *ForkChoice) applyProposerBoostScore() error {
 		if !ok || previousNode == nil {
 			log.WithError(errInvalidProposerBoostRoot).Errorf("invalid prev root %#x", s.previousProposerBoostRoot)
 		} else {
-			previousNode.balance -= s.previousProposerBoostScore
+			if previousNode.balance < s.previousProposerBoostScore {
+				log.Errorf("invalid proposer boost score %d for node balance %d", s.previousProposerBoostScore, previousNode.balance)
+				previousNode.balance = 0
+			} else {
+				previousNode.balance -= s.previousProposerBoostScore
+			}
 		}
 	}
 
