@@ -81,7 +81,7 @@ func (s *Store) SaveLastEpochsWrittenForValidators(
 	// The list of validators might be too massive for boltdb to handle in a single transaction,
 	// so instead we split it into batches and write each batch.
 	batchSize := 10000
-	for i := 0; i < len(encodedIndices); i += batchSize {
+	for start := 0; start < len(encodedIndices); start += batchSize {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -90,15 +90,15 @@ func (s *Store) SaveLastEpochsWrittenForValidators(
 				return ctx.Err()
 			}
 			bkt := tx.Bucket(attestedEpochsByValidator)
-			min := i + batchSize
-			if min > len(encodedIndices) {
-				min = len(encodedIndices)
+			end := start + batchSize
+			if end > len(encodedIndices) {
+				end = len(encodedIndices)
 			}
-			for j, encodedIndex := range encodedIndices[i:min] {
+			for j, encodedIndex := range encodedIndices[start:end] {
 				if ctx.Err() != nil {
 					return ctx.Err()
 				}
-				if err := bkt.Put(encodedIndex, encodedEpochs[j]); err != nil {
+				if err := bkt.Put(encodedIndex, encodedEpochs[j+start]); err != nil {
 					return err
 				}
 			}
