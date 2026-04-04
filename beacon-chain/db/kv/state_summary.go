@@ -47,7 +47,11 @@ func (s *Store) StateSummary(ctx context.Context, blockRoot [32]byte) (*qrysmpb.
 	}
 	var enc []byte
 	if err := s.db.View(func(tx *bolt.Tx) error {
-		enc = tx.Bucket(stateSummaryBucket).Get(blockRoot[:])
+		v := tx.Bucket(stateSummaryBucket).Get(blockRoot[:])
+		if len(v) > 0 {
+			enc = make([]byte, len(v))
+			copy(enc, v)
+		}
 		return nil
 	}); err != nil {
 		return nil, err

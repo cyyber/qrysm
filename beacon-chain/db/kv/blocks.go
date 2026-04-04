@@ -536,22 +536,24 @@ func (s *Store) FeeRecipientByValidatorID(ctx context.Context, id primitives.Val
 	var addr []byte
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(feeRecipientBucket)
-		addr = bkt.Get(bytesutil.Uint64ToBytesBigEndian(uint64(id)))
+		stored := bkt.Get(bytesutil.Uint64ToBytesBigEndian(uint64(id)))
+		if len(stored) > 0 {
+			addr = bytesutil.SafeCopyBytes(stored)
+			return nil
+		}
 		// IF the fee recipient is not found in the standard fee recipient bucket, then
 		// check the registration bucket. The fee recipient may be there.
 		// This is to resolve imcompatility until we fully migrate to the registration bucket.
-		if addr == nil {
-			bkt = tx.Bucket(registrationBucket)
-			enc := bkt.Get(bytesutil.Uint64ToBytesBigEndian(uint64(id)))
-			if enc == nil {
-				return errors.Wrapf(ErrNotFoundFeeRecipient, "validator id %d", id)
-			}
-			reg := &qrysmpb.ValidatorRegistrationV1{}
-			if err := decode(ctx, enc, reg); err != nil {
-				return err
-			}
-			addr = reg.FeeRecipient
+		bkt = tx.Bucket(registrationBucket)
+		enc := bkt.Get(bytesutil.Uint64ToBytesBigEndian(uint64(id)))
+		if enc == nil {
+			return errors.Wrapf(ErrNotFoundFeeRecipient, "validator id %d", id)
 		}
+		reg := &qrysmpb.ValidatorRegistrationV1{}
+		if err := decode(ctx, enc, reg); err != nil {
+			return err
+		}
+		addr = bytesutil.SafeCopyBytes(reg.FeeRecipient)
 		return nil
 	})
 	return common.BytesToAddress(addr), err
