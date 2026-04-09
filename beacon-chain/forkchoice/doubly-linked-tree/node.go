@@ -11,13 +11,11 @@ import (
 	"github.com/theQRL/qrysm/time/slots"
 )
 
-// orphanLateBlockFirstThreshold is the number of seconds after which we
-// consider a block to be late, and thus a candidate to being reorged.
-const orphanLateBlockFirstThreshold = 4
-
-// ProcessAttestationsThreshold  is the number of seconds after which we
-// process attestations for the current slot
-const ProcessAttestationsThreshold = 10
+// ProcessAttestationsThreshold returns the number of seconds after which we
+// process attestations for the current slot. It is derived from the slot
+// duration as SecondsPerSlot * 5 / 6, matching the upstream Ethereum value of
+// 10 for a 12-second slot and yielding 50 for qrysm's 60-second slot.
+const ProcessAttestationsThreshold = 50
 
 // applyWeightChanges recomputes the weight of the node passed as an argument and all of its descendants,
 // using the current balance stored in each node.
@@ -133,11 +131,12 @@ func (n *Node) setNodeAndParentValidated(ctx context.Context) error {
 // arrivedEarly returns whether this node was inserted before the first
 // threshold to orphan a block.
 // Note that genesisTime has seconds granularity, therefore we use a strict
-// inequality < here. For example a block that arrives 3.9999 seconds into the
-// slot will have secs = 3 below.
+// inequality < here. For example a block that arrives at exactly the voting
+// window boundary will still be considered early.
 func (n *Node) arrivedEarly(genesisTime uint64) (bool, error) {
 	secs, err := slots.SecondsSinceSlotStart(n.slot, genesisTime, n.timestamp)
-	return secs < orphanLateBlockFirstThreshold, err
+	votingWindow := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
+	return secs < votingWindow, err
 }
 
 // arrivedAfterOrphanCheck returns whether this block was inserted after the
