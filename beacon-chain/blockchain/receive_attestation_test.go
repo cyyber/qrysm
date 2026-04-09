@@ -84,6 +84,47 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	require.NoError(t, err, "Could not verify LMD and FFG votes to be consistent")
 }
 
+// TestVerifyLMDFFGConsistent_TargetEpochExceedsBlockSlot is a regression test
+// for the FFG/LMD consistency bug that affected Prysm before PRs #13257 / #13258.
+//
+// Scenario: an attester is asked to produce an attestation in a new epoch before
+// any block has been produced in that epoch. Per the Ethereum spec the attester
+// votes with BeaconBlockRoot == Target.Root == head_root, and Target.Epoch is the
+// current (new) epoch - so Target.Epoch's start slot is strictly greater than the
+// head block's slot.
+//
+// Prysm introduced a cached per-node target field that returned the head's own
+// target (pointing at an earlier epoch's checkpoint block), which spuriously
+// failed the consistency check in this edge case; #13258 fixed it by making the
+// lookup epoch-aware. qrysm never adopted that cache - it still walks the chain
+// via Ancestor(), which returns the input block when the requested slot is at or
+// after the block's own slot. This test locks that spec-correct behavior in so
+// any future refactor that caches per-block target roots will be caught.
+func TestVerifyLMDFFGConsistent_TargetEpochExceedsBlockSlot(t *testing.T) {
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
+
+	// Head block is the first block of epoch 1 (slot 128 with
+	// SlotsPerEpoch=128). We deliberately produce no block in epoch 2.
+	headBlock := util.NewBeaconBlockZond()
+	headBlock.Block.Slot = params.BeaconConfig().SlotsPerEpoch
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, headBlock)
+	headRoot, err := headBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	// Attestation produced during epoch 2 before any epoch-2 block exists.
+	// EpochStart(2) > headBlock.Slot, and both BeaconBlockRoot and Target.Root
+	// are set to the head block's root (spec-correct behavior for an attester
+	// with no block yet in the current epoch).
+	a := util.NewAttestation()
+	a.Data.Target.Epoch = 2
+	a.Data.Target.Root = headRoot[:]
+	a.Data.BeaconBlockRoot = headRoot[:]
+
+	err = service.VerifyLmdFfgConsistency(context.Background(), a)
+	require.NoError(t, err, "Could not verify LMD and FFG votes when target epoch start slot exceeds block slot")
+}
+
 func TestProcessAttestations_Ok(t *testing.T) {
 	service, tr := minimalTestService(t)
 	hook := logTest.NewGlobal()
