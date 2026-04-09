@@ -34,10 +34,7 @@ func TestStore_PruneProposalsAtEpoch(t *testing.T) {
 
 		err = beaconDB.db.Update(func(tx *bolt.Tx) error {
 			bkt := tx.Bucket(proposalRecordsBucket)
-			key, err := keyForValidatorProposal(lowestStoredSlot+1, 0 /* proposer index */)
-			if err != nil {
-				return err
-			}
+			key := keyForValidatorProposal(lowestStoredSlot+1, 0 /* proposer index */)
 			return bkt.Put(key, []byte("hi"))
 		})
 		require.NoError(t, err)
@@ -93,14 +90,8 @@ func TestStore_PruneProposalsAtEpoch(t *testing.T) {
 				endSlot, err := slots.EpochStart(i + 1)
 				require.NoError(t, err)
 				for j := startSlot; j < endSlot; j++ {
-					prop1Key, err := keyForValidatorProposal(j, 0)
-					if err != nil {
-						return err
-					}
-					prop2Key, err := keyForValidatorProposal(j, 1)
-					if err != nil {
-						return err
-					}
+					prop1Key := keyForValidatorProposal(j, 0)
+					prop2Key := keyForValidatorProposal(j, 1)
 					if bkt.Get(prop1Key) != nil {
 						return fmt.Errorf("proposal still exists for epoch %d, validator 0", j)
 					}

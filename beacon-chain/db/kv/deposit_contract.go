@@ -17,7 +17,11 @@ func (s *Store) DepositContractAddress(ctx context.Context) ([]byte, error) {
 	var addr []byte
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		chainInfo := tx.Bucket(chainMetadataBucket)
-		addr = chainInfo.Get(depositContractAddressKey)
+		v := chainInfo.Get(depositContractAddressKey)
+		if len(v) > 0 {
+			addr = make([]byte, len(v))
+			copy(addr, v)
+		}
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
 		panic(err) // lint:nopanic

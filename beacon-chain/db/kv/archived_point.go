@@ -32,7 +32,10 @@ func (s *Store) LastArchivedRoot(ctx context.Context) [32]byte {
 	var blockRoot []byte
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(stateSlotIndicesBucket)
-		_, blockRoot = bkt.Cursor().Last()
+		_, v := bkt.Cursor().Last()
+		if len(v) > 0 {
+			blockRoot = bytesutil.SafeCopyBytes(v)
+		}
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
 		panic(err) // lint:nopanic
@@ -50,7 +53,10 @@ func (s *Store) ArchivedPointRoot(ctx context.Context, slot primitives.Slot) [32
 	var blockRoot []byte
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(stateSlotIndicesBucket)
-		blockRoot = bucket.Get(bytesutil.SlotToBytesBigEndian(slot))
+		v := bucket.Get(bytesutil.SlotToBytesBigEndian(slot))
+		if len(v) > 0 {
+			blockRoot = bytesutil.SafeCopyBytes(v)
+		}
 		return nil
 	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
 		panic(err) // lint:nopanic

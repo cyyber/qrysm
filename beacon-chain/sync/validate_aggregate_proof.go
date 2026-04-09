@@ -117,7 +117,9 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return validationRes, err
 	}
 
-	s.setAggregatorIndexEpochSeen(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex)
+	if first := s.setAggregatorIndexEpochSeen(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex); !first {
+		return pubsub.ValidationIgnore, nil
+	}
 
 	msg.ValidatorData = m
 
@@ -210,11 +212,17 @@ func (s *Service) hasSeenAggregatorIndexEpoch(epoch primitives.Epoch, aggregator
 }
 
 // Set aggregate's aggregator index target epoch as seen.
-func (s *Service) setAggregatorIndexEpochSeen(epoch primitives.Epoch, aggregatorIndex primitives.ValidatorIndex) {
+// Returns true if this is the first time seeing this aggregator index and epoch.
+func (s *Service) setAggregatorIndexEpochSeen(epoch primitives.Epoch, aggregatorIndex primitives.ValidatorIndex) bool {
 	s.seenAggregatedAttestationLock.Lock()
 	defer s.seenAggregatedAttestationLock.Unlock()
 	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(uint64(aggregatorIndex))...)
+	_, seen := s.seenAggregatedAttestationCache.Get(string(b))
+	if seen {
+		return false
+	}
 	s.seenAggregatedAttestationCache.Add(string(b), true)
+	return true
 }
 
 // This validates the aggregator's index in state is within the beacon committee.

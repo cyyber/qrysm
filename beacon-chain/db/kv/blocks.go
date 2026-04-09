@@ -261,10 +261,36 @@ func (s *Store) DeleteBlock(ctx context.Context, root [32]byte) error {
 			return ErrDeleteJustifiedAndFinalized
 		}
 
-		if err := tx.Bucket(blocksBucket).Delete(root[:]); err != nil {
+		// Look up the block to find its slot and parent root for index cleanup.
+		enc := tx.Bucket(blocksBucket).Get(root[:])
+		if enc == nil {
+			// Block not found, nothing to delete.
+			return nil
+		}
+		blk, err := unmarshalBlock(ctx, enc)
+		if err != nil {
 			return err
 		}
-		if err := tx.Bucket(blockParentRootIndicesBucket).Delete(root[:]); err != nil {
+
+		// Clean up slot->root index entry.
+		slotKey := bytesutil.SlotToBytesBigEndian(blk.Block().Slot())
+		slotIndices := map[string][]byte{
+			string(blockSlotIndicesBucket): slotKey,
+		}
+		if err := deleteValueForIndices(ctx, slotIndices, root[:], tx); err != nil {
+			return err
+		}
+
+		// Clean up parent root->child root index entry.
+		parentRoot := blk.Block().ParentRoot()
+		parentIndices := map[string][]byte{
+			string(blockParentRootIndicesBucket): parentRoot[:],
+		}
+		if err := deleteValueForIndices(ctx, parentIndices, root[:], tx); err != nil {
+			return err
+		}
+
+		if err := tx.Bucket(blocksBucket).Delete(root[:]); err != nil {
 			return err
 		}
 		s.blockCache.Del(string(root[:]))
@@ -510,22 +536,24 @@ func (s *Store) FeeRecipientByValidatorID(ctx context.Context, id primitives.Val
 	var addr []byte
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(feeRecipientBucket)
-		addr = bkt.Get(bytesutil.Uint64ToBytesBigEndian(uint64(id)))
+		stored := bkt.Get(bytesutil.Uint64ToBytesBigEndian(uint64(id)))
+		if len(stored) > 0 {
+			addr = bytesutil.SafeCopyBytes(stored)
+			return nil
+		}
 		// IF the fee recipient is not found in the standard fee recipient bucket, then
 		// check the registration bucket. The fee recipient may be there.
 		// This is to resolve imcompatility until we fully migrate to the registration bucket.
-		if addr == nil {
-			bkt = tx.Bucket(registrationBucket)
-			enc := bkt.Get(bytesutil.Uint64ToBytesBigEndian(uint64(id)))
-			if enc == nil {
-				return errors.Wrapf(ErrNotFoundFeeRecipient, "validator id %d", id)
-			}
-			reg := &qrysmpb.ValidatorRegistrationV1{}
-			if err := decode(ctx, enc, reg); err != nil {
-				return err
-			}
-			addr = reg.FeeRecipient
+		bkt = tx.Bucket(registrationBucket)
+		enc := bkt.Get(bytesutil.Uint64ToBytesBigEndian(uint64(id)))
+		if enc == nil {
+			return errors.Wrapf(ErrNotFoundFeeRecipient, "validator id %d", id)
 		}
+		reg := &qrysmpb.ValidatorRegistrationV1{}
+		if err := decode(ctx, enc, reg); err != nil {
+			return err
+		}
+		addr = bytesutil.SafeCopyBytes(reg.FeeRecipient)
 		return nil
 	})
 	return common.BytesToAddress(addr), err

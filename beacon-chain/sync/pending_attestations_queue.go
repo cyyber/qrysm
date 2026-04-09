@@ -106,7 +106,7 @@ func (s *Service) processAttestations(ctx context.Context, attestations []*qrysm
 					log.WithError(err).Debug("Could not save aggregate attestation")
 					continue
 				}
-				s.setAggregatorIndexEpochSeen(att.Aggregate.Data.Target.Epoch, att.AggregatorIndex)
+				_ = s.setAggregatorIndexEpochSeen(att.Aggregate.Data.Target.Epoch, att.AggregatorIndex)
 
 				// Broadcasting the signed attestation again once a node is able to process it.
 				if err := s.cfg.p2p.Broadcast(ctx, signedAtt); err != nil {
@@ -141,7 +141,7 @@ func (s *Service) processAttestations(ctx context.Context, attestations []*qrysm
 					log.WithError(err).Debug("Could not save unaggregated attestation")
 					continue
 				}
-				s.setSeenCommitteeIndicesSlot(att.Aggregate.Data.Slot, att.Aggregate.Data.CommitteeIndex, att.Aggregate.AggregationBits)
+				_ = s.setSeenCommitteeIndicesSlot(att.Aggregate.Data.Slot, att.Aggregate.Data.CommitteeIndex, att.Aggregate.AggregationBits)
 
 				valCount, err := helpers.ActiveValidatorCount(ctx, preState, slots.ToEpoch(att.Aggregate.Data.Slot))
 				if err != nil {

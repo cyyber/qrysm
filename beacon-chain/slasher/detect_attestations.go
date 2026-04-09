@@ -84,28 +84,43 @@ func (s *Service) detectAllAttesterSlashings(
 	args *chunkUpdateArgs,
 	attestations []*slashertypes.IndexedAttestationWrapper,
 ) ([]*qrysmpb.AttesterSlashing, error) {
-	// Map of updated chunks by chunk index, which will be saved at the end.
-	updatedChunks := make(map[uint64]Chunker)
+	// Separate chunk maps for min and max spans.
+	updatedMinChunks := make(map[uint64]Chunker)
+	updatedMaxChunks := make(map[uint64]Chunker)
 	groupedAtts := s.groupByChunkIndex(attestations)
 	validatorIndices := s.params.validatorIndicesInChunk(args.validatorChunkIndex)
 
+	minArgs := &chunkUpdateArgs{
+		kind:                slashertypes.MinSpan,
+		validatorChunkIndex: args.validatorChunkIndex,
+		currentEpoch:        args.currentEpoch,
+	}
+	maxArgs := &chunkUpdateArgs{
+		kind:                slashertypes.MaxSpan,
+		validatorChunkIndex: args.validatorChunkIndex,
+		currentEpoch:        args.currentEpoch,
+	}
+
 	// Update the min/max span chunks for the change of current epoch.
 	for _, validatorIndex := range validatorIndices {
-		if err := s.epochUpdateForValidator(ctx, args, updatedChunks, validatorIndex); err != nil {
+		if err := s.epochUpdateForValidator(ctx, minArgs, updatedMinChunks, validatorIndex); err != nil {
 			return nil, errors.Wrapf(
 				err,
-				"could not update validator index chunks %d",
+				"could not update validator index for min chunks %d",
+				validatorIndex,
+			)
+		}
+		if err := s.epochUpdateForValidator(ctx, maxArgs, updatedMaxChunks, validatorIndex); err != nil {
+			return nil, errors.Wrapf(
+				err,
+				"could not update validator index for max chunks %d",
 				validatorIndex,
 			)
 		}
 	}
 
-	// Update min and max spans and retrieve any detected slashable offenses.
-	surroundingSlashings, err := s.updateSpans(ctx, updatedChunks, &chunkUpdateArgs{
-		kind:                slashertypes.MinSpan,
-		validatorChunkIndex: args.validatorChunkIndex,
-		currentEpoch:        args.currentEpoch,
-	}, groupedAtts)
+	// Check for surrounding votes (MinSpan).
+	surroundingSlashings, err := s.updateSpans(ctx, updatedMinChunks, minArgs, groupedAtts)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err,
@@ -114,11 +129,8 @@ func (s *Service) detectAllAttesterSlashings(
 		)
 	}
 
-	surroundedSlashings, err := s.updateSpans(ctx, updatedChunks, &chunkUpdateArgs{
-		kind:                slashertypes.MaxSpan,
-		validatorChunkIndex: args.validatorChunkIndex,
-		currentEpoch:        args.currentEpoch,
-	}, groupedAtts)
+	// Check for surrounded votes (MaxSpan).
+	surroundedSlashings, err := s.updateSpans(ctx, updatedMaxChunks, maxArgs, groupedAtts)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err,
@@ -130,8 +142,13 @@ func (s *Service) detectAllAttesterSlashings(
 	slashings := make([]*qrysmpb.AttesterSlashing, 0, len(surroundingSlashings)+len(surroundedSlashings))
 	slashings = append(slashings, surroundingSlashings...)
 	slashings = append(slashings, surroundedSlashings...)
-	if err := s.saveUpdatedChunks(ctx, args, updatedChunks); err != nil {
-		return nil, err
+
+	// Save updated chunks into the database.
+	if err := s.saveUpdatedChunks(ctx, minArgs, updatedMinChunks); err != nil {
+		return nil, errors.Wrap(err, "could not save chunks for min spans")
+	}
+	if err := s.saveUpdatedChunks(ctx, maxArgs, updatedMaxChunks); err != nil {
+		return nil, errors.Wrap(err, "could not save chunks for max spans")
 	}
 	return slashings, nil
 }

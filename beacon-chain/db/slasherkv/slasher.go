@@ -81,7 +81,7 @@ func (s *Store) SaveLastEpochsWrittenForValidators(
 	// The list of validators might be too massive for boltdb to handle in a single transaction,
 	// so instead we split it into batches and write each batch.
 	batchSize := 10000
-	for i := 0; i < len(encodedIndices); i += batchSize {
+	for start := 0; start < len(encodedIndices); start += batchSize {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -90,15 +90,15 @@ func (s *Store) SaveLastEpochsWrittenForValidators(
 				return ctx.Err()
 			}
 			bkt := tx.Bucket(attestedEpochsByValidator)
-			min := i + batchSize
-			if min > len(encodedIndices) {
-				min = len(encodedIndices)
+			end := start + batchSize
+			if end > len(encodedIndices) {
+				end = len(encodedIndices)
 			}
-			for j, encodedIndex := range encodedIndices[i:min] {
+			for j, encodedIndex := range encodedIndices[start:end] {
 				if ctx.Err() != nil {
 					return ctx.Err()
 				}
-				if err := bkt.Put(encodedIndex, encodedEpochs[j]); err != nil {
+				if err := bkt.Put(encodedIndex, encodedEpochs[j+start]); err != nil {
 					return err
 				}
 			}
@@ -326,13 +326,10 @@ func (s *Store) CheckDoubleBlockProposals(
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposalRecordsBucket)
 		for _, proposal := range proposals {
-			key, err := keyForValidatorProposal(
+			key := keyForValidatorProposal(
 				proposal.SignedBeaconBlockHeader.Header.Slot,
 				proposal.SignedBeaconBlockHeader.Header.ProposerIndex,
 			)
-			if err != nil {
-				return err
-			}
 			encExistingProposalWrapper := bkt.Get(key)
 			if len(encExistingProposalWrapper) < signingRootSize {
 				continue
@@ -362,11 +359,8 @@ func (s *Store) BlockProposalForValidator(
 	_, span := trace.StartSpan(ctx, "BeaconDB.BlockProposalForValidator")
 	defer span.End()
 	var record *slashertypes.SignedBlockHeaderWrapper
-	key, err := keyForValidatorProposal(slot, validatorIdx)
-	if err != nil {
-		return nil, err
-	}
-	err = s.db.View(func(tx *bolt.Tx) error {
+	key := keyForValidatorProposal(slot, validatorIdx)
+	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposalRecordsBucket)
 		encProposal := bkt.Get(key)
 		if encProposal == nil {
@@ -392,13 +386,10 @@ func (s *Store) SaveBlockProposals(
 	encodedKeys := make([][]byte, len(proposals))
 	encodedProposals := make([][]byte, len(proposals))
 	for i, proposal := range proposals {
-		key, err := keyForValidatorProposal(
+		key := keyForValidatorProposal(
 			proposal.SignedBeaconBlockHeader.Header.Slot,
 			proposal.SignedBeaconBlockHeader.Header.ProposerIndex,
 		)
-		if err != nil {
-			return err
-		}
 		enc, err := encodeProposalRecord(proposal)
 		if err != nil {
 			return err
@@ -473,13 +464,11 @@ func suffixForAttestationRecordsKey(key, encodedValidatorIndex []byte) bool {
 }
 
 // Disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
-func keyForValidatorProposal(slot primitives.Slot, proposerIndex primitives.ValidatorIndex) ([]byte, error) {
-	encSlot, err := slot.MarshalSSZ()
-	if err != nil {
-		return nil, err
-	}
+func keyForValidatorProposal(slot primitives.Slot, proposerIndex primitives.ValidatorIndex) []byte {
+	encSlot := make([]byte, 8)
+	binary.BigEndian.PutUint64(encSlot, uint64(slot))
 	encValidatorIdx := encodeValidatorIndex(proposerIndex)
-	return append(encSlot, encValidatorIdx...), nil
+	return append(encSlot, encValidatorIdx...)
 }
 
 func encodeSlasherChunk(chunk []uint16) ([]byte, error) {
@@ -578,10 +567,10 @@ func decodeProposalRecord(encoded []byte) (*slashertypes.SignedBlockHeaderWrappe
 	}, nil
 }
 
-// Encodes an epoch into little-endian bytes.
+// Encodes an epoch into big-endian bytes.
 func encodeTargetEpoch(epoch primitives.Epoch) []byte {
 	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, uint64(epoch))
+	binary.BigEndian.PutUint64(buf, uint64(epoch))
 	return buf
 }
 

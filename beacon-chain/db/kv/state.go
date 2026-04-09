@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/theQRL/qrysm/beacon-chain/state"
 	"github.com/theQRL/qrysm/beacon-chain/state/genesis"
+	"github.com/theQRL/qrysm/consensus-types/blocks"
 	statenative "github.com/theQRL/qrysm/beacon-chain/state/state-native"
 	"github.com/theQRL/qrysm/config/features"
 	"github.com/theQRL/qrysm/config/params"
@@ -570,11 +571,18 @@ func (s *Store) slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []by
 			return s.Slot(), nil
 		}
 
-		return primitives.Slot(0), nil
+		blk, err := unmarshalBlock(ctx, enc)
+		if err != nil {
+			return 0, errors.Wrap(err, "could not unmarshal block")
+		}
+		if err := blocks.BeaconBlockIsNil(blk); err != nil {
+			return 0, err
+		}
+		return blk.Block().Slot(), nil
 	}
 	stateSummary := &qrysmpb.StateSummary{}
 	if err := decode(ctx, enc, stateSummary); err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, "could not unmarshal state summary")
 	}
 	return stateSummary.Slot, nil
 }

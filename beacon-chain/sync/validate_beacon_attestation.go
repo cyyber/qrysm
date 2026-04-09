@@ -163,7 +163,9 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 		return validationRes, err
 	}
 
-	s.setSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits)
+	if first := s.setSeenCommitteeIndicesSlot(att.Data.Slot, att.Data.CommitteeIndex, att.AggregationBits); !first {
+		return pubsub.ValidationIgnore, nil
+	}
 
 	msg.ValidatorData = att
 
@@ -242,12 +244,18 @@ func (s *Service) hasSeenCommitteeIndicesSlot(slot primitives.Slot, committeeID 
 }
 
 // Set committee's indices and slot as seen for incoming attestations.
-func (s *Service) setSeenCommitteeIndicesSlot(slot primitives.Slot, committeeID primitives.CommitteeIndex, aggregateBits []byte) {
+// Returns true if this is the first time seeing this attestation.
+func (s *Service) setSeenCommitteeIndicesSlot(slot primitives.Slot, committeeID primitives.CommitteeIndex, aggregateBits []byte) bool {
 	s.seenUnAggregatedAttestationLock.Lock()
 	defer s.seenUnAggregatedAttestationLock.Unlock()
 	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(committeeID))...)
 	b = append(b, bytesutil.SafeCopyBytes(aggregateBits)...)
+	_, seen := s.seenUnAggregatedAttestationCache.Get(string(b))
+	if seen {
+		return false
+	}
 	s.seenUnAggregatedAttestationCache.Add(string(b), true)
+	return true
 }
 
 // hasBlockAndState returns true if the beacon node knows about a block and associated state in the
