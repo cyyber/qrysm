@@ -149,6 +149,10 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	// Process the block if the clock jitter is less than MAXIMUM_GOSSIP_CLOCK_DISPARITY.
 	// Otherwise queue it for processing in the right slot.
 	if isBlockQueueable(genesisTime, blk.Block().Slot(), receivedTime) {
+		if res, err := s.verifyPendingBlockSignature(ctx, blk, blockRoot); err != nil {
+			log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not verify block signature")
+			return res, err
+		}
 		s.pendingQueueLock.Lock()
 		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blockRoot); err != nil {
 			s.pendingQueueLock.Unlock()
@@ -163,6 +167,10 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	// Handle block when the parent is unknown.
 	if !s.cfg.chain.HasBlock(ctx, blk.Block().ParentRoot()) {
+		if res, err := s.verifyPendingBlockSignature(ctx, blk, blockRoot); err != nil {
+			log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not verify block signature")
+			return res, err
+		}
 		s.pendingQueueLock.Lock()
 		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blockRoot); err != nil {
 			s.pendingQueueLock.Unlock()
@@ -315,6 +323,26 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 		return ErrOptimisticParent
 	}
 	return nil
+}
+
+// verifyPendingBlockSignature verifies the signature of a pending block with
+// respect to the current head state. This is used to avoid enqueuing
+// unauthenticated blocks into the pending queue, which would otherwise let a
+// malicious peer flood the queue with arbitrary blocks.
+func (s *Service) verifyPendingBlockSignature(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) (pubsub.ValidationResult, error) {
+	roState, err := s.cfg.chain.HeadStateReadOnly(ctx)
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	// Ignore block in the event of non-existent proposer.
+	if _, err := roState.ValidatorAtIndex(blk.Block().ProposerIndex()); err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	if err := blocks.VerifyBlockSignatureUsingCurrentFork(roState, blk); err != nil {
+		s.setBadBlock(ctx, blkRoot)
+		return pubsub.ValidationReject, err
+	}
+	return pubsub.ValidationAccept, nil
 }
 
 // Returns true if the block is not the first block proposed for the proposer for the slot.
