@@ -321,19 +321,19 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.Beacon
 	if err := helpers.UpdateProposerIndicesInCache(ctx, st, e); err != nil {
 		return errors.Wrap(err, "could not update proposer index cache")
 	}
-	go func() {
+	go func(ep primitives.Epoch) {
 		// Use a custom deadline here, since this method runs asynchronously.
 		// We ignore the parent method's context and instead create a new one
 		// with a custom deadline, therefore using the background context instead.
 		slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
 		defer cancel()
-		if err := helpers.UpdateCommitteeCache(slotCtx, st, e+1); err != nil {
+		if err := helpers.UpdateCommitteeCache(slotCtx, st, ep+1); err != nil {
 			log.WithError(err).Warn("Could not update committee cache")
 		}
-		if err := helpers.UpdateProposerIndicesInCache(slotCtx, st, e+1); err != nil {
+		if err := helpers.UpdateProposerIndicesInCache(slotCtx, st, ep+1); err != nil {
 			log.WithError(err).Warn("Failed to cache next epoch proposers")
 		}
-	}()
+	}(e)
 	return nil
 }
 
