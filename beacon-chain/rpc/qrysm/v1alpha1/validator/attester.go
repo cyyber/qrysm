@@ -33,10 +33,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *qrysmpb.Attestati
 	}
 
 	// An optimistic validator MUST NOT participate in attestation. (i.e., sign across the DOMAIN_BEACON_ATTESTER, DOMAIN_SELECTION_PROOF or DOMAIN_AGGREGATE_AND_PROOF domains).
-	if err := vs.optimisticStatus(ctx); err != nil {
-		return nil, err
-	}
-
+	// The optimistic check is performed inside CoreService.GetAttestationData (after the cache lookup) so it is skipped on cache hit.
 	res, err := vs.CoreService.GetAttestationData(ctx, req)
 	if err != nil {
 		return nil, status.Errorf(core.ErrorReasonToGRPC(err.Reason), "Could not get attestation data: %v", err.Err)

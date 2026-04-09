@@ -426,9 +426,8 @@ func (s *Server) GetAttestationData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if isOptimistic, err := shared.IsOptimistic(ctx, w, s.OptimisticModeFetcher); isOptimistic || err != nil {
-		return
-	}
+	// Optimistic-mode check is performed inside CoreService.GetAttestationData (after the
+	// cache lookup) so it is skipped on cache hit.
 
 	rawSlot := r.URL.Query().Get("slot")
 	slot, valid := shared.ValidateUint(w, "Slot", rawSlot)

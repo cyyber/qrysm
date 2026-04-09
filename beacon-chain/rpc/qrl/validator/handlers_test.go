@@ -951,9 +951,10 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				AttestationCache:   cache.NewAttestationCache(),
-				GenesisTimeFetcher: chain,
-				HeadFetcher:        chain,
+				AttestationCache:      cache.NewAttestationCache(),
+				GenesisTimeFetcher:    chain,
+				HeadFetcher:           chain,
+				OptimisticModeFetcher: chain,
 			},
 		}
 

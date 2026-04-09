@@ -31,6 +31,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var errOptimisticMode = errors.New("the node is currently optimistic and cannot serve validators")
+
 // AggregateBroadcastFailedError represents an error scenario where
 // broadcasting an aggregate selection proof failed.
 type AggregateBroadcastFailedError struct {
@@ -342,6 +344,18 @@ func (s *Service) GetAttestationData(
 	if res != nil {
 		res.CommitteeIndex = req.CommitteeIndex
 		return res, nil
+	}
+
+	// Cache miss: verify the node is not optimistic before producing fresh attestation data.
+	// On cache hit we skip this check because cached entries were already produced from a non-optimistic head.
+	if s.OptimisticModeFetcher != nil {
+		optimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
+		if err != nil {
+			return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not determine if the node is optimistic")}
+		}
+		if optimistic {
+			return nil, &RpcError{Reason: Unavailable, Err: errOptimisticMode}
+		}
 	}
 
 	if err := s.AttestationCache.MarkInProgress(req); err != nil {
