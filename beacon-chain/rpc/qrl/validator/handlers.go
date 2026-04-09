@@ -41,7 +41,7 @@ import (
 
 // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
 func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.GetAggregateAttestation")
+	_, span := trace.StartSpan(r.Context(), "validator.GetAggregateAttestation")
 	defer span.End()
 
 	attDataRoot := r.URL.Query().Get("attestation_data_root")
@@ -56,56 +56,75 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := s.AttestationsPool.AggregateUnaggregatedAttestations(ctx); err != nil {
-		http2.HandleError(w, "Could not aggregate unaggregated attestations: "+err.Error(), http.StatusBadRequest)
+	match, err := bestMatchingAtt(s.AttestationsPool.AggregatedAttestations(), primitives.Slot(slot), attDataRootBytes)
+	if err != nil {
+		http2.HandleError(w, "Could not get matching attestation: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	allAtts := s.AttestationsPool.AggregatedAttestations()
-	var bestMatchingAtt *qrysmpb.Attestation
-	for _, att := range allAtts {
-		if att.Data.Slot == primitives.Slot(slot) {
-			root, err := att.Data.HashTreeRoot()
-			if err != nil {
-				http2.HandleError(w, "Could not get attestation data root: "+err.Error(), http.StatusInternalServerError)
-				return
-			}
-			if bytes.Equal(root[:], attDataRootBytes) {
-				if bestMatchingAtt == nil || len(att.AggregationBits) > len(bestMatchingAtt.AggregationBits) {
-					bestMatchingAtt = att
-				}
-			}
+	if match == nil {
+		atts, err := s.AttestationsPool.UnaggregatedAttestations()
+		if err != nil {
+			http2.HandleError(w, "Could not get unaggregated attestations: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		match, err = bestMatchingAtt(atts, primitives.Slot(slot), attDataRootBytes)
+		if err != nil {
+			http2.HandleError(w, "Could not get matching attestation: "+err.Error(), http.StatusInternalServerError)
+			return
 		}
 	}
-	if bestMatchingAtt == nil {
+	if match == nil {
 		http2.HandleError(w, "No matching attestation found", http.StatusNotFound)
 		return
 	}
 
-	sigs := make([]string, len(bestMatchingAtt.Signatures))
-	for i, sig := range bestMatchingAtt.Signatures {
+	sigs := make([]string, len(match.Signatures))
+	for i, sig := range match.Signatures {
 		sigs[i] = hexutil.Encode(sig)
 	}
 
 	response := &AggregateAttestationResponse{
 		Data: &shared.Attestation{
-			AggregationBits: hexutil.Encode(bestMatchingAtt.AggregationBits),
+			AggregationBits: hexutil.Encode(match.AggregationBits),
 			Data: &shared.AttestationData{
-				Slot:            strconv.FormatUint(uint64(bestMatchingAtt.Data.Slot), 10),
-				CommitteeIndex:  strconv.FormatUint(uint64(bestMatchingAtt.Data.CommitteeIndex), 10),
-				BeaconBlockRoot: hexutil.Encode(bestMatchingAtt.Data.BeaconBlockRoot),
+				Slot:            strconv.FormatUint(uint64(match.Data.Slot), 10),
+				CommitteeIndex:  strconv.FormatUint(uint64(match.Data.CommitteeIndex), 10),
+				BeaconBlockRoot: hexutil.Encode(match.Data.BeaconBlockRoot),
 				Source: &shared.Checkpoint{
-					Epoch: strconv.FormatUint(uint64(bestMatchingAtt.Data.Source.Epoch), 10),
-					Root:  hexutil.Encode(bestMatchingAtt.Data.Source.Root),
+					Epoch: strconv.FormatUint(uint64(match.Data.Source.Epoch), 10),
+					Root:  hexutil.Encode(match.Data.Source.Root),
 				},
 				Target: &shared.Checkpoint{
-					Epoch: strconv.FormatUint(uint64(bestMatchingAtt.Data.Target.Epoch), 10),
-					Root:  hexutil.Encode(bestMatchingAtt.Data.Target.Root),
+					Epoch: strconv.FormatUint(uint64(match.Data.Target.Epoch), 10),
+					Root:  hexutil.Encode(match.Data.Target.Root),
 				},
 			},
 			Signatures: sigs,
 		}}
 	http2.WriteJson(w, response)
+}
+
+// bestMatchingAtt returns the attestation in atts that matches the given slot and
+// attestation data root and has the most aggregation bits set. Returns nil if no
+// match is found.
+func bestMatchingAtt(atts []*qrysmpb.Attestation, slot primitives.Slot, attDataRoot []byte) (*qrysmpb.Attestation, error) {
+	var best *qrysmpb.Attestation
+	for _, att := range atts {
+		if att.Data.Slot != slot {
+			continue
+		}
+		root, err := att.Data.HashTreeRoot()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get attestation data root")
+		}
+		if !bytes.Equal(root[:], attDataRoot) {
+			continue
+		}
+		if best == nil || len(att.AggregationBits) > len(best.AggregationBits) {
+			best = att
+		}
+	}
+	return best, nil
 }
 
 // SubmitContributionAndProofs publishes multiple signed sync committee contribution and proofs.

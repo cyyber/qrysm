@@ -128,11 +128,13 @@ func TestGetAggregateAttestation(t *testing.T) {
 	pool := attestations.NewPool()
 	err := pool.SaveAggregatedAttestations([]*qrysmpb.Attestation{attSlot1, attslot21, attslot22})
 	assert.NoError(t, err)
+	err = pool.SaveUnaggregatedAttestation(attslot33)
+	assert.NoError(t, err)
 	s := &Server{
 		AttestationsPool: pool,
 	}
 
-	t.Run("ok", func(t *testing.T) {
+	t.Run("matching aggregated att", func(t *testing.T) {
 		reqRoot, err := attslot22.Data.HashTreeRoot()
 		require.NoError(t, err)
 		attDataRoot := hexutil.Encode(reqRoot[:])
@@ -160,14 +162,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 		assert.DeepEqual(t, hexutil.Encode(root22), resp.Data.Data.Target.Root)
 	})
 
-	t.Run("aggregate beforehand", func(t *testing.T) {
-		err = s.AttestationsPool.SaveUnaggregatedAttestation(attslot33)
-		require.NoError(t, err)
-		newAtt := qrysmpb.CopyAttestation(attslot33)
-		newAtt.AggregationBits = []byte{0, 1, 0, 1}
-		err = s.AttestationsPool.SaveUnaggregatedAttestation(newAtt)
-		require.NoError(t, err)
-
+	t.Run("matching unaggregated att", func(t *testing.T) {
 		reqRoot, err := attslot33.Data.HashTreeRoot()
 		require.NoError(t, err)
 		attDataRoot := hexutil.Encode(reqRoot[:])
@@ -181,7 +176,18 @@ func TestGetAggregateAttestation(t *testing.T) {
 		resp := &AggregateAttestationResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp)
-		assert.DeepEqual(t, "0x01010001", resp.Data.AggregationBits)
+		require.NotNil(t, resp.Data)
+		assert.DeepEqual(t, "0x01000001", resp.Data.AggregationBits)
+		assert.DeepEqual(t, hexutil.Encode(sig33), resp.Data.Signatures[0])
+		assert.Equal(t, "2", resp.Data.Data.Slot)
+		assert.Equal(t, "3", resp.Data.Data.CommitteeIndex)
+		assert.DeepEqual(t, hexutil.Encode(root33), resp.Data.Data.BeaconBlockRoot)
+		require.NotNil(t, resp.Data.Data.Source)
+		assert.Equal(t, "1", resp.Data.Data.Source.Epoch)
+		assert.DeepEqual(t, hexutil.Encode(root33), resp.Data.Data.Source.Root)
+		require.NotNil(t, resp.Data.Data.Target)
+		assert.Equal(t, "1", resp.Data.Data.Target.Epoch)
+		assert.DeepEqual(t, hexutil.Encode(root33), resp.Data.Data.Target.Root)
 	})
 	t.Run("no matching attestation", func(t *testing.T) {
 		attDataRoot := hexutil.Encode(bytesutil.PadTo([]byte("foo"), 32))
