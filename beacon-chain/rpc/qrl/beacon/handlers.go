@@ -238,6 +238,9 @@ func (s *Server) validateConsensus(ctx context.Context, blk interfaces.ReadOnlyS
 	if err != nil {
 		return errors.Wrap(err, "could not get parent block")
 	}
+	if err := blocks.BeaconBlockIsNil(parentBlock); err != nil {
+		return errors.Wrap(err, "could not validate parent block")
+	}
 	parentStateRoot := parentBlock.Block().StateRoot()
 	parentState, err := s.Stater.State(ctx, parentStateRoot[:])
 	if err != nil {
