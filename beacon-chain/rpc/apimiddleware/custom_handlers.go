@@ -82,7 +82,7 @@ func handleGetSSZ(
 	req *http.Request,
 	config sszConfig,
 ) (handled bool) {
-	ssz := http2.SszRequested(req)
+	ssz := http2.RespondWithSsz(req)
 	if !ssz {
 		return false
 	}

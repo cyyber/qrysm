@@ -76,7 +76,7 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *http.Request, v1alpha1req *qrysmpb.BlockRequest) {
-	isSSZ := http2.SszRequested(r)
+	isSSZ := http2.RespondWithSsz(r)
 	if !isSSZ {
 		log.Error("Checking for SSZ failed, defaulting to JSON")
 	}

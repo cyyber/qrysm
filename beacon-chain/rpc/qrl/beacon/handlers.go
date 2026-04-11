@@ -53,8 +53,7 @@ func (s *Server) PublishBlindedBlock(w http.ResponseWriter, r *http.Request) {
 	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
-	isSSZ := http2.SszRequested(r)
-	if isSSZ {
+	if http2.IsRequestSsz(r) {
 		s.publishBlindedBlockSSZ(ctx, w, r)
 	} else {
 		s.publishBlindedBlock(ctx, w, r)
@@ -129,8 +128,7 @@ func (s *Server) PublishBlock(w http.ResponseWriter, r *http.Request) {
 	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
-	isSSZ := http2.SszRequested(r)
-	if isSSZ {
+	if http2.IsRequestSsz(r) {
 		s.publishBlockSSZ(ctx, w, r)
 	} else {
 		s.publishBlock(ctx, w, r)
