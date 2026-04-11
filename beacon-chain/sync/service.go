@@ -33,10 +33,12 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/state/stategen"
 	lruwrpr "github.com/theQRL/qrysm/cache/lru"
 	"github.com/theQRL/qrysm/config/params"
+	"github.com/theQRL/qrysm/consensus-types/interfaces"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/runtime"
 	qrysmTime "github.com/theQRL/qrysm/time"
 	"github.com/theQRL/qrysm/time/slots"
+	"github.com/trailofbits/go-mutexasserts"
 )
 
 var _ runtime.Service = (*Service)(nil)
@@ -143,7 +145,7 @@ type Service struct {
 
 // NewService initializes new regular sync service.
 func NewService(ctx context.Context, opts ...Option) *Service {
-	c := gcache.New(pendingBlockExpTime /* exp time */, 2*pendingBlockExpTime /* prune time */)
+	c := gcache.New(pendingBlockExpTime /* exp time */, 0 /* disable janitor */)
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
 		ctx:                  ctx,
@@ -160,6 +162,24 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 			return nil
 		}
 	}
+	r.slotToPendingBlocks.OnEvicted(func(_ string, i interface{}) {
+		if !mutexasserts.RWMutexLocked(&r.pendingQueueLock) {
+			log.Error("pending queue lock is not locked when evicting block from cache")
+			return
+		}
+		blks, ok := i.([]interfaces.ReadOnlySignedBeaconBlock)
+		if !ok {
+			return
+		}
+		for _, blk := range blks {
+			root, err := blk.Block().HashTreeRoot()
+			if err != nil {
+				log.WithError(err).Error("could not hash block")
+				continue
+			}
+			delete(r.seenPendingBlocks, root)
+		}
+	})
 	r.subHandler = newSubTopicHandler()
 	r.rateLimiter = newRateLimiter(r.cfg.p2p)
 	r.initCaches()

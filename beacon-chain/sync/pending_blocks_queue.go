@@ -54,6 +54,9 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "processPendingBlocks")
 	defer span.End()
 
+	// Remove old blocks from our expiration cache.
+	s.deleteExpiredBlocksFromCache()
+
 	pids := s.cfg.p2p.Peers().Connected()
 	if err := s.validatePendingSlots(); err != nil {
 		return errors.Wrap(err, "could not validate pending slots")
@@ -358,6 +361,15 @@ func (s *Service) clearPendingSlots() {
 	defer s.pendingQueueLock.Unlock()
 	s.slotToPendingBlocks.Flush()
 	s.seenPendingBlocks = make(map[[32]byte]bool)
+}
+
+// This method manually clears our cache so that all expired
+// entries are correctly removed.
+func (s *Service) deleteExpiredBlocksFromCache() {
+	s.pendingQueueLock.Lock()
+	defer s.pendingQueueLock.Unlock()
+
+	s.slotToPendingBlocks.DeleteExpired()
 }
 
 // Delete block from the list from the pending queue using the slot as key.
