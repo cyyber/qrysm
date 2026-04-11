@@ -692,8 +692,8 @@ type EventChainReorgJson struct {
 	Slot                string `json:"slot"`
 	Depth               string `json:"depth"`
 	OldHeadBlock        string `json:"old_head_block" hex:"true"`
-	NewHeadBlock        string `json:"old_head_state" hex:"true"`
-	OldHeadState        string `json:"new_head_block" hex:"true"`
+	NewHeadBlock        string `json:"new_head_block" hex:"true"`
+	OldHeadState        string `json:"old_head_state" hex:"true"`
 	NewHeadState        string `json:"new_head_state" hex:"true"`
 	Epoch               string `json:"epoch"`
 	ExecutionOptimistic bool   `json:"execution_optimistic"`
