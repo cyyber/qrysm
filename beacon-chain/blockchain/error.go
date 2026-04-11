@@ -28,6 +28,8 @@ var (
 	// ErrNotCheckpoint is returned when a given checkpoint is not a
 	// checkpoint in any chain known to forkchoice
 	ErrNotCheckpoint = errors.New("not a checkpoint in forkchoice")
+	// errBlockBeingSynced is returned when a block is being synced.
+	errBlockBeingSynced = errors.New("block is being synced")
 )
 
 // An invalid block is the block that fails state transition based on the core protocol rules.
