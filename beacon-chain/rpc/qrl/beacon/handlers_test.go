@@ -879,23 +879,23 @@ func TestGetBlockHeaders(t *testing.T) {
 
 	url := "http://example.com/qrl/v1/beacon/headers"
 
-	t.Run("list headers", func(t *testing.T) {
-		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*qrysmpb.BeaconBlockContainer_ZondBlock).ZondBlock)
-		require.NoError(t, err)
-		mockChainFetcher := &chainMock.ChainService{
-			DB:                  beaconDB,
-			Block:               wsb,
-			Root:                headBlock.BlockRoot,
-			FinalizedCheckPoint: &qrysmpb.Checkpoint{Root: blkContainers[64].BlockRoot},
-			FinalizedRoots:      map[[32]byte]bool{},
-		}
-		bs := &Server{
-			BeaconDB:              beaconDB,
-			ChainInfoFetcher:      mockChainFetcher,
-			OptimisticModeFetcher: mockChainFetcher,
-			FinalizationFetcher:   mockChainFetcher,
-		}
+	wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*qrysmpb.BeaconBlockContainer_ZondBlock).ZondBlock)
+	require.NoError(t, err)
+	mockChainFetcher := &chainMock.ChainService{
+		DB:                  beaconDB,
+		Block:               wsb,
+		Root:                headBlock.BlockRoot,
+		FinalizedCheckPoint: &qrysmpb.Checkpoint{Root: blkContainers[64].BlockRoot},
+		FinalizedRoots:      map[[32]byte]bool{},
+	}
+	bs := &Server{
+		BeaconDB:              beaconDB,
+		ChainInfoFetcher:      mockChainFetcher,
+		OptimisticModeFetcher: mockChainFetcher,
+		FinalizationFetcher:   mockChainFetcher,
+	}
 
+	t.Run("list headers", func(t *testing.T) {
 		tests := []struct {
 			name       string
 			slot       primitives.Slot
@@ -933,6 +933,7 @@ func TestGetBlockHeaders(t *testing.T) {
 				writer.Body = &bytes.Buffer{}
 
 				bs.GetBlockHeaders(writer, request)
+				require.Equal(t, http.StatusOK, writer.Code)
 				resp := &GetBlockHeadersResponse{}
 				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 
@@ -984,6 +985,7 @@ func TestGetBlockHeaders(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 
 		bs.GetBlockHeaders(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
 		resp := &GetBlockHeadersResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
@@ -1027,6 +1029,7 @@ func TestGetBlockHeaders(t *testing.T) {
 			writer.Body = &bytes.Buffer{}
 
 			bs.GetBlockHeaders(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
 			resp := &GetBlockHeadersResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, true, resp.Finalized)
@@ -1040,6 +1043,7 @@ func TestGetBlockHeaders(t *testing.T) {
 			writer.Body = &bytes.Buffer{}
 
 			bs.GetBlockHeaders(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
 			resp := &GetBlockHeadersResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, false, resp.Finalized)
@@ -1052,10 +1056,26 @@ func TestGetBlockHeaders(t *testing.T) {
 			writer.Body = &bytes.Buffer{}
 
 			bs.GetBlockHeaders(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
 			resp := &GetBlockHeadersResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, false, resp.Finalized)
 		})
+	})
+
+	t.Run("no blocks found", func(t *testing.T) {
+		urlWithParams := fmt.Sprintf("%s?parent_root=%s", url, hexutil.Encode(bytes.Repeat([]byte{1}, 32)))
+		request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
+		writer := httptest.NewRecorder()
+
+		writer.Body = &bytes.Buffer{}
+
+		bs.GetBlockHeaders(writer, request)
+		require.Equal(t, http.StatusNotFound, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusNotFound, e.Code)
+		assert.StringContains(t, "No blocks found", e.Message)
 	})
 }
 
