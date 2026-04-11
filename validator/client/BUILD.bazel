@@ -45,6 +45,7 @@ go_library(
         "//crypto/rand",
         "//encoding/bytesutil",
         "//monitoring/tracing",
+        "//network/http",
         "//proto/qrysm/v1alpha1",
         "//proto/qrysm/v1alpha1/slashings",
         "//proto/qrysm/v1alpha1/validator-client",

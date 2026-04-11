@@ -3,14 +3,17 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/theQRL/qrysm/beacon-chain/core/signing"
 	field_params "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
 	"github.com/theQRL/qrysm/monitoring/tracing"
+	httputil "github.com/theQRL/qrysm/network/http"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	validatorpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1/validator-client"
 	qrysmTime "github.com/theQRL/qrysm/time"
@@ -71,11 +74,17 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot primitives
 		SlotSignature:  slotSig,
 	})
 	if err != nil {
+		// handle grpc not found
 		s, ok := status.FromError(err)
-		if ok && s.Code() == codes.NotFound {
+		grpcNotFound := ok && s.Code() == codes.NotFound
+		// handle http not found
+		jsonErr := &httputil.DefaultErrorJson{}
+		httpNotFound := errors.As(err, &jsonErr) && jsonErr.Code == http.StatusNotFound
+
+		if grpcNotFound || httpNotFound {
 			log.WithField("slot", slot).WithError(err).Warn("No attestations to aggregate")
 		} else {
-			log.WithField("slot", slot).WithError(err).Error("Could not submit slot signature to beacon node")
+			log.WithField("slot", slot).WithError(err).Error("Could not submit aggregate selection proof to beacon node")
 			if v.emitAccountMetrics {
 				ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
 			}
