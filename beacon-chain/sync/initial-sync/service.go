@@ -169,10 +169,11 @@ func (s *Service) Resync() error {
 
 	s.waitForMinimumPeers()
 
+	l := log
 	if err = s.roundRobinSync(genesis); err != nil {
-		log = log.WithError(err)
+		l = log.WithError(err)
 	}
-	log.WithField("slot", s.cfg.Chain.HeadSlot()).Info("Resync attempt complete")
+	l.WithField("slot", s.cfg.Chain.HeadSlot()).Info("Resync attempt complete")
 	return nil
 }
 

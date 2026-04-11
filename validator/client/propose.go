@@ -150,7 +150,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		log.WithError(err).Error("Failed to get execution payload")
 		return
 	}
-	log = log.WithFields(logrus.Fields{
+	l := log.WithFields(logrus.Fields{
 		"payloadHash": fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash())),
 		"parentHash":  fmt.Sprintf("%#x", bytesutil.Trunc(p.ParentHash())),
 		"blockNumber": p.BlockNumber,
@@ -161,10 +161,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 			log.WithError(err).Error("Failed to get execution payload transactions")
 			return
 		}
-		log = log.WithField("txCount", len(txs))
+		l = l.WithField("txCount", len(txs))
 	}
 	if p.GasLimit() != 0 {
-		log = log.WithField("gasUtilized", float64(p.GasUsed())/float64(p.GasLimit()))
+		l = l.WithField("gasUtilized", float64(p.GasUsed())/float64(p.GasLimit()))
 	}
 	if !blk.IsBlinded() {
 		withdrawals, err := p.Withdrawals()
@@ -172,12 +172,12 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 			log.WithError(err).Error("Failed to get execution payload withdrawals")
 			return
 		}
-		log = log.WithField("withdrawalCount", len(withdrawals))
+		l = l.WithField("withdrawalCount", len(withdrawals))
 	}
 
 	blkRoot := fmt.Sprintf("%#x", bytesutil.Trunc(blkResp.BlockRoot))
 	graffiti := blk.Block().Body().Graffiti()
-	log.WithFields(logrus.Fields{
+	l.WithFields(logrus.Fields{
 		"slot":            blk.Block().Slot(),
 		"blockRoot":       blkRoot,
 		"numAttestations": len(blk.Block().Body().Attestations()),
