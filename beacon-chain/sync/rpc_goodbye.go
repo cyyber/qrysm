@@ -41,9 +41,10 @@ func (s *Service) goodbyeRPCHandler(_ context.Context, msg any, stream libp2pcor
 		return fmt.Errorf("wrong message type for goodbye, got %T, wanted *uint64", msg)
 	}
 	if err := s.rateLimiter.validateRequest(stream, 1); err != nil {
-		return err
+		log.WithError(err).Warn("Goodbye message from rate-limited peer.")
+	} else {
+		s.rateLimiter.add(stream, 1)
 	}
-	s.rateLimiter.add(stream, 1)
 	log := log.WithField("Reason", goodbyeMessage(*m))
 	log.WithField("peer", stream.Conn().RemotePeer()).Debug("Peer has sent a goodbye message")
 	s.cfg.p2p.Peers().SetNextValidTime(stream.Conn().RemotePeer(), goodByeBackoff(*m))
