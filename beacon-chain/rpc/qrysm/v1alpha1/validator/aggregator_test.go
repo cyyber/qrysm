@@ -76,8 +76,8 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 	s, err := state_native.InitializeFromProtoZond(&qrysmpb.BeaconStateZond{
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Validators: []*qrysmpb.Validator{
-			{PublicKey: pubKey(0)},
-			{PublicKey: pubKey(1)},
+			{PublicKey: pubKey(0), ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+			{PublicKey: pubKey(1), ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 		},
 	})
 	require.NoError(t, err)
