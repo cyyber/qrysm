@@ -675,6 +675,9 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *qrysmpb.DutiesR
 func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fieldparams.MLDSA87PubkeyLength]byte][]iface.ValidatorRole, error) {
 	v.dutiesLock.RLock()
 	defer v.dutiesLock.RUnlock()
+	if v.duties == nil {
+		return nil, errors.New("duties are not initialized")
+	}
 	rolesAt := make(map[[fieldparams.MLDSA87PubkeyLength]byte][]iface.ValidatorRole)
 	for validator, duty := range v.duties.CurrentEpochDuties {
 		var roles []iface.ValidatorRole
