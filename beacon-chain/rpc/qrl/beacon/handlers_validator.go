@@ -70,7 +70,6 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	epoch := slots.ToEpoch(st.Slot())
-	allBalances := st.Balances()
 
 	statuses := r.URL.Query()["status"]
 	for i, ss := range statuses {
@@ -86,11 +85,16 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 				http2.HandleError(w, "Could not get validator status: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
-			if len(ids) == 0 {
-				containers[i] = valContainerFromReadOnlyVal(val, primitives.ValidatorIndex(i), allBalances[i], valStatus)
-			} else {
-				containers[i] = valContainerFromReadOnlyVal(val, ids[i], allBalances[ids[i]], valStatus)
+			id := primitives.ValidatorIndex(i)
+			if len(ids) > 0 {
+				id = ids[i]
 			}
+			balance, err := st.BalanceAtIndex(id)
+			if err != nil {
+				http2.HandleError(w, "Could not get validator balance: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			containers[i] = valContainerFromReadOnlyVal(val, id, balance, valStatus)
 		}
 		resp := &GetValidatorsResponse{
 			Data:                containers,
@@ -123,12 +127,16 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if filteredStatuses[valStatus] || filteredStatuses[valSubStatus] {
-			var container *ValidatorContainer
-			if len(ids) == 0 {
-				container = valContainerFromReadOnlyVal(val, primitives.ValidatorIndex(i), allBalances[i], valSubStatus)
-			} else {
-				container = valContainerFromReadOnlyVal(val, ids[i], allBalances[ids[i]], valSubStatus)
+			id := primitives.ValidatorIndex(i)
+			if len(ids) > 0 {
+				id = ids[i]
 			}
+			balance, err := st.BalanceAtIndex(id)
+			if err != nil {
+				http2.HandleError(w, "Could not get validator balance: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			container := valContainerFromReadOnlyVal(val, id, balance, valSubStatus)
 			valContainers = append(valContainers, container)
 		}
 	}
