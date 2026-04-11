@@ -401,6 +401,12 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interface
 		return errors.Wrapf(err, "could not save block from slot %d", b.Block().Slot())
 	}
 	if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
+		// Do not use parent context in the event it deadlined.
+		ctx = trace.NewContext(context.Background(), span)
+		log.Warnf("Rolling back insertion of block with root %#x", r)
+		if deleteErr := s.cfg.BeaconDB.DeleteBlock(ctx, r); deleteErr != nil {
+			log.WithError(deleteErr).Errorf("Could not delete block with block root %#x", r)
+		}
 		return errors.Wrap(err, "could not save state")
 	}
 	return nil
