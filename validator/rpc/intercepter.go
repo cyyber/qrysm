@@ -47,7 +47,11 @@ func (s *Server) authorize(ctx context.Context) error {
 	if len(authHeader) < 1 || !strings.Contains(authHeader[0], "Bearer ") {
 		return status.Error(codes.Unauthenticated, "Invalid auth header, needs Bearer {token}")
 	}
-	token := strings.Split(authHeader[0], "Bearer ")[1]
+	tokenParts := strings.Split(authHeader[0], "Bearer ")
+	if len(tokenParts) != 2 {
+		return status.Error(codes.Unauthenticated, "Invalid token format")
+	}
+	token := tokenParts[1]
 	_, err := jwt.Parse(token, s.validateJWT)
 	if err != nil {
 		return status.Errorf(codes.Unauthenticated, "Could not parse JWT token: %v", err)

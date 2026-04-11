@@ -68,6 +68,54 @@ func TestServer_JWTInterceptor_InvalidSigningType(t *testing.T) {
 	require.ErrorContains(t, "unexpected JWT signing method", err)
 }
 
+func TestServer_JWTInterceptor_InvalidTokenFormat(t *testing.T) {
+	s := Server{
+		jwtSecret: []byte("testKey"),
+	}
+	interceptor := s.JWTInterceptor()
+
+	unaryInfo := &grpc.UnaryServerInfo{
+		FullMethod: "Proto.CreateWallet",
+	}
+	unaryHandler := func(ctx context.Context, req any) (any, error) {
+		return nil, nil
+	}
+	token, err := createTokenString(s.jwtSecret)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name      string
+		authValue string
+		wantErr   string
+	}{
+		{
+			name:      "no space after Bearer",
+			authValue: "Bearer" + token,
+			wantErr:   "Invalid auth header",
+		},
+		{
+			name:      "no Bearer prefix",
+			authValue: token,
+			wantErr:   "Invalid auth header",
+		},
+		{
+			name:      "multiple Bearer splits",
+			authValue: "Bearer " + token[:2] + " Bearer " + token[2:],
+			wantErr:   "Invalid token format",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctxMD := map[string][]string{
+				"authorization": {tt.authValue},
+			}
+			ctx := metadata.NewIncomingContext(context.Background(), ctxMD)
+			_, err := interceptor(ctx, "xyz", unaryInfo, unaryHandler)
+			require.ErrorContains(t, tt.wantErr, err)
+		})
+	}
+}
+
 func createTokenString(jwtKey []byte) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{})
 	// Sign and get the complete encoded token as a string using the secret
