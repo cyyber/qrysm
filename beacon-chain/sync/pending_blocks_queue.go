@@ -168,22 +168,28 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			default:
 			}
 
-			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
+			// Calculate the deadline time by adding three slots duration to the current time.
+			secondsPerSlot := params.BeaconConfig().SecondsPerSlot
+			threeSlotDuration := 3 * time.Duration(secondsPerSlot) * time.Second
+			ctxWithTimeout, cancelFunction := context.WithTimeout(ctx, threeSlotDuration)
+			if err := s.cfg.chain.ReceiveBlock(ctxWithTimeout, b, blkRoot); err != nil {
 				if blockchain.IsInvalidBlock(err) {
 					r := blockchain.InvalidBlockRoot(err)
 					if r != [32]byte{} {
-						s.setBadBlock(ctx, r) // Setting head block as bad.
+						s.setBadBlock(ctxWithTimeout, r) // Setting head block as bad.
 					} else {
-						s.setBadBlock(ctx, blkRoot)
+						s.setBadBlock(ctxWithTimeout, blkRoot)
 					}
 				}
 				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not process block")
 
 				// In the next iteration of the queue, this block will be removed from
 				// the pending queue as it has been marked as a 'bad' block.
+				cancelFunction()
 				span.End()
 				continue
 			}
+			cancelFunction()
 
 			s.setSeenBlockIndexSlot(b.Block().Slot(), b.Block().ProposerIndex())
 
