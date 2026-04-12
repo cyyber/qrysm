@@ -250,7 +250,7 @@ func filterSlashablePubKeysFromBlocks(_ context.Context, historyByPubKey map[[fi
 		seenSigningRootsBySlot := make(map[primitives.Slot][]byte)
 		for _, blk := range proposals.Proposals {
 			if signingRoot, ok := seenSigningRootsBySlot[blk.Slot]; ok {
-				if signingRoot == nil || !bytes.Equal(signingRoot, blk.SigningRoot) {
+				if len(signingRoot) == 0 || len(blk.SigningRoot) == 0 || !bytes.Equal(signingRoot, blk.SigningRoot) {
 					slashablePubKeys = append(slashablePubKeys, pubKey)
 					break
 				}
@@ -321,17 +321,18 @@ func transformSignedBlocks(_ context.Context, signedBlocks []*format.SignedBlock
 		if err != nil {
 			return nil, fmt.Errorf("%s is not a valid slot: %w", proposal.Slot, err)
 		}
-		var signingRoot [32]byte
 		// Signing roots are optional in the standard JSON file.
+		var signingRoot []byte
 		if proposal.SigningRoot != "" {
-			signingRoot, err = RootFromHex(proposal.SigningRoot)
+			root, err := RootFromHex(proposal.SigningRoot)
 			if err != nil {
 				return nil, fmt.Errorf("%s is not a valid root: %w", proposal.SigningRoot, err)
 			}
+			signingRoot = root[:]
 		}
 		proposals[i] = kv.Proposal{
 			Slot:        slot,
-			SigningRoot: signingRoot[:],
+			SigningRoot: signingRoot,
 		}
 	}
 	return &kv.ProposalHistoryForPubkey{
