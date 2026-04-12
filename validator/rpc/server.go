@@ -72,7 +72,8 @@ type Server struct {
 	withKey                   string
 	credentialError           error
 	grpcServer                *grpc.Server
-	jwtSecret                 []byte
+	authToken                 string
+	authTokenPath             string
 	validatorService          *client.ValidatorService
 	syncChecker               client.SyncChecker
 	genesisFetcher            client.GenesisFetcher
@@ -122,6 +123,12 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 
 // Start the gRPC server.
 func (s *Server) Start() {
+	if err := s.initializeAuthToken(); err != nil {
+		s.credentialError = err
+		log.WithError(err).Error("Could not initialize validator auth token")
+		return
+	}
+
 	// Setup the gRPC server options and TLS configuration.
 	address := fmt.Sprintf("%s:%s", s.host, s.port)
 	lis, err := net.Listen("tcp", address)
@@ -131,7 +138,7 @@ func (s *Server) Start() {
 	s.listener = lis
 
 	// Register interceptors for metrics gathering as well as our
-	// own, custom JWT unary interceptor.
+	// auth token unary interceptor.
 	opts := []grpc.ServerOption{
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
@@ -140,7 +147,7 @@ func (s *Server) Start() {
 			),
 			grpcprometheus.UnaryServerInterceptor,
 			grpcopentracing.UnaryServerInterceptor(),
-			s.JWTInterceptor(),
+			s.AuthTokenInterceptor(),
 		)),
 	}
 	grpcprometheus.EnableHandlingTimeHistogram()

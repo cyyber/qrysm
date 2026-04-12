@@ -4,15 +4,20 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/gorilla/mux"
 	logtest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/theQRL/go-qrl/common"
 	"github.com/theQRL/go-qrl/common/hexutil"
+	gatewaymiddleware "github.com/theQRL/qrysm/api/gateway/apimiddleware"
 	"github.com/theQRL/qrysm/cmd/validator/flags"
 	field_params "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
@@ -25,6 +30,7 @@ import (
 	"github.com/theQRL/qrysm/validator/db/iface"
 	dbTest "github.com/theQRL/qrysm/validator/db/testing"
 	"github.com/theQRL/qrysm/validator/keymanager"
+	validatormiddleware "github.com/theQRL/qrysm/validator/rpc/apimiddleware"
 	"github.com/urfave/cli/v2"
 )
 
@@ -64,6 +70,100 @@ func TestNode_Builds(t *testing.T) {
 	require.NoError(t, err, "Failed to create ValidatorClient")
 	err = valClient.db.Close()
 	require.NoError(t, err)
+}
+
+func TestValidatorGateway_KeymanagerAliasesRequireSameAuth(t *testing.T) {
+	t.Parallel()
+
+	router := mux.NewRouter()
+	apiMiddleware := &gatewaymiddleware.ApiProxyMiddleware{
+		GatewayAddress:  "validator.example",
+		EndpointCreator: &validatormiddleware.ValidatorEndpointFactory{},
+		Timeout:         time.Second,
+		ProxyClient: &http.Client{
+			Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+				require.Equal(t, "http", r.URL.Scheme)
+				require.Equal(t, "validator.example", r.URL.Host)
+				require.Equal(t, "/internal/qrl/v1/keystores", r.URL.Path)
+
+				statusCode := http.StatusOK
+				body := `{"data":[]}`
+				if r.Header.Get("Authorization") == "" {
+					statusCode = http.StatusUnauthorized
+					body = `{"message":"Unauthorized","code":401}`
+				}
+
+				return &http.Response{
+					StatusCode: statusCode,
+					Header:     make(http.Header),
+					Body:       io.NopCloser(strings.NewReader(body)),
+				}, nil
+			}),
+		},
+	}
+	apiMiddleware.Run(router)
+	router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if strings.HasPrefix(req.URL.Path, "/api/qrl/") {
+			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
+			apiMiddleware.ServeHTTP(w, req)
+			return
+		}
+	})
+
+	tests := []struct {
+		name       string
+		path       string
+		authHeader string
+		wantCode   int
+		wantBody   string
+	}{
+		{
+			name:     "direct keymanager route without auth",
+			path:     "/qrl/v1/keystores",
+			wantCode: http.StatusUnauthorized,
+			wantBody: "Unauthorized",
+		},
+		{
+			name:     "api-prefixed keymanager route without auth",
+			path:     "/api/qrl/v1/keystores",
+			wantCode: http.StatusUnauthorized,
+			wantBody: "Unauthorized",
+		},
+		{
+			name:       "direct keymanager route with auth",
+			path:       "/qrl/v1/keystores",
+			authHeader: "Bearer test-token",
+			wantCode:   http.StatusOK,
+			wantBody:   `"data":[]`,
+		},
+		{
+			name:       "api-prefixed keymanager route with auth",
+			path:       "/api/qrl/v1/keystores",
+			authHeader: "Bearer test-token",
+			wantCode:   http.StatusOK,
+			wantBody:   `"data":[]`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "http://example.com"+tt.path, nil)
+			if tt.authHeader != "" {
+				req.Header.Set("Authorization", tt.authHeader)
+			}
+			rr := httptest.NewRecorder()
+			router.ServeHTTP(rr, req)
+
+			require.Equal(t, tt.wantCode, rr.Code)
+			assert.Equal(t, true, strings.Contains(rr.Body.String(), tt.wantBody))
+		})
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }
 
 // TestClearDB tests clearing the database

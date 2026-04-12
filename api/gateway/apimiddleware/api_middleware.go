@@ -16,6 +16,7 @@ type ApiProxyMiddleware struct {
 	GatewayAddress  string
 	EndpointCreator EndpointFactory
 	Timeout         time.Duration
+	ProxyClient     *http.Client
 	router          *mux.Router
 }
 

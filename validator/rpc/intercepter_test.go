@@ -2,19 +2,19 @@ package rpc
 
 import (
 	"context"
+	"strings"
 	"testing"
 
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/theQRL/qrysm/testing/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
-func TestServer_JWTInterceptor_Verify(t *testing.T) {
+func TestServer_AuthTokenInterceptor_Verify(t *testing.T) {
 	s := Server{
-		jwtSecret: []byte("testKey"),
+		authToken: testAuthToken(),
 	}
-	interceptor := s.JWTInterceptor()
+	interceptor := s.AuthTokenInterceptor()
 
 	unaryInfo := &grpc.UnaryServerInfo{
 		FullMethod: "Proto.CreateWallet",
@@ -22,22 +22,20 @@ func TestServer_JWTInterceptor_Verify(t *testing.T) {
 	unaryHandler := func(ctx context.Context, req any) (any, error) {
 		return nil, nil
 	}
-	token, err := createTokenString(s.jwtSecret)
-	require.NoError(t, err)
 	ctxMD := map[string][]string{
-		"authorization": {"Bearer " + token},
+		"authorization": {"Bearer " + s.authToken},
 	}
 	ctx := context.Background()
 	ctx = metadata.NewIncomingContext(ctx, ctxMD)
-	_, err = interceptor(ctx, "xyz", unaryInfo, unaryHandler)
+	_, err := interceptor(ctx, "xyz", unaryInfo, unaryHandler)
 	require.NoError(t, err)
 }
 
-func TestServer_JWTInterceptor_BadToken(t *testing.T) {
+func TestServer_AuthTokenInterceptor_BadToken(t *testing.T) {
 	s := Server{
-		jwtSecret: []byte("testKey"),
+		authToken: testAuthToken(),
 	}
-	interceptor := s.JWTInterceptor()
+	interceptor := s.AuthTokenInterceptor()
 
 	unaryInfo := &grpc.UnaryServerInfo{
 		FullMethod: "Proto.CreateWallet",
@@ -46,33 +44,18 @@ func TestServer_JWTInterceptor_BadToken(t *testing.T) {
 		return nil, nil
 	}
 
-	badServer := Server{
-		jwtSecret: []byte("badTestKey"),
-	}
-	token, err := createTokenString(badServer.jwtSecret)
-	require.NoError(t, err)
 	ctxMD := map[string][]string{
-		"authorization": {"Bearer " + token},
+		"authorization": {"Bearer " + badAuthToken()},
 	}
 	ctx := context.Background()
 	ctx = metadata.NewIncomingContext(ctx, ctxMD)
-	_, err = interceptor(ctx, "xyz", unaryInfo, unaryHandler)
-	require.ErrorContains(t, "signature is invalid", err)
+	_, err := interceptor(ctx, "xyz", unaryInfo, unaryHandler)
+	require.ErrorContains(t, "Invalid auth token", err)
 }
 
-func TestServer_JWTInterceptor_InvalidSigningType(t *testing.T) {
-	ss := &Server{jwtSecret: make([]byte, 32)}
-	// Use a different signing type than the expected, HMAC.
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.RegisteredClaims{})
-	_, err := ss.validateJWT(token)
-	require.ErrorContains(t, "unexpected JWT signing method", err)
-}
-
-func TestServer_JWTInterceptor_InvalidTokenFormat(t *testing.T) {
-	s := Server{
-		jwtSecret: []byte("testKey"),
-	}
-	interceptor := s.JWTInterceptor()
+func TestServer_AuthTokenInterceptor_NotInitialized(t *testing.T) {
+	s := Server{}
+	interceptor := s.AuthTokenInterceptor()
 
 	unaryInfo := &grpc.UnaryServerInfo{
 		FullMethod: "Proto.CreateWallet",
@@ -80,8 +63,26 @@ func TestServer_JWTInterceptor_InvalidTokenFormat(t *testing.T) {
 	unaryHandler := func(ctx context.Context, req any) (any, error) {
 		return nil, nil
 	}
-	token, err := createTokenString(s.jwtSecret)
-	require.NoError(t, err)
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.MD{
+		"authorization": {"Bearer " + testAuthToken()},
+	})
+	_, err := interceptor(ctx, "xyz", unaryInfo, unaryHandler)
+	require.ErrorContains(t, "Authorization token is not initialized", err)
+}
+
+func TestServer_AuthTokenInterceptor_InvalidTokenFormat(t *testing.T) {
+	s := Server{
+		authToken: testAuthToken(),
+	}
+	interceptor := s.AuthTokenInterceptor()
+
+	unaryInfo := &grpc.UnaryServerInfo{
+		FullMethod: "Proto.CreateWallet",
+	}
+	unaryHandler := func(ctx context.Context, req any) (any, error) {
+		return nil, nil
+	}
+	token := s.authToken
 
 	tests := []struct {
 		name      string
@@ -116,12 +117,10 @@ func TestServer_JWTInterceptor_InvalidTokenFormat(t *testing.T) {
 	}
 }
 
-func createTokenString(jwtKey []byte) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{})
-	// Sign and get the complete encoded token as a string using the secret
-	tokenString, err := token.SignedString(jwtKey)
-	if err != nil {
-		return "", err
-	}
-	return tokenString, nil
+func testAuthToken() string {
+	return "0x" + strings.Repeat("11", 32)
+}
+
+func badAuthToken() string {
+	return "0x" + strings.Repeat("22", 32)
 }

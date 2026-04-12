@@ -3,6 +3,7 @@ load("@qrysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "rpc",
     srcs = [
+        "auth_token.go",
         "intercepter.go",
         "log.go",
         "server.go",
@@ -15,12 +16,14 @@ go_library(
         "//validator:__subpackages__",
     ],
     deps = [
+        "//api",
         "//async/event",
         "//config/fieldparams",
         "//config/params",
         "//config/validator/service",
         "//consensus-types/validator",
         "//encoding/bytesutil",
+        "//io/file",
         "//io/logs",
         "//monitoring/tracing",
         "//proto/qrl/service",
@@ -33,7 +36,6 @@ go_library(
         "//validator/keymanager",
         "//validator/slashing-protection-history",
         "//validator/slashing-protection-history/format",
-        "@com_github_golang_jwt_jwt_v4//:jwt",
         "@com_github_grpc_ecosystem_go_grpc_middleware//:go-grpc-middleware",
         "@com_github_grpc_ecosystem_go_grpc_middleware//recovery",
         "@com_github_grpc_ecosystem_go_grpc_middleware//tracing/opentracing",
@@ -56,12 +58,14 @@ go_library(
 go_test(
     name = "rpc_test",
     srcs = [
+        "auth_token_test.go",
         "intercepter_test.go",
         "slashing_test.go",
         "standard_api_test.go",
     ],
     embed = [":rpc"],
     deps = [
+        "//api",
         "//cmd/validator/flags",
         "//config/fieldparams",
         "//config/params",
@@ -87,7 +91,6 @@ go_test(
         "//validator/keymanager/local",
         "//validator/slashing-protection-history/format",
         "//validator/testing",
-        "@com_github_golang_jwt_jwt_v4//:jwt",
         "@com_github_golang_mock//gomock",
         "@com_github_google_uuid//:uuid",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime",
