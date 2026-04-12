@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/theQRL/qrysm/api"
@@ -17,8 +18,8 @@ type jsonRestHandler interface {
 }
 
 type beaconApiJsonRestHandler struct {
-	httpClient http.Client
-	host       string
+	timeout time.Duration
+	host    string
 }
 
 // GetRestJsonResponse sends a GET requests to apiEndpoint and decodes the response body as a JSON object into responseJson.
@@ -31,13 +32,19 @@ func (c beaconApiJsonRestHandler) GetRestJsonResponse(ctx context.Context, apiEn
 		return nil, errors.New("responseJson is nil")
 	}
 
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, c.timeout)
+		defer cancel()
+	}
+
 	url := c.host + apiEndpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create request with context")
 	}
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to query REST API %s", url)
 	}
@@ -58,6 +65,12 @@ func (c beaconApiJsonRestHandler) PostRestJson(ctx context.Context, apiEndpoint 
 		return nil, errors.New("POST data is nil")
 	}
 
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, c.timeout)
+		defer cancel()
+	}
+
 	url := c.host + apiEndpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, data)
 	if err != nil {
@@ -69,7 +82,7 @@ func (c beaconApiJsonRestHandler) PostRestJson(ctx context.Context, apiEndpoint 
 	}
 	req.Header.Set("Content-Type", api.JsonMediaType)
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to send POST data to REST endpoint %s", url)
 	}

@@ -2,7 +2,6 @@ package beacon_api
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	"github.com/pkg/errors"
@@ -24,8 +23,8 @@ type beaconApiValidatorClient struct {
 
 func NewBeaconApiValidatorClient(host string, timeout time.Duration) iface.ValidatorClient {
 	jsonRestHandler := beaconApiJsonRestHandler{
-		httpClient: http.Client{Timeout: timeout},
-		host:       host,
+		timeout: timeout,
+		host:    host,
 	}
 
 	return &beaconApiValidatorClient{

@@ -45,8 +45,8 @@ func TestGetRestJsonResponse_Valid(t *testing.T) {
 	defer server.Close()
 
 	jsonRestHandler := beaconApiJsonRestHandler{
-		httpClient: http.Client{Timeout: time.Second * 5},
-		host:       server.URL,
+		timeout: time.Second * 5,
+		host:    server.URL,
 	}
 
 	responseJson := &beacon.GetGenesisResponse{}
@@ -150,8 +150,8 @@ func TestGetRestJsonResponse_Error(t *testing.T) {
 			ctx := context.Background()
 
 			jsonRestHandler := beaconApiJsonRestHandler{
-				httpClient: http.Client{Timeout: testCase.timeout},
-				host:       server.URL,
+				timeout: testCase.timeout,
+				host:    server.URL,
 			}
 			errorJson, err := jsonRestHandler.GetRestJsonResponse(ctx, endpoint, testCase.responseJson)
 			assert.ErrorContains(t, testCase.expectedErrorMessage, err)
@@ -226,8 +226,8 @@ func TestPostRestJson_Valid(t *testing.T) {
 			ctx := context.Background()
 
 			jsonRestHandler := beaconApiJsonRestHandler{
-				httpClient: http.Client{Timeout: time.Second * 5},
-				host:       server.URL,
+				timeout: time.Second * 5,
+				host:    server.URL,
 			}
 
 			_, err := jsonRestHandler.PostRestJson(
@@ -345,8 +345,8 @@ func TestPostRestJson_Error(t *testing.T) {
 			ctx := context.Background()
 
 			jsonRestHandler := beaconApiJsonRestHandler{
-				httpClient: http.Client{Timeout: testCase.timeout},
-				host:       server.URL,
+				timeout: testCase.timeout,
+				host:    server.URL,
 			}
 
 			errorJson, err := jsonRestHandler.PostRestJson(
@@ -377,8 +377,8 @@ func TestJsonHandler_ContextError(t *testing.T) {
 	cancel()
 
 	jsonRestHandler := beaconApiJsonRestHandler{
-		httpClient: http.Client{},
-		host:       server.URL,
+		timeout: time.Second * 30,
+		host:    server.URL,
 	}
 
 	_, err := jsonRestHandler.PostRestJson(
@@ -398,6 +398,83 @@ func TestJsonHandler_ContextError(t *testing.T) {
 	)
 
 	assert.ErrorContains(t, context.Canceled.Error(), err)
+}
+
+func TestGetRestJsonResponse_ContextDeadlineOverridesDefaultTimeout(t *testing.T) {
+	genesisJSON := &beacon.GetGenesisResponse{
+		Data: &beacon.Genesis{
+			GenesisTime:           "123",
+			GenesisValidatorsRoot: "0x456",
+			GenesisForkVersion:    "0x789",
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	jsonRestHandler := beaconApiJsonRestHandler{
+		timeout: 5 * time.Millisecond,
+		host:    "http://example.com",
+	}
+
+	restoreDefaultClient := setDefaultClient(&http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			time.Sleep(20 * time.Millisecond)
+			return jsonHTTPResponse(req, genesisJSON), nil
+		}),
+	})
+	defer restoreDefaultClient()
+
+	responseJSON := &beacon.GetGenesisResponse{}
+	_, err := jsonRestHandler.GetRestJsonResponse(ctx, "/example/rest/api/endpoint", responseJSON)
+	require.NoError(t, err)
+	assert.DeepEqual(t, genesisJSON, responseJSON)
+}
+
+func TestPostRestJson_ContextDeadlineOverridesDefaultTimeout(t *testing.T) {
+	dataBytes := []byte{1, 2, 3, 4, 5}
+
+	genesisJSON := &beacon.GetGenesisResponse{
+		Data: &beacon.Genesis{
+			GenesisTime:           "123",
+			GenesisValidatorsRoot: "0x456",
+			GenesisForkVersion:    "0x789",
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	jsonRestHandler := beaconApiJsonRestHandler{
+		timeout: 5 * time.Millisecond,
+		host:    "http://example.com",
+	}
+
+	restoreDefaultClient := setDefaultClient(&http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			time.Sleep(20 * time.Millisecond)
+
+			receivedBytes := make([]byte, len(dataBytes))
+			numBytes, err := req.Body.Read(receivedBytes)
+			assert.Equal(t, io.EOF, err)
+			assert.Equal(t, len(dataBytes), numBytes)
+			assert.DeepEqual(t, dataBytes, receivedBytes)
+
+			return jsonHTTPResponse(req, genesisJSON), nil
+		}),
+	})
+	defer restoreDefaultClient()
+
+	responseJSON := &beacon.GetGenesisResponse{}
+	_, err := jsonRestHandler.PostRestJson(
+		ctx,
+		"/example/rest/api/endpoint",
+		map[string]string{},
+		bytes.NewBuffer(dataBytes),
+		responseJSON,
+	)
+	require.NoError(t, err)
+	assert.DeepEqual(t, genesisJSON, responseJSON)
 }
 
 func httpErrorJsonHandler(statusCode int, errorMessage string) func(w http.ResponseWriter, r *http.Request) {
@@ -425,6 +502,34 @@ func invalidJsonErrHandler(w http.ResponseWriter, _ *http.Request) {
 	_, err := w.Write([]byte("foo"))
 	if err != nil {
 		panic(err)
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func setDefaultClient(client *http.Client) func() {
+	oldClient := http.DefaultClient
+	http.DefaultClient = client
+	return func() {
+		http.DefaultClient = oldClient
+	}
+}
+
+func jsonHTTPResponse(req *http.Request, responseJSON any) *http.Response {
+	bodyBytes, err := json.Marshal(responseJSON)
+	if err != nil {
+		panic(err)
+	}
+
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(bytes.NewReader(bodyBytes)),
+		Header:     make(http.Header),
+		Request:    req,
 	}
 }
 

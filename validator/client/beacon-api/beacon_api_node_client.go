@@ -2,7 +2,6 @@ package beacon_api
 
 import (
 	"context"
-	"net/http"
 	"strconv"
 	"time"
 
@@ -101,8 +100,8 @@ func (c *beaconApiNodeClient) ListPeers(ctx context.Context, in *emptypb.Empty) 
 
 func NewNodeClientWithFallback(host string, timeout time.Duration, fallbackClient iface.NodeClient) iface.NodeClient {
 	jsonRestHandler := beaconApiJsonRestHandler{
-		httpClient: http.Client{Timeout: timeout},
-		host:       host,
+		timeout: timeout,
+		host:    host,
 	}
 
 	return &beaconApiNodeClient{

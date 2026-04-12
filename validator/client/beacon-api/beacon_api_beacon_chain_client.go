@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"net/http"
 	"reflect"
 	"strconv"
 	"time"
@@ -339,8 +338,8 @@ func (c beaconApiBeaconChainClient) GetValidatorPerformance(ctx context.Context,
 
 func NewBeaconApiBeaconChainClientWithFallback(host string, timeout time.Duration, fallbackClient iface.BeaconChainClient) iface.BeaconChainClient {
 	jsonRestHandler := beaconApiJsonRestHandler{
-		httpClient: http.Client{Timeout: timeout},
-		host:       host,
+		timeout: timeout,
+		host:    host,
 	}
 
 	return &beaconApiBeaconChainClient{
