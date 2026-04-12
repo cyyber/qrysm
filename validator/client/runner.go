@@ -36,15 +36,15 @@ func run(ctx context.Context, v iface.Validator) {
 	cleanup := v.Done
 	defer cleanup()
 
-	headSlot, err := initializeValidatorAndGetHeadSlot(ctx, v)
+	currentSlot, err := initializeValidatorAndGetCurrentSlot(ctx, v)
 	if err != nil {
 		return // Exit if context is canceled.
 	}
 
 	connectionErrorChannel := make(chan error, 1)
 	go v.ReceiveBlocks(ctx, connectionErrorChannel)
-	if err := v.UpdateDuties(ctx, headSlot); err != nil {
-		handleAssignmentError(err, headSlot)
+	if err := v.UpdateDuties(ctx, currentSlot); err != nil {
+		handleAssignmentError(err, currentSlot)
 	}
 
 	accountsChangedChan := make(chan [][field_params.MLDSA87PubkeyLength]byte, 1)
@@ -59,7 +59,7 @@ func run(ctx context.Context, v iface.Validator) {
 		log.Infof("Validator client started with provided proposer settings that sets options such as fee recipient"+
 			" and will periodically update the beacon node and custom builder (if --%s)", flags.EnableBuilderFlag.Name)
 		deadline := time.Now().Add(5 * time.Minute)
-		if err := v.PushProposerSettings(ctx, km, headSlot, deadline); err != nil {
+		if err := v.PushProposerSettings(ctx, km, currentSlot, deadline); err != nil {
 			if errors.Is(err, ErrBuilderValidatorRegistration) {
 				log.WithError(err).Warn("Push proposer settings error")
 			} else {
@@ -154,17 +154,16 @@ func onAccountsChanged(ctx context.Context, v iface.Validator, current [][field_
 	}
 }
 
-func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (primitives.Slot, error) {
+func initializeValidatorAndGetCurrentSlot(ctx context.Context, v iface.Validator) (primitives.Slot, error) {
 	ticker := time.NewTicker(backOffPeriod)
 	defer ticker.Stop()
 
-	var headSlot primitives.Slot
 	firstTime := true
 	for {
 		if !firstTime {
 			if ctx.Err() != nil {
 				log.Info("Context canceled, stopping validator")
-				return headSlot, errors.New("context canceled")
+				return 0, errors.New("context canceled")
 			}
 			<-ticker.C
 		} else {
@@ -198,15 +197,6 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 		if err != nil {
 			log.WithError(err).Fatal("Could not wait for validator activation")
 		}
-
-		headSlot, err = v.CanonicalHeadSlot(ctx)
-		if isConnectionError(err) {
-			log.WithError(err).Warn("Could not get current canonical head slot")
-			continue
-		}
-		if err != nil {
-			log.WithError(err).Fatal("Could not get current canonical head slot")
-		}
 		err = v.CheckDoppelGanger(ctx)
 		if isConnectionError(err) {
 			log.WithError(err).Warn("Could not wait for checking doppelganger")
@@ -217,7 +207,7 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 		}
 		break
 	}
-	return headSlot, nil
+	return slots.CurrentSlot(v.GenesisTime()), nil
 }
 
 func performRoles(slotCtx context.Context, allRoles map[[field_params.MLDSA87PubkeyLength]byte][]iface.ValidatorRole, v iface.Validator, slot primitives.Slot, wg *sync.WaitGroup, span *trace.Span) {

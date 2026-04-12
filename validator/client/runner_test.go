@@ -16,6 +16,7 @@ import (
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
+	"github.com/theQRL/qrysm/time/slots"
 	"github.com/theQRL/qrysm/validator/client/iface"
 	"github.com/theQRL/qrysm/validator/client/testutil"
 )
@@ -51,11 +52,10 @@ func TestRetry_On_ConnectionError(t *testing.T) {
 	// the time it takes for all steps to succeed before main loop.
 	time.Sleep(time.Duration(retry*6) * backOffPeriod)
 	cancel()
-	// every call will fail retry=10 times so first one will be called 4 * retry=10.
-	assert.Equal(t, retry*3, v.WaitForChainStartCalled, "Expected WaitForChainStart() to be called")
-	assert.Equal(t, retry*2, v.WaitForSyncCalled, "Expected WaitForSync() to be called")
-	assert.Equal(t, retry, v.WaitForActivationCalled, "Expected WaitForActivation() to be called")
-	assert.Equal(t, retry, v.CanonicalHeadSlotCalled, "Expected WaitForActivation() to be called")
+	assert.Equal(t, retry*2+1, v.WaitForChainStartCalled, "Expected WaitForChainStart() to be called")
+	assert.Equal(t, retry+1, v.WaitForSyncCalled, "Expected WaitForSync() to be called")
+	assert.Equal(t, 1, v.WaitForActivationCalled, "Expected WaitForActivation() to be called")
+	assert.Equal(t, 0, v.CanonicalHeadSlotCalled, "Expected CanonicalHeadSlot() not to be called")
 	assert.Equal(t, retry, v.ReceiveBlocksCalled, "Expected WaitForActivation() to be called")
 }
 
@@ -63,6 +63,28 @@ func TestCancelledContext_WaitsForActivation(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	run(cancelledContext(), v)
 	assert.Equal(t, 1, v.WaitForActivationCalled, "Expected WaitForActivation() to be called")
+}
+
+func TestRun_UsesCurrentSlotAfterActivation(t *testing.T) {
+	genesisTime := uint64(time.Now().Add(time.Second).Unix())
+	v := &testutil.FakeValidator{
+		Km:       &mockKeymanager{accountsChangedFeed: &event.Feed{}},
+		GenesisT: genesisTime,
+	}
+	require.NoError(t, v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{}))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		cancel()
+	}()
+
+	run(ctx, v)
+
+	expectedSlot := uint64(slots.CurrentSlot(genesisTime))
+	assert.Equal(t, expectedSlot, v.UpdateDutiesArg1, "Expected initial UpdateDuties() to use the current slot")
+	assert.Equal(t, expectedSlot, v.PushProposerSettingsArg1, "Expected initial PushProposerSettings() to use the current slot")
+	assert.Equal(t, 0, v.CanonicalHeadSlotCalled, "Expected CanonicalHeadSlot() not to be called")
 }
 
 func TestUpdateDuties_NextSlot(t *testing.T) {

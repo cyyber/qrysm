@@ -99,6 +99,10 @@ func (_ *MockValidator) Done() {
 	panic("implement me")
 }
 
+func (_ *MockValidator) GenesisTime() uint64 {
+	panic("implement me")
+}
+
 func (_ *MockValidator) WaitForChainStart(_ context.Context) error {
 	panic("implement me")
 }

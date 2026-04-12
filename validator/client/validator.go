@@ -110,6 +110,10 @@ type validatorStatus struct {
 	index     primitives.ValidatorIndex
 }
 
+func (v *validator) GenesisTime() uint64 {
+	return v.genesisTime
+}
+
 // Done cleans up the validator.
 func (v *validator) Done() {
 	v.ticker.Done()

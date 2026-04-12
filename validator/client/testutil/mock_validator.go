@@ -38,11 +38,14 @@ type FakeValidator struct {
 	WaitForActivationCalled           int
 	CanonicalHeadSlotCalled           int
 	ReceiveBlocksCalled               int
+	PushProposerSettingsCalled        int
 	RetryTillSuccess                  int
 	ProposeBlockArg1                  uint64
 	AttestToBlockHeadArg1             uint64
 	RoleAtArg1                        uint64
 	UpdateDutiesArg1                  uint64
+	PushProposerSettingsArg1          uint64
+	GenesisT                          uint64
 	NextSlotRet                       <-chan primitives.Slot
 	PublicKey                         string
 	UpdateDutiesRet                   error
@@ -60,6 +63,10 @@ type FakeValidator struct {
 // Done for mocking.
 func (fv *FakeValidator) Done() {
 	fv.DoneCalled = true
+}
+
+func (fv *FakeValidator) GenesisTime() uint64 {
+	return fv.GenesisT
 }
 
 // WaitForKeymanagerInitialization for mocking.
@@ -247,6 +254,8 @@ func (*FakeValidator) HasProposerSettings() bool {
 
 // PushProposerSettings for mocking
 func (fv *FakeValidator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot, deadline time.Time) error {
+	fv.PushProposerSettingsCalled++
+	fv.PushProposerSettingsArg1 = uint64(slot)
 	nctx, cancel := context.WithDeadline(ctx, deadline)
 	ctx = nctx
 	defer cancel()
