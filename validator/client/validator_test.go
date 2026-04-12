@@ -35,6 +35,7 @@ import (
 	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/testing/util"
 	validatormock "github.com/theQRL/qrysm/testing/validator-mock"
+	"github.com/theQRL/qrysm/time/slots"
 	"github.com/theQRL/qrysm/validator/client/iface"
 	dbTest "github.com/theQRL/qrysm/validator/db/testing"
 	"github.com/theQRL/qrysm/validator/keymanager"
@@ -87,6 +88,23 @@ type mockKeymanager struct {
 	keys                [][field_params.MLDSA87PubkeyLength]byte
 	fetchNoKeys         bool
 	accountsChangedFeed *event.Feed
+}
+
+type mockLifecycleTicker struct {
+	channel    chan primitives.Slot
+	doneCalled bool
+}
+
+func newMockLifecycleTicker() *mockLifecycleTicker {
+	return &mockLifecycleTicker{channel: make(chan primitives.Slot)}
+}
+
+func (m *mockLifecycleTicker) C() <-chan primitives.Slot {
+	return m.channel
+}
+
+func (m *mockLifecycleTicker) Done() {
+	m.doneCalled = true
 }
 
 var errMockKeyExists = errors.New("key already in mockKeymanager map")
@@ -252,6 +270,47 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	require.ErrorContains(t, "does not match root saved", err)
 }
 
+func TestWaitForChainStart_StopsExistingTicker(t *testing.T) {
+	originalNewSlotTicker := newSlotTicker
+	defer func() {
+		newSlotTicker = originalNewSlotTicker
+	}()
+
+	replacementTicker := newMockLifecycleTicker()
+	newSlotTicker = func(time.Time, uint64) slots.Ticker {
+		return replacementTicker
+	}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := validatormock.NewMockValidatorClient(ctrl)
+
+	db := dbTest.SetupDB(t, [][field_params.MLDSA87PubkeyLength]byte{})
+	oldTicker := newMockLifecycleTicker()
+	v := validator{
+		validatorClient: client,
+		db:              db,
+		ticker:          oldTicker,
+	}
+
+	genesis := uint64(time.Unix(1, 0).Unix())
+	genesisValidatorsRoot := bytesutil.ToBytes32([]byte("validators"))
+	client.EXPECT().WaitForChainStart(
+		gomock.Any(),
+		&emptypb.Empty{},
+	).Return(&qrysmpb.ChainStartResponse{
+		Started:               true,
+		GenesisTime:           genesis,
+		GenesisValidatorsRoot: genesisValidatorsRoot[:],
+	}, nil)
+
+	require.NoError(t, v.WaitForChainStart(context.Background()))
+	assert.Equal(t, true, oldTicker.doneCalled, "Expected previous ticker to be stopped before replacement")
+	if v.ticker != replacementTicker {
+		t.Fatal("Expected replacement ticker to be installed")
+	}
+}
+
 func TestWaitForChainStart_ContextCanceled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -356,6 +415,54 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&qrysmpb.Validators{}, nil)
 	require.NoError(t, v.WaitForActivation(ctx, nil), "Could not wait for activation")
 	require.LogsContain(t, hook, "Validator activated")
+}
+
+func TestWaitForActivation_StopsExistingTicker(t *testing.T) {
+	originalNewSlotTicker := newSlotTicker
+	defer func() {
+		newSlotTicker = originalNewSlotTicker
+	}()
+
+	replacementTicker := newMockLifecycleTicker()
+	newSlotTicker = func(time.Time, uint64) slots.Ticker {
+		return replacementTicker
+	}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	validatorClient := validatormock.NewMockValidatorClient(ctrl)
+	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+
+	kp := randKeypair(t)
+	oldTicker := newMockLifecycleTicker()
+	v := validator{
+		validatorClient: validatorClient,
+		keyManager:      newMockKeymanager(t, kp),
+		beaconClient:    beaconClient,
+		genesisTime:     1,
+		ticker:          oldTicker,
+	}
+
+	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
+	resp.Statuses[0].Status.Status = qrysmpb.ValidatorStatus_ACTIVE
+	clientStream := mock2.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	validatorClient.EXPECT().WaitForActivation(
+		gomock.Any(),
+		&qrysmpb.ValidatorActivationRequest{
+			PublicKeys: [][]byte{kp.pub[:]},
+		},
+	).Return(clientStream, nil)
+	clientStream.EXPECT().Recv().Return(
+		resp,
+		nil,
+	)
+	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&qrysmpb.Validators{}, nil)
+
+	require.NoError(t, v.WaitForActivation(context.Background(), nil), "Could not wait for activation")
+	assert.Equal(t, true, oldTicker.doneCalled, "Expected previous ticker to be stopped before replacement")
+	if v.ticker != replacementTicker {
+		t.Fatal("Expected replacement ticker to be installed")
+	}
 }
 
 func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {

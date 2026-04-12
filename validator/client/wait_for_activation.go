@@ -7,11 +7,9 @@ import (
 
 	"github.com/pkg/errors"
 	field_params "github.com/theQRL/qrysm/config/fieldparams"
-	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/encoding/bytesutil"
 	"github.com/theQRL/qrysm/monitoring/tracing"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
-	"github.com/theQRL/qrysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -98,7 +96,7 @@ func (v *validator) internalWaitForActivation(ctx context.Context, accountsChang
 		return err
 	}
 
-	v.ticker = slots.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+	v.resetTicker()
 	return nil
 }
 

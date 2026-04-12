@@ -63,6 +63,10 @@ var (
 	msgNoKeysFetched     = "No validating keys fetched. Trying again"
 )
 
+var newSlotTicker = func(genesisTime time.Time, secondsPerSlot uint64) slots.Ticker {
+	return slots.NewSlotTicker(genesisTime, secondsPerSlot)
+}
+
 type validator struct {
 	logValidatorBalances               bool
 	emitAccountMetrics                 bool
@@ -116,7 +120,16 @@ func (v *validator) GenesisTime() uint64 {
 
 // Done cleans up the validator.
 func (v *validator) Done() {
-	v.ticker.Done()
+	if v.ticker != nil {
+		v.ticker.Done()
+	}
+}
+
+func (v *validator) resetTicker() {
+	if v.ticker != nil {
+		v.ticker.Done()
+	}
+	v.ticker = newSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 }
 
 // WaitForKeymanagerInitialization checks if the validator needs to wait for
@@ -246,7 +259,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
-	v.ticker = slots.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+	v.resetTicker()
 	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Beacon chain started")
 	return nil
 }
