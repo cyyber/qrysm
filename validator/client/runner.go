@@ -60,11 +60,7 @@ func run(ctx context.Context, v iface.Validator) {
 			" and will periodically update the beacon node and custom builder (if --%s)", flags.EnableBuilderFlag.Name)
 		deadline := time.Now().Add(5 * time.Minute)
 		if err := v.PushProposerSettings(ctx, km, currentSlot, deadline); err != nil {
-			if errors.Is(err, ErrBuilderValidatorRegistration) {
-				log.WithError(err).Warn("Push proposer settings error")
-			} else {
-				log.WithError(err).Fatal("Failed to update proposer settings") // allow fatal. skipcq
-			}
+			log.WithError(err).Warn("Failed to update proposer settings on startup, will retry on next epoch")
 		}
 	} else {
 		log.Warn("Validator client started without proposer settings such as fee recipient" +
