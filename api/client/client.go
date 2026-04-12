@@ -76,6 +76,9 @@ func (c *Client) Get(ctx context.Context, path string, opts ...ReqOption) ([]byt
 	if err != nil {
 		return nil, err
 	}
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
 	for _, o := range opts {
 		o(req)
 	}
