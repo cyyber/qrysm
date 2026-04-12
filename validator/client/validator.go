@@ -83,7 +83,9 @@ type validator struct {
 	dutiesLock                         sync.RWMutex
 	duties                             *qrysmpb.DutiesResponse
 	prevBalance                        map[[fieldparams.MLDSA87PubkeyLength]byte]uint64
+	pubkeyToValidatorIndexLock         sync.Mutex
 	pubkeyToValidatorIndex             map[[fieldparams.MLDSA87PubkeyLength]byte]primitives.ValidatorIndex
+	signedValidatorRegistrationsLock   sync.Mutex
 	signedValidatorRegistrations       map[[fieldparams.MLDSA87PubkeyLength]byte]*qrysmpb.SignedValidatorRegistrationV1
 	graffitiOrderedIndex               uint64
 	aggregatedSlotCommitteeIDCache     *lru.Cache
@@ -1029,12 +1031,15 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.MLDSA87PubkeyLength]byte, slot primitives.Slot) ([][fieldparams.MLDSA87PubkeyLength]byte, error) {
 	filteredKeys := make([][fieldparams.MLDSA87PubkeyLength]byte, 0)
 	statusRequestKeys := make([][]byte, 0)
+
+	v.pubkeyToValidatorIndexLock.Lock()
 	for _, k := range pubkeys {
 		_, ok := v.pubkeyToValidatorIndex[k]
 		// Get validator index from RPC server if not found.
 		if !ok {
 			i, ok, err := v.validatorIndex(ctx, k)
 			if err != nil {
+				v.pubkeyToValidatorIndexLock.Unlock()
 				return nil, err
 			}
 			if !ok { // Nothing we can do if RPC server doesn't have validator index.
@@ -1045,6 +1050,7 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 		copiedk := k
 		statusRequestKeys = append(statusRequestKeys, copiedk[:])
 	}
+	v.pubkeyToValidatorIndexLock.Unlock()
 	resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &qrysmpb.MultipleValidatorStatusRequest{
 		PublicKeys: statusRequestKeys,
 	})
@@ -1093,7 +1099,9 @@ func (v *validator) buildPrepProposerReqs(pubkeys [][fieldparams.MLDSA87PubkeyLe
 			}
 		}
 
+		v.pubkeyToValidatorIndexLock.Lock()
 		validatorIndex, ok := v.pubkeyToValidatorIndex[k]
+		v.pubkeyToValidatorIndexLock.Unlock()
 		if !ok {
 			continue
 		}
@@ -1162,7 +1170,9 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 		}
 
 		// map is populated before this function in buildPrepProposerReq
+		v.pubkeyToValidatorIndexLock.Lock()
 		_, ok := v.pubkeyToValidatorIndex[k]
+		v.pubkeyToValidatorIndexLock.Unlock()
 		if !ok {
 			continue
 		}
