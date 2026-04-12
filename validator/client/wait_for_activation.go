@@ -40,7 +40,8 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan c
 }
 
 // internalWaitForActivation performs the following:
-// 1) While the key manager is empty, poll the key manager until some validator keys exist.
+// 1) While the key manager is empty, wait for account updates or periodically refetch
+// the key manager until some validator keys exist.
 // 2) Open a server side stream for activation events against the given keys.
 // 3) In another go routine, the key manager is monitored for updates and emits an update event on
 // the accountsChangedChan. When an event signal is received, restart the internalWaitForActivation routine.
@@ -61,18 +62,19 @@ func (v *validator) internalWaitForActivation(ctx context.Context, accountsChang
 		defer ticker.Stop()
 		for {
 			select {
+			case <-accountsChangedChan:
 			case <-ticker.C:
-				validatingKeys, err = v.keyManager.FetchValidatingPublicKeys(ctx)
-				if err != nil {
-					return errors.Wrap(err, msgCouldNotFetchKeys)
-				}
-				if len(validatingKeys) == 0 {
-					log.Warn(msgNoKeysFetched)
-					continue
-				}
 			case <-ctx.Done():
 				log.Debug("Context closed, exiting fetching validating keys")
 				return ctx.Err()
+			}
+			validatingKeys, err = v.keyManager.FetchValidatingPublicKeys(ctx)
+			if err != nil {
+				return errors.Wrap(err, msgCouldNotFetchKeys)
+			}
+			if len(validatingKeys) == 0 {
+				log.Warn(msgNoKeysFetched)
+				continue
 			}
 			break
 		}

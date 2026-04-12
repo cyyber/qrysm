@@ -199,6 +199,52 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 	assert.LogsContain(t, hook, "Validator activated")
 }
 
+func TestWaitForActivation_AccountsChangedWhileNoKeysFetched(t *testing.T) {
+	originalPeriod := keyRefetchPeriod
+	defer func() {
+		keyRefetchPeriod = originalPeriod
+	}()
+	keyRefetchPeriod = time.Hour
+
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	validatorClient := validatormock.NewMockValidatorClient(ctrl)
+	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+
+	kp := randKeypair(t)
+	km := newMockKeymanager(t, kp)
+	km.fetchNoKeys = true
+
+	v := validator{
+		validatorClient: validatorClient,
+		keyManager:      km,
+		beaconClient:    beaconClient,
+	}
+	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
+	resp.Statuses[0].Status.Status = qrysmpb.ValidatorStatus_ACTIVE
+	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	validatorClient.EXPECT().WaitForActivation(
+		gomock.Any(),
+		&qrysmpb.ValidatorActivationRequest{
+			PublicKeys: [][]byte{kp.pub[:]},
+		},
+	).Return(clientStream, nil)
+	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&qrysmpb.Validators{}, nil)
+	clientStream.EXPECT().Recv().Return(
+		resp,
+		nil)
+
+	accountsChangedChan := make(chan [][field_params.MLDSA87PubkeyLength]byte, 1)
+	accountsChangedChan <- nil
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	assert.NoError(t, v.internalWaitForActivation(ctx, accountsChangedChan), "Could not wait for activation")
+	assert.LogsContain(t, hook, msgNoKeysFetched)
+	assert.LogsContain(t, hook, "Validator activated")
+}
+
 // Regression test for a scenario where you start with an inactive key and then import an active key.
 func TestWaitForActivation_AccountsChanged(t *testing.T) {
 	hook := logTest.NewGlobal()
