@@ -90,14 +90,14 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	optimistic, err := s.OptimisticModeFetcher.IsOptimistic(r.Context())
-	if err != nil {
-		http2.HandleError(w, "Could not get optimistic mode info: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	blkRoot, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		http2.HandleError(w, "Could not get block root: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	optimistic, err := s.OptimisticModeFetcher.IsOptimisticForRoot(r.Context(), blkRoot)
+	if err != nil {
+		http2.HandleError(w, "Could not get optimistic mode info: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -137,14 +137,14 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	optimistic, err := s.OptimisticModeFetcher.IsOptimistic(r.Context())
-	if err != nil {
-		http2.HandleError(w, "Could not get optimistic mode info: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	blkRoot, err := st.LatestBlockHeader().HashTreeRoot()
 	if err != nil {
 		http2.HandleError(w, "Could not get block root: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	optimistic, err := s.OptimisticModeFetcher.IsOptimisticForRoot(r.Context(), blkRoot)
+	if err != nil {
+		http2.HandleError(w, "Could not get optimistic mode info: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -215,14 +215,14 @@ func (s *Server) SyncCommitteeRewards(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	optimistic, err := s.OptimisticModeFetcher.IsOptimistic(r.Context())
-	if err != nil {
-		http2.HandleError(w, "Could not get optimistic mode info: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	blkRoot, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		http2.HandleError(w, "Could not get block root: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	optimistic, err := s.OptimisticModeFetcher.IsOptimisticForRoot(r.Context(), blkRoot)
+	if err != nil {
+		http2.HandleError(w, "Could not get optimistic mode info: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

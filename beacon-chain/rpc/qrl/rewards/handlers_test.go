@@ -154,8 +154,9 @@ func TestBlockRewards(t *testing.T) {
 
 	sbb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
+	blkRoot, err := sbb.Block().HashTreeRoot()
 	require.NoError(t, err)
-	mockChainService := &mock.ChainService{Optimistic: true}
+	mockChainService := &mock.ChainService{OptimisticRoots: map[[32]byte]bool{blkRoot: true}}
 	s := &Server{
 		Blocker: &testutil.MockBlocker{SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
 			2: sbb,
@@ -220,8 +221,10 @@ func TestAttestationRewards(t *testing.T) {
 	require.NoError(t, st.SetCurrentParticipationBits(participation))
 	require.NoError(t, st.SetPreviousParticipationBits(participation))
 
+	attBlkRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	require.NoError(t, err)
 	currentSlot := params.BeaconConfig().SlotsPerEpoch * 3
-	mockChainService := &mock.ChainService{Optimistic: true, Slot: &currentSlot}
+	mockChainService := &mock.ChainService{OptimisticRoots: map[[32]byte]bool{attBlkRoot: true}, Slot: &currentSlot}
 	s := &Server{
 		Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
 			params.BeaconConfig().SlotsPerEpoch*3 - 1: st,
@@ -337,8 +340,10 @@ func TestAttestationRewards(t *testing.T) {
 		require.NoError(t, st.SetCurrentParticipationBits(participation))
 		require.NoError(t, st.SetPreviousParticipationBits(participation))
 
+		subBlkRoot, err := st.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
 		currentSlot := params.BeaconConfig().SlotsPerEpoch * 3
-		mockChainService := &mock.ChainService{Optimistic: true, Slot: &currentSlot}
+		mockChainService := &mock.ChainService{OptimisticRoots: map[[32]byte]bool{subBlkRoot: true}, Slot: &currentSlot}
 		s := &Server{
 			Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
 				params.BeaconConfig().SlotsPerEpoch*3 - 1: st,
@@ -508,10 +513,11 @@ func TestSyncCommiteeRewards(t *testing.T) {
 	b.Block.Body.SyncAggregate = &qrysmpb.SyncAggregate{SyncCommitteeBits: scBits, SyncCommitteeSignatures: sigs}
 	sbb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
+	scBlkRoot, err := sbb.Block().HashTreeRoot()
 	require.NoError(t, err)
 
 	currentSlot := params.BeaconConfig().SlotsPerEpoch
-	mockChainService := &mock.ChainService{Optimistic: true, Slot: &currentSlot}
+	mockChainService := &mock.ChainService{OptimisticRoots: map[[32]byte]bool{scBlkRoot: true}, Slot: &currentSlot}
 	s := &Server{
 		Blocker: &testutil.MockBlocker{SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
 			128: sbb,
