@@ -227,7 +227,7 @@ func (v *ValidatorService) Start() {
 	close(tempChan)
 
 	v.validator = valStruct
-	go run(v.ctx, v.validator)
+	go runWithRecovery(v.ctx, v.validator, v.waitForRunnerRecovery)
 }
 
 // Stop the validator service.
@@ -246,6 +246,22 @@ func (v *ValidatorService) Status() error {
 		return errors.New("no connection to beacon RPC")
 	}
 	return nil
+}
+
+func (v *ValidatorService) waitForRunnerRecovery(ctx context.Context) error {
+	if err := waitForRetry(ctx); err != nil {
+		return err
+	}
+	for {
+		if _, err := v.Syncing(ctx); err == nil {
+			return nil
+		} else {
+			log.WithError(err).Warn("Validator service health check failed, waiting for healthy beacon node...")
+		}
+		if err := waitForRetry(ctx); err != nil {
+			return err
+		}
+	}
 }
 
 // InteropKeysConfig returns the useInteropKeys flag.

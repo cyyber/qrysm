@@ -3,6 +3,7 @@ package testutil
 import (
 	"bytes"
 	"context"
+	"errors"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -38,8 +39,11 @@ type FakeValidator struct {
 	WaitForActivationCalled           int
 	CanonicalHeadSlotCalled           int
 	ReceiveBlocksCalled               int
+	KeymanagerCalled                  int
 	PushProposerSettingsCalled        int
 	RetryTillSuccess                  int
+	ReceiveBlocksRetryTillSuccess     int
+	KeymanagerFailures                int
 	ProposeBlockArg1                  uint64
 	AttestToBlockHeadArg1             uint64
 	RoleAtArg1                        uint64
@@ -57,6 +61,7 @@ type FakeValidator struct {
 	PubkeysToStatusesMap              map[[field_params.MLDSA87PubkeyLength]byte]qrysmpb.ValidatorStatus
 	proposerSettings                  *validatorserviceconfig.ProposerSettings
 	ProposerSettingWait               time.Duration
+	KeymanagerErr                     error
 	Km                                keymanager.IKeymanager
 }
 
@@ -216,6 +221,14 @@ func (fv *FakeValidator) PubkeysToStatuses(_ context.Context) map[[field_params.
 
 // Keymanager for mocking
 func (fv *FakeValidator) Keymanager() (keymanager.IKeymanager, error) {
+	fv.KeymanagerCalled++
+	if fv.KeymanagerFailures > 0 {
+		fv.KeymanagerFailures--
+		if fv.KeymanagerErr != nil {
+			return nil, fv.KeymanagerErr
+		}
+		return nil, errors.New("keymanager unavailable")
+	}
 	return fv.Km, nil
 }
 
@@ -227,7 +240,7 @@ func (*FakeValidator) CheckDoppelGanger(_ context.Context) error {
 // ReceiveBlocks for mocking
 func (fv *FakeValidator) ReceiveBlocks(_ context.Context, connectionErrorChannel chan<- error) {
 	fv.ReceiveBlocksCalled++
-	if fv.RetryTillSuccess > fv.ReceiveBlocksCalled {
+	if fv.ReceiveBlocksRetryTillSuccess >= fv.ReceiveBlocksCalled && fv.ReceiveBlocksRetryTillSuccess > 0 {
 		connectionErrorChannel <- iface.ErrConnectionIssue
 	}
 }

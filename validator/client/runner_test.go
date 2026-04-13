@@ -45,6 +45,10 @@ func TestRetry_On_ConnectionError(t *testing.T) {
 		Km:               &mockKeymanager{accountsChangedFeed: &event.Feed{}},
 		RetryTillSuccess: retry,
 	}
+	originalBackOffPeriod := backOffPeriod
+	defer func() {
+		backOffPeriod = originalBackOffPeriod
+	}()
 	backOffPeriod = 10 * time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())
 	go run(ctx, v)
@@ -56,13 +60,71 @@ func TestRetry_On_ConnectionError(t *testing.T) {
 	assert.Equal(t, retry+1, v.WaitForSyncCalled, "Expected WaitForSync() to be called")
 	assert.Equal(t, 1, v.WaitForActivationCalled, "Expected WaitForActivation() to be called")
 	assert.Equal(t, 0, v.CanonicalHeadSlotCalled, "Expected CanonicalHeadSlot() not to be called")
-	assert.Equal(t, retry, v.ReceiveBlocksCalled, "Expected WaitForActivation() to be called")
+	assert.Equal(t, 1, v.ReceiveBlocksCalled, "Expected ReceiveBlocks() to be called once after startup succeeds")
 }
 
 func TestCancelledContext_WaitsForActivation(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	run(cancelledContext(), v)
 	assert.Equal(t, 1, v.WaitForActivationCalled, "Expected WaitForActivation() to be called")
+}
+
+func TestRun_ReturnsKeymanagerError(t *testing.T) {
+	v := &testutil.FakeValidator{
+		KeymanagerFailures: 1,
+		KeymanagerErr:      errors.New("boom"),
+	}
+
+	err := run(context.Background(), v)
+
+	require.ErrorContains(t, "could not get keymanager", err)
+	assert.Equal(t, true, v.DoneCalled, "Expected Done() to be called")
+	assert.Equal(t, 1, v.KeymanagerCalled, "Expected Keymanager() to be called once")
+}
+
+func TestRunWithRecovery_RestartsAfterStartupError(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	v := &testutil.FakeValidator{
+		Km:                 &mockKeymanager{accountsChangedFeed: &event.Feed{}},
+		KeymanagerFailures: 1,
+		KeymanagerErr:      errors.New("boom"),
+	}
+	recoveryCalls := 0
+	waitForRecovery := func(context.Context) error {
+		recoveryCalls++
+		return nil
+	}
+
+	go runWithRecovery(ctx, v, waitForRecovery)
+	time.Sleep(50 * time.Millisecond)
+	cancel()
+	time.Sleep(20 * time.Millisecond)
+
+	assert.Equal(t, 2, v.WaitForChainStartCalled, "Expected the runner to restart after a startup failure")
+	assert.Equal(t, 2, v.KeymanagerCalled, "Expected Keymanager() to be retried after a startup failure")
+	assert.Equal(t, 1, recoveryCalls, "Expected one recovery wait between failed and successful runs")
+}
+
+func TestRunWithRecovery_RestartsAfterBlockStreamError(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	v := &testutil.FakeValidator{
+		Km:                            &mockKeymanager{accountsChangedFeed: &event.Feed{}},
+		ReceiveBlocksRetryTillSuccess: 1,
+	}
+	recoveryCalls := 0
+	waitForRecovery := func(context.Context) error {
+		recoveryCalls++
+		return nil
+	}
+
+	go runWithRecovery(ctx, v, waitForRecovery)
+	time.Sleep(50 * time.Millisecond)
+	cancel()
+	time.Sleep(20 * time.Millisecond)
+
+	assert.Equal(t, 2, v.WaitForChainStartCalled, "Expected the runner to reinitialize after a block stream failure")
+	assert.Equal(t, 2, v.ReceiveBlocksCalled, "Expected ReceiveBlocks() to be restarted through the recovery loop")
+	assert.Equal(t, 1, recoveryCalls, "Expected one recovery wait between failed and successful runs")
 }
 
 func TestRun_UsesCurrentSlotAfterActivation(t *testing.T) {
