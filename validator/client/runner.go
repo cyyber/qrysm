@@ -152,7 +152,7 @@ func run(ctx context.Context, v iface.Validator) error {
 				span.End()
 				continue
 			}
-			performRoles(slotCtx, allRoles, v, slot, &wg, span)
+			performRoles(slotCtx, allRoles, v, slot, &wg, span, cancel)
 		}
 	}
 }
@@ -265,7 +265,7 @@ func waitForRetry(ctx context.Context) error {
 	}
 }
 
-func performRoles(slotCtx context.Context, allRoles map[[field_params.MLDSA87PubkeyLength]byte][]iface.ValidatorRole, v iface.Validator, slot primitives.Slot, wg *sync.WaitGroup, span *trace.Span) {
+func performRoles(slotCtx context.Context, allRoles map[[field_params.MLDSA87PubkeyLength]byte][]iface.ValidatorRole, v iface.Validator, slot primitives.Slot, wg *sync.WaitGroup, span *trace.Span, cancel context.CancelFunc) {
 	for pubKey, roles := range allRoles {
 		wg.Add(len(roles))
 		for _, role := range roles {
@@ -294,6 +294,7 @@ func performRoles(slotCtx context.Context, allRoles map[[field_params.MLDSA87Pub
 	// Wait for all processes to complete, then report span complete.
 	go func() {
 		wg.Wait()
+		defer cancel()
 		defer span.End()
 		defer func() {
 			if err := recover(); err != nil { // catch any panic in logging

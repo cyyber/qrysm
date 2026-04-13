@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"math/bits"
+	"sync"
 	"testing"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/theQRL/qrysm/time/slots"
 	"github.com/theQRL/qrysm/validator/client/iface"
 	"github.com/theQRL/qrysm/validator/client/testutil"
+	"go.opencensus.io/trace"
 )
 
 func cancelledContext() context.Context {
@@ -125,6 +127,50 @@ func TestRunWithRecovery_RestartsAfterBlockStreamError(t *testing.T) {
 	assert.Equal(t, 2, v.WaitForChainStartCalled, "Expected the runner to reinitialize after a block stream failure")
 	assert.Equal(t, 2, v.ReceiveBlocksCalled, "Expected ReceiveBlocks() to be restarted through the recovery loop")
 	assert.Equal(t, 1, recoveryCalls, "Expected one recovery wait between failed and successful runs")
+}
+
+type slotContextObserverValidator struct {
+	*testutil.FakeValidator
+	logCtxCh chan context.Context
+}
+
+func (v *slotContextObserverValidator) LogValidatorGainsAndLosses(ctx context.Context, _ primitives.Slot) error {
+	select {
+	case v.logCtxCh <- ctx:
+	default:
+	}
+	return nil
+}
+
+func TestPerformRoles_CancelsSlotContextWhenComplete(t *testing.T) {
+	slotCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Minute))
+	defer cancel()
+
+	observer := &slotContextObserverValidator{
+		FakeValidator: &testutil.FakeValidator{},
+		logCtxCh:      make(chan context.Context, 1),
+	}
+
+	_, span := trace.StartSpan(context.Background(), "test.performRoles")
+	var wg sync.WaitGroup
+	allRoles := map[[field_params.MLDSA87PubkeyLength]byte][]iface.ValidatorRole{
+		{1}: {iface.RoleUnknown},
+	}
+
+	performRoles(slotCtx, allRoles, observer, primitives.Slot(1), &wg, span, cancel)
+
+	var observedCtx context.Context
+	select {
+	case observedCtx = <-observer.logCtxCh:
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("timed out waiting for post-slot logging")
+	}
+
+	select {
+	case <-observedCtx.Done():
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("timed out waiting for slot context cancellation")
+	}
 }
 
 func TestRun_UsesCurrentSlotAfterActivation(t *testing.T) {
