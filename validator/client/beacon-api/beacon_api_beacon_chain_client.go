@@ -337,10 +337,7 @@ func (c beaconApiBeaconChainClient) GetValidatorPerformance(ctx context.Context,
 }
 
 func NewBeaconApiBeaconChainClientWithFallback(host string, timeout time.Duration, fallbackClient iface.BeaconChainClient) iface.BeaconChainClient {
-	jsonRestHandler := beaconApiJsonRestHandler{
-		timeout: timeout,
-		host:    host,
-	}
+	jsonRestHandler := newBeaconAPIJSONRestHandler(host, timeout)
 
 	return &beaconApiBeaconChainClient{
 		jsonRestHandler:         jsonRestHandler,

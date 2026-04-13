@@ -43,7 +43,7 @@ var (
 	// BeaconRESTApiProviderFlag defines a beacon node REST API endpoint.
 	BeaconRESTApiProviderFlag = &cli.StringFlag{
 		Name:  "beacon-rest-api-provider",
-		Usage: "Beacon node REST API provider endpoint",
+		Usage: "Beacon node REST API provider endpoint(s). Use comma-separated URLs for failover",
 		Value: "http://127.0.0.1:3500",
 	}
 	// CertFlag defines a flag for the node's TLS certificate.

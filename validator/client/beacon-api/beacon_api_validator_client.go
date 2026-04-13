@@ -22,10 +22,7 @@ type beaconApiValidatorClient struct {
 }
 
 func NewBeaconApiValidatorClient(host string, timeout time.Duration) iface.ValidatorClient {
-	jsonRestHandler := beaconApiJsonRestHandler{
-		timeout: timeout,
-		host:    host,
-	}
+	jsonRestHandler := newBeaconAPIJSONRestHandler(host, timeout)
 
 	return &beaconApiValidatorClient{
 		genesisProvider:         beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler},

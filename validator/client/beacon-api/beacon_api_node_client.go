@@ -99,10 +99,7 @@ func (c *beaconApiNodeClient) ListPeers(ctx context.Context, in *emptypb.Empty) 
 }
 
 func NewNodeClientWithFallback(host string, timeout time.Duration, fallbackClient iface.NodeClient) iface.NodeClient {
-	jsonRestHandler := beaconApiJsonRestHandler{
-		timeout: timeout,
-		host:    host,
-	}
+	jsonRestHandler := newBeaconAPIJSONRestHandler(host, timeout)
 
 	return &beaconApiNodeClient{
 		jsonRestHandler: jsonRestHandler,
