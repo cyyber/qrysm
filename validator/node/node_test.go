@@ -24,6 +24,7 @@ import (
 	validatorserviceconfig "github.com/theQRL/qrysm/config/validator/service"
 	"github.com/theQRL/qrysm/consensus-types/validator"
 	"github.com/theQRL/qrysm/encoding/bytesutil"
+	qrysmruntime "github.com/theQRL/qrysm/runtime"
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/validator/accounts"
@@ -33,6 +34,21 @@ import (
 	validatormiddleware "github.com/theQRL/qrysm/validator/rpc/apimiddleware"
 	"github.com/urfave/cli/v2"
 )
+
+type shutdownCountingService struct {
+	stopCalls int
+}
+
+func (*shutdownCountingService) Start() {}
+
+func (s *shutdownCountingService) Stop() error {
+	s.stopCalls++
+	return nil
+}
+
+func (*shutdownCountingService) Status() error {
+	return nil
+}
 
 // Test that the sharding node can build with default flag values.
 func TestNode_Builds(t *testing.T) {
@@ -157,6 +173,42 @@ func TestValidatorGateway_KeymanagerAliasesRequireSameAuth(t *testing.T) {
 			require.Equal(t, tt.wantCode, rr.Code)
 			assert.Equal(t, true, strings.Contains(rr.Body.String(), tt.wantBody))
 		})
+	}
+}
+
+func TestValidatorClientClose_Idempotent(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	registry := qrysmruntime.NewServiceRegistry()
+	service := &shutdownCountingService{}
+	require.NoError(t, registry.RegisterService(service))
+
+	valClient := &ValidatorClient{
+		ctx:      ctx,
+		cancel:   cancel,
+		services: registry,
+		stop:     make(chan struct{}),
+	}
+
+	func() {
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				t.Fatalf("Close panicked on repeated call: %v", recovered)
+			}
+		}()
+		valClient.Close()
+		valClient.Close()
+	}()
+
+	require.Equal(t, 1, service.stopCalls)
+	select {
+	case <-valClient.stop:
+	default:
+		t.Fatal("expected stop channel to be closed")
+	}
+	select {
+	case <-valClient.ctx.Done():
+	default:
+		t.Fatal("expected validator client context to be canceled")
 	}
 }
 

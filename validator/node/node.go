@@ -67,6 +67,7 @@ type ValidatorClient struct {
 	cancel            context.CancelFunc
 	db                *kv.Store
 	services          *runtime.ServiceRegistry // Lifecycle and service store.
+	closeOnce         sync.Once
 	lock              sync.RWMutex
 	wallet            *wallet.Wallet
 	walletInitialized *event.Feed
@@ -165,13 +166,21 @@ func (c *ValidatorClient) Start() {
 
 // Close handles graceful shutdown of the system.
 func (c *ValidatorClient) Close() {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.closeOnce.Do(func() {
+		c.lock.Lock()
+		defer c.lock.Unlock()
 
-	c.services.StopAll()
-	log.Info("Stopping Qrysm validator")
-	c.cancel()
-	close(c.stop)
+		if c.services != nil {
+			c.services.StopAll()
+		}
+		log.Info("Stopping Qrysm validator")
+		if c.cancel != nil {
+			c.cancel()
+		}
+		if c.stop != nil {
+			close(c.stop)
+		}
+	})
 }
 
 func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
