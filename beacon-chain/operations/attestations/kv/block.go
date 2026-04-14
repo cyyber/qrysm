@@ -61,6 +61,13 @@ func (c *AttCaches) DeleteBlockAttestation(att *qrysmpb.Attestation) error {
 
 	c.blockAttLock.Lock()
 	defer c.blockAttLock.Unlock()
+	if atts, ok := c.blockAtt[r]; ok {
+		for _, existingAtt := range atts {
+			if err := c.insertSeenAggregatedBit(existingAtt); err != nil {
+				return err
+			}
+		}
+	}
 	delete(c.blockAtt, r)
 
 	return nil

@@ -509,3 +509,31 @@ func TestKV_Aggregated_DuplicateAggregatedAttestations(t *testing.T) {
 	assert.DeepSSZEqual(t, att2, returned[0], "Did not receive correct aggregated atts")
 	assert.Equal(t, 1, len(returned), "Did not receive correct aggregated atts")
 }
+
+func TestKV_Aggregated_HasAggregatedAttestation_AfterBlockDeletion(t *testing.T) {
+	cache := NewAttCaches()
+
+	att1 := util.HydrateAttestation(&qrysmpb.Attestation{
+		Data:            &qrysmpb.AttestationData{Slot: 1},
+		AggregationBits: bitfield.Bitlist{0b1111000},
+	})
+	att2 := util.HydrateAttestation(&qrysmpb.Attestation{
+		Data:            &qrysmpb.AttestationData{Slot: 1},
+		AggregationBits: bitfield.Bitlist{0b1100111},
+	})
+	query := util.HydrateAttestation(&qrysmpb.Attestation{
+		Data:            &qrysmpb.AttestationData{Slot: 1},
+		AggregationBits: bitfield.Bitlist{0b1100111},
+	})
+
+	require.NoError(t, cache.SaveBlockAttestation(att1))
+	require.NoError(t, cache.SaveBlockAttestation(att2))
+	require.NoError(t, cache.DeleteBlockAttestation(att1))
+
+	result, err := cache.HasAggregatedAttestation(query)
+	require.NoError(t, err)
+	assert.Equal(t, true, result)
+
+	require.NoError(t, cache.SaveAggregatedAttestation(query))
+	assert.Equal(t, 0, cache.AggregatedAttestationCount())
+}

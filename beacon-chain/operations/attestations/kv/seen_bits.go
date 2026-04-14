@@ -8,12 +8,20 @@ import (
 )
 
 func (c *AttCaches) insertSeenBit(att *qrysmpb.Attestation) error {
+	return insertSeenBit(c.seenAtt, att)
+}
+
+func (c *AttCaches) insertSeenAggregatedBit(att *qrysmpb.Attestation) error {
+	return insertSeenBit(c.seenAggregatedAtt, att)
+}
+
+func insertSeenBit(seenCache *cache.Cache, att *qrysmpb.Attestation) error {
 	r, err := hashFn(att.Data)
 	if err != nil {
 		return err
 	}
 
-	v, ok := c.seenAtt.Get(string(r[:]))
+	v, ok := seenCache.Get(string(r[:]))
 	if ok {
 		seenBits, ok := v.([]bitfield.Bitlist)
 		if !ok {
@@ -31,21 +39,29 @@ func (c *AttCaches) insertSeenBit(att *qrysmpb.Attestation) error {
 		if !alreadyExists {
 			seenBits = append(seenBits, att.AggregationBits)
 		}
-		c.seenAtt.Set(string(r[:]), seenBits, cache.DefaultExpiration /* one epoch */)
+		seenCache.Set(string(r[:]), seenBits, cache.DefaultExpiration /* one epoch */)
 		return nil
 	}
 
-	c.seenAtt.Set(string(r[:]), []bitfield.Bitlist{att.AggregationBits}, cache.DefaultExpiration /* one epoch */)
+	seenCache.Set(string(r[:]), []bitfield.Bitlist{att.AggregationBits}, cache.DefaultExpiration /* one epoch */)
 	return nil
 }
 
 func (c *AttCaches) hasSeenBit(att *qrysmpb.Attestation) (bool, error) {
+	return hasSeenBit(c.seenAtt, att)
+}
+
+func (c *AttCaches) hasSeenAggregatedBit(att *qrysmpb.Attestation) (bool, error) {
+	return hasSeenBit(c.seenAggregatedAtt, att)
+}
+
+func hasSeenBit(seenCache *cache.Cache, att *qrysmpb.Attestation) (bool, error) {
 	r, err := hashFn(att.Data)
 	if err != nil {
 		return false, err
 	}
 
-	v, ok := c.seenAtt.Get(string(r[:]))
+	v, ok := seenCache.Get(string(r[:]))
 	if ok {
 		seenBits, ok := v.([]bitfield.Bitlist)
 		if !ok {

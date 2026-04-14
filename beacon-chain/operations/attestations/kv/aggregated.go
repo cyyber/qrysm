@@ -248,6 +248,9 @@ func (c *AttCaches) DeleteAggregatedAttestation(att *qrysmpb.Attestation) error 
 	if err := c.insertSeenBit(att); err != nil {
 		return err
 	}
+	if err := c.insertSeenAggregatedBit(att); err != nil {
+		return err
+	}
 
 	c.aggregatedAttLock.Lock()
 	defer c.aggregatedAttLock.Unlock()
@@ -305,6 +308,14 @@ func (c *AttCaches) HasAggregatedAttestation(att *qrysmpb.Attestation) (bool, er
 				return true, nil
 			}
 		}
+	}
+
+	seen, err := c.hasSeenAggregatedBit(att)
+	if err != nil {
+		return false, err
+	}
+	if seen {
+		return true, nil
 	}
 
 	return false, nil

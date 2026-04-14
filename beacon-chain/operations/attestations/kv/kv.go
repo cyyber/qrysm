@@ -28,6 +28,7 @@ type AttCaches struct {
 	blockAttLock       sync.RWMutex
 	blockAtt           map[[32]byte][]*qrysmpb.Attestation
 	seenAtt            *cache.Cache
+	seenAggregatedAtt  *cache.Cache
 }
 
 // NewAttCaches initializes a new attestation pool consists of multiple KV store in cache for
@@ -41,6 +42,10 @@ func NewAttCaches() *AttCaches {
 		forkchoiceAtt:   make(map[[32]byte]*qrysmpb.Attestation),
 		blockAtt:        make(map[[32]byte][]*qrysmpb.Attestation),
 		seenAtt:         c,
+		seenAggregatedAtt: cache.New(
+			secsInEpoch*time.Second,
+			2*secsInEpoch*time.Second,
+		),
 	}
 
 	return pool
