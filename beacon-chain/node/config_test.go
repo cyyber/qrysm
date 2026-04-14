@@ -39,6 +39,14 @@ func TestConfigureHistoricalSlasher(t *testing.T) {
 	)
 }
 
+func TestSlotsPerArchivedPointDefault(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+
+	assert.Equal(t, 1048576, flags.SlotsPerArchivedPoint.Value)
+	assert.Equal(t, primitives.Slot(flags.SlotsPerArchivedPoint.Value), params.MainnetConfig().SlotsPerArchivedPoint)
+	assert.Equal(t, params.MainnetConfig().SlotsPerArchivedPoint, params.BeaconConfig().SlotsPerArchivedPoint)
+}
+
 func TestConfigureSlotsPerArchivedPoint(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 

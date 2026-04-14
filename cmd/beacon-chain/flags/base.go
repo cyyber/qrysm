@@ -142,8 +142,8 @@ var (
 	// section of beaconDB.
 	SlotsPerArchivedPoint = &cli.IntFlag{
 		Name:  "slots-per-archive-point",
-		Usage: "The slot durations of when an archived state gets saved in the beaconDB.",
-		Value: 2048,
+		Usage: "The slot durations of when an archived state gets saved in the beaconDB. Lower values increase archive migration cost and database pressure.",
+		Value: int(params.MainnetConfig().SlotsPerArchivedPoint),
 	}
 	// BlockBatchLimit specifies the requested block batch size.
 	BlockBatchLimit = &cli.IntFlag{
