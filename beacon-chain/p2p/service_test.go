@@ -61,8 +61,8 @@ func (mockListener) RequestQNR(*qnode.Node) (*qnode.Node, error) {
 	panic("implement me")
 }
 
-func (mockListener) LocalNode() *qnode.LocalNode {
-	panic("implement me")
+func (m mockListener) LocalNode() *qnode.LocalNode {
+	return m.localNode
 }
 
 func (mockListener) RandomNodes() qnode.Iterator {

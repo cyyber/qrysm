@@ -28,6 +28,7 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/p2p/peers/scorers"
 	testp2p "github.com/theQRL/qrysm/beacon-chain/p2p/testing"
 	"github.com/theQRL/qrysm/beacon-chain/startup"
+	"github.com/theQRL/qrysm/cmd/beacon-chain/flags"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/wrapper"
 	leakybucket "github.com/theQRL/qrysm/container/leaky-bucket"
@@ -49,6 +50,14 @@ func createAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
 	ip, err := qrysmNetwork.ExternalIPv4()
 	require.NoError(t, err, "Could not get ip")
 	ipAddr := net.ParseIP(ip)
+	return createPrivKeyForIP(t, ipAddr)
+}
+
+func createLoopbackAddrAndPrivKey(t *testing.T) (net.IP, *ecdsa.PrivateKey) {
+	return createPrivKeyForIP(t, net.ParseIP("127.0.0.1"))
+}
+
+func createPrivKeyForIP(t *testing.T, ipAddr net.IP) (net.IP, *ecdsa.PrivateKey) {
 	temp := t.TempDir()
 	randNum := rand.Int()
 	tempPath := path.Join(temp, strconv.Itoa(randNum))
@@ -476,15 +485,70 @@ func TestRefreshQNR_ForkBoundaries(t *testing.T) {
 				assert.DeepEqual(t, bitfield.Bitvector64{0xe, 0x0, 0x80, 0x0, 0x0, 0x0, 0x0, 0x0}, s.metaData.AttnetsBitfield())
 			},
 		},
+		{
+			name: "subscribe all subnets advertises all bitfields",
+			svcBuilder: func(t *testing.T) *Service {
+				flags.Init(&flags.GlobalFlags{SubscribeToAllSubnets: true})
+				t.Cleanup(func() {
+					flags.Init(new(flags.GlobalFlags))
+				})
+
+				port := 2000
+				ipAddr, pkey := createLoopbackAddrAndPrivKey(t)
+				s := &Service{
+					genesisTime:           time.Now().Add(-6 * oneEpochDuration()),
+					genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+					cfg:                   &Config{UDPPort: uint(port)},
+				}
+				localNode, err := s.createLocalNode(pkey, ipAddr, port, port)
+				assert.NoError(t, err)
+
+				s.dv5Listener = mockListener{localNode: localNode}
+				s.metaData = wrapper.WrappedMetadataV1(new(qrysmpb.MetaDataV1))
+				return s
+			},
+			postValidation: func(t *testing.T, s *Service) {
+				assert.DeepEqual(t, allAttestationSubnetsBitfield(), s.metaData.AttnetsBitfield())
+				assert.DeepEqual(t, allSyncCommitteeSubnetsBitfield(), s.metaData.MetadataObjV1().Syncnets)
+
+				recordAttnets, err := attBitvector(s.dv5Listener.Self().Record())
+				require.NoError(t, err)
+				recordSyncnets, err := syncBitvector(s.dv5Listener.Self().Record())
+				require.NoError(t, err)
+				assert.DeepEqual(t, allAttestationSubnetsBitfield(), recordAttnets)
+				assert.DeepEqual(t, allSyncCommitteeSubnetsBitfield(), recordSyncnets)
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := tt.svcBuilder(t)
 			s.RefreshQNR()
 			tt.postValidation(t, s)
-			s.dv5Listener.Close()
+			if s.dv5Listener != nil {
+				s.dv5Listener.Close()
+			}
 			cache.SubnetIDs.EmptyAllCaches()
 			cache.SyncSubnetIDs.EmptyAllCaches()
 		})
 	}
+}
+
+func TestRefreshQNR_NoDiscoveryUpdatesMetadataWhenSubscribingAllSubnets(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	flags.Init(&flags.GlobalFlags{SubscribeToAllSubnets: true})
+	t.Cleanup(func() {
+		flags.Init(new(flags.GlobalFlags))
+	})
+
+	s := &Service{
+		genesisTime:           time.Now(),
+		genesisValidatorsRoot: bytesutil.PadTo([]byte{'A'}, 32),
+		metaData:              wrapper.WrappedMetadataV1(new(qrysmpb.MetaDataV1)),
+	}
+
+	s.RefreshQNR()
+
+	assert.DeepEqual(t, allAttestationSubnetsBitfield(), s.metaData.AttnetsBitfield())
+	assert.DeepEqual(t, allSyncCommitteeSubnetsBitfield(), s.metaData.MetadataObjV1().Syncnets)
 }

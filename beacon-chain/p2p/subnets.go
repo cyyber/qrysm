@@ -10,7 +10,9 @@ import (
 	"github.com/theQRL/go-bitfield"
 	"github.com/theQRL/go-qrl/p2p/qnode"
 	"github.com/theQRL/go-qrl/p2p/qnr"
+	"github.com/theQRL/qrysm/beacon-chain/cache"
 	"github.com/theQRL/qrysm/cmd/beacon-chain/flags"
+	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/consensus-types/wrapper"
 	"go.opencensus.io/trace"
 
@@ -126,17 +128,69 @@ func (s *Service) hasPeerWithSubnet(topic string) bool {
 	return len(s.pubsub.ListPeers(topic+s.Encoding().ProtocolSuffix())) >= int(minPeers) // lint:ignore uintcast -- Min peers can be safely cast to int.
 }
 
+func advertisedSubnetBitfields(currEpoch primitives.Epoch) (bitfield.Bitvector64, bitfield.Bitvector4) {
+	if flags.Get().SubscribeToAllSubnets {
+		return allAttestationSubnetsBitfield(), allSyncCommitteeSubnetsBitfield()
+	}
+
+	bitVAtt := bitfield.NewBitvector64()
+	committees := cache.SubnetIDs.GetAllSubnets()
+	for _, idx := range committees {
+		bitVAtt.SetBitAt(idx, true)
+	}
+
+	bitVSync := bitfield.Bitvector4{byte(0x00)}
+	committees = cache.SyncSubnetIDs.GetAllSubnets(currEpoch)
+	for _, idx := range committees {
+		bitVSync.SetBitAt(idx, true)
+	}
+
+	return bitVAtt, bitVSync
+}
+
+func allAttestationSubnetsBitfield() bitfield.Bitvector64 {
+	bitV := bitfield.NewBitvector64()
+	for idx := uint64(0); idx < attestationSubnetCount; idx++ {
+		bitV.SetBitAt(idx, true)
+	}
+	return bitV
+}
+
+func allSyncCommitteeSubnetsBitfield() bitfield.Bitvector4 {
+	bitV := bitfield.Bitvector4{byte(0x00)}
+	for idx := uint64(0); idx < syncCommsSubnetCount; idx++ {
+		bitV.SetBitAt(idx, true)
+	}
+	return bitV
+}
+
+func (s *Service) metadataBitfields() (bitfield.Bitvector64, bitfield.Bitvector4) {
+	if s.metaData == nil || s.metaData.IsNil() || s.metaData.MetadataObjV1() == nil {
+		return bitfield.NewBitvector64(), bitfield.Bitvector4{byte(0x00)}
+	}
+
+	md := s.metaData.MetadataObjV1()
+	return md.Attnets, md.Syncnets
+}
+
 // Updates the service's discv5 listener record's attestation subnet
 // with a new value for a bitfield of subnets tracked. It also record's
 // the sync committee subnet in the qnr. It also updates the node's
 // metadata by increasing the sequence number and the subnets tracked by the node.
 func (s *Service) updateSubnetRecordWithMetadata(bitVAtt bitfield.Bitvector64, bitVSync bitfield.Bitvector4) {
-	entry := qnr.WithEntry(attSubnetQnrKey, &bitVAtt)
-	subEntry := qnr.WithEntry(syncCommsSubnetQnrKey, &bitVSync)
-	s.dv5Listener.LocalNode().Set(entry)
-	s.dv5Listener.LocalNode().Set(subEntry)
+	if s.dv5Listener != nil {
+		entry := qnr.WithEntry(attSubnetQnrKey, &bitVAtt)
+		subEntry := qnr.WithEntry(syncCommsSubnetQnrKey, &bitVSync)
+		s.dv5Listener.LocalNode().Set(entry)
+		s.dv5Listener.LocalNode().Set(subEntry)
+	}
+
+	seq := uint64(0)
+	if s.metaData != nil && !s.metaData.IsNil() {
+		seq = s.metaData.SequenceNumber()
+	}
 	s.metaData = wrapper.WrappedMetadataV1(&pb.MetaDataV1{
-		SeqNumber: s.metaData.SequenceNumber() + 1,
+		SeqNumber: seq + 1,
 		Attnets:   bitVAtt,
 		Syncnets:  bitVSync,
 	})

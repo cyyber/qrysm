@@ -10,11 +10,9 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
-	"github.com/theQRL/go-bitfield"
 	"github.com/theQRL/go-qrl/p2p/discover"
 	"github.com/theQRL/go-qrl/p2p/qnode"
 	"github.com/theQRL/go-qrl/p2p/qnr"
-	"github.com/theQRL/qrysm/beacon-chain/cache"
 	ecdsaqrysm "github.com/theQRL/qrysm/crypto/ecdsa"
 	"github.com/theQRL/qrysm/runtime/version"
 	"github.com/theQRL/qrysm/time/slots"
@@ -37,40 +35,35 @@ type Listener interface {
 // with the tracked committee ids for the epoch, allowing our node
 // to be dynamically discoverable by others given our tracked committee ids.
 func (s *Service) RefreshQNR() {
-	// return early if discv5 isnt running
-	if s.dv5Listener == nil || !s.isInitialized() {
+	if !s.isInitialized() {
 		return
 	}
-	bitV := bitfield.NewBitvector64()
-	committees := cache.SubnetIDs.GetAllSubnets()
-	for _, idx := range committees {
-		bitV.SetBitAt(idx, true)
-	}
-	currentBitV, err := attBitvector(s.dv5Listener.Self().Record())
-	if err != nil {
-		log.WithError(err).Error("Could not retrieve att bitfield")
-		return
-	}
-	// Compare current epoch with our fork epochs
-	currEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.genesisTime.Unix())))
 
-	// Retrieve sync subnets from application level
-	// cache.
-	bitS := bitfield.Bitvector4{byte(0x00)}
-	committees = cache.SyncSubnetIDs.GetAllSubnets(currEpoch)
-	for _, idx := range committees {
-		bitS.SetBitAt(idx, true)
+	currEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.genesisTime.Unix())))
+	bitV, bitS := advertisedSubnetBitfields(currEpoch)
+	currentMetaBitV, currentMetaBitS := s.metadataBitfields()
+	metadataUnchanged := bytes.Equal(bitV, currentMetaBitV) && bytes.Equal(bitS, currentMetaBitS) &&
+		s.metaData != nil && !s.metaData.IsNil() && s.metaData.Version() == version.Zond
+
+	qnrUnchanged := true
+	if s.dv5Listener != nil {
+		currentBitV, err := attBitvector(s.dv5Listener.Self().Record())
+		if err != nil {
+			log.WithError(err).Error("Could not retrieve att bitfield")
+			return
+		}
+		currentBitS, err := syncBitvector(s.dv5Listener.Self().Record())
+		if err != nil {
+			log.WithError(err).Error("Could not retrieve sync bitfield")
+			return
+		}
+		qnrUnchanged = bytes.Equal(bitV, currentBitV) && bytes.Equal(bitS, currentBitS)
 	}
-	currentBitS, err := syncBitvector(s.dv5Listener.Self().Record())
-	if err != nil {
-		log.WithError(err).Error("Could not retrieve sync bitfield")
+
+	if metadataUnchanged && qnrUnchanged {
 		return
 	}
-	if bytes.Equal(bitV, currentBitV) && bytes.Equal(bitS, currentBitS) &&
-		s.Metadata().Version() == version.Zond {
-		// return early if bitfields haven't changed
-		return
-	}
+
 	s.updateSubnetRecordWithMetadata(bitV, bitS)
 
 	// ping all peers to inform them of new metadata
