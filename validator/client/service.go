@@ -21,6 +21,7 @@ import (
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/validator/accounts/wallet"
+	beaconApi "github.com/theQRL/qrysm/validator/client/beacon-api"
 	beaconChainClientFactory "github.com/theQRL/qrysm/validator/client/beacon-chain-client-factory"
 	"github.com/theQRL/qrysm/validator/client/iface"
 	nodeClientFactory "github.com/theQRL/qrysm/validator/client/node-client-factory"
@@ -186,10 +187,15 @@ func (v *ValidatorService) Start() {
 
 	validatorClient := validatorClientFactory.NewValidatorClient(v.conn)
 	beaconClient := beaconChainClientFactory.NewBeaconChainClient(v.conn)
+	dutyDependentRootTimeout := v.conn.GetBeaconApiTimeout()
+	if dutyDependentRootTimeout == 0 || dutyDependentRootTimeout > time.Second {
+		dutyDependentRootTimeout = time.Second
+	}
 
 	valStruct := &validator{
 		db:                             v.db,
 		validatorClient:                validatorClient,
+		dutyDependentRootProvider:      beaconApi.NewDutyDependentRootsProvider(v.conn.GetBeaconApiUrl(), dutyDependentRootTimeout),
 		beaconClient:                   beaconClient,
 		node:                           nodeClientFactory.NewNodeClient(v.conn),
 		graffiti:                       v.graffiti,

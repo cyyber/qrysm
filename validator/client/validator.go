@@ -82,6 +82,8 @@ type validator struct {
 	startBalances                      map[[fieldparams.MLDSA87PubkeyLength]byte]uint64
 	dutiesLock                         sync.RWMutex
 	duties                             *qrysmpb.DutiesResponse
+	previousDutyDependentRoot          []byte
+	currentDutyDependentRoot           []byte
 	prevBalance                        map[[fieldparams.MLDSA87PubkeyLength]byte]uint64
 	pubkeyToValidatorIndexLock         sync.Mutex
 	pubkeyToValidatorIndex             map[[fieldparams.MLDSA87PubkeyLength]byte]primitives.ValidatorIndex
@@ -102,6 +104,7 @@ type validator struct {
 	keyManager                         keymanager.IKeymanager
 	ticker                             slots.Ticker
 	validatorClient                    iface.ValidatorClient
+	dutyDependentRootProvider          dutyDependentRootProvider
 	graffiti                           []byte
 	voteStats                          voteStats
 	syncCommitteeStats                 syncCommitteeStats
@@ -535,8 +538,13 @@ func retrieveLatestRecord(recs []*kv.AttestationRecord) *kv.AttestationRecord {
 // beginning of a new epoch.
 func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) error {
 	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.duties != nil {
-		// Do nothing if not epoch start AND assignments already exist.
-		return nil
+		refresh, err := v.dutiesRefreshRequired(ctx, slot)
+		if err != nil {
+			log.WithError(err).Debug("Could not validate duty dependent roots, refreshing duties")
+		}
+		if !refresh {
+			return nil
+		}
 	}
 	// Set deadline to end of epoch.
 	ss, err := slots.EpochStart(slots.ToEpoch(slot) + 1)
@@ -578,6 +586,8 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 	if err != nil {
 		v.dutiesLock.Lock()
 		v.duties = nil // Clear assignments so we know to retry the request.
+		v.previousDutyDependentRoot = nil
+		v.currentDutyDependentRoot = nil
 		v.dutiesLock.Unlock()
 		log.WithError(err).Error("Error getting validator duties")
 		return err
@@ -593,8 +603,16 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 		return ErrValidatorsAllExited
 	}
 
+	previousDutyDependentRoot, currentDutyDependentRoot, err := v.fetchDutyDependentRoots(ctx, req.Epoch)
+	if err != nil {
+		previousDutyDependentRoot = nil
+		currentDutyDependentRoot = nil
+	}
+
 	v.dutiesLock.Lock()
 	v.duties = resp
+	v.previousDutyDependentRoot = previousDutyDependentRoot
+	v.currentDutyDependentRoot = currentDutyDependentRoot
 	v.logDuties(slot, v.duties.CurrentEpochDuties, v.duties.NextEpochDuties)
 	v.dutiesLock.Unlock()
 
@@ -612,6 +630,39 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 	}()
 
 	return nil
+}
+
+func (v *validator) dutiesRefreshRequired(ctx context.Context, slot primitives.Slot) (bool, error) {
+	previousCachedRoot, currentCachedRoot := v.cachedDutyDependentRoots()
+	if len(previousCachedRoot) == 0 || len(currentCachedRoot) == 0 {
+		return true, nil
+	}
+
+	previousRoot, currentRoot, err := v.fetchDutyDependentRoots(ctx, slots.ToEpoch(slot))
+	if err != nil {
+		return true, err
+	}
+	if len(previousRoot) == 0 || len(currentRoot) == 0 {
+		return true, nil
+	}
+
+	return !bytes.Equal(previousCachedRoot, previousRoot) || !bytes.Equal(currentCachedRoot, currentRoot), nil
+}
+
+func (v *validator) fetchDutyDependentRoots(ctx context.Context, epoch primitives.Epoch) ([]byte, []byte, error) {
+	if v.dutyDependentRootProvider == nil {
+		return nil, nil, nil
+	}
+	return v.dutyDependentRootProvider.GetDutyDependentRoots(ctx, epoch)
+}
+
+func (v *validator) cachedDutyDependentRoots() ([]byte, []byte) {
+	v.dutiesLock.RLock()
+	defer v.dutiesLock.RUnlock()
+
+	previousRoot := append([]byte(nil), v.previousDutyDependentRoot...)
+	currentRoot := append([]byte(nil), v.currentDutyDependentRoot...)
+	return previousRoot, currentRoot
 }
 
 // subscribeToSubnets iterates through each validator duty, signs each slot, and asks beacon node

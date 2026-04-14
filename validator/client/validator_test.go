@@ -54,6 +54,19 @@ var _ iface.Validator = (*validator)(nil)
 
 const cancelledCtx = "context has been canceled"
 
+type stubDutyDependentRootProvider struct {
+	previous []byte
+	current  []byte
+	err      error
+}
+
+func (p *stubDutyDependentRootProvider) GetDutyDependentRoots(context.Context, primitives.Epoch) ([]byte, []byte, error) {
+	if p.err != nil {
+		return nil, nil, p.err
+	}
+	return append([]byte(nil), p.previous...), append([]byte(nil), p.current...), nil
+}
+
 func genMockKeymanager(t *testing.T, numKeys int) *mockKeymanager {
 	pairs := make([]keypair, numKeys)
 	for i := range numKeys {
@@ -555,14 +568,20 @@ func TestWaitSync_Syncing(t *testing.T) {
 	require.NoError(t, v.WaitForSync(context.Background()))
 }
 
-func TestUpdateDuties_DoesNothingWhenNotEpochStart_AlreadyExistingAssignments(t *testing.T) {
+func TestUpdateDuties_DoesNothingWhenNotEpochStart_WhenDependentRootsUnchanged(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := validatormock.NewMockValidatorClient(ctrl)
 
 	slot := primitives.Slot(1)
+	previousRoot := []byte("previous-root")
+	currentRoot := []byte("current-root")
 	v := validator{
 		validatorClient: client,
+		dutyDependentRootProvider: &stubDutyDependentRootProvider{
+			previous: previousRoot,
+			current:  currentRoot,
+		},
 		duties: &qrysmpb.DutiesResponse{
 			CurrentEpochDuties: []*qrysmpb.DutiesResponse_Duty{
 				{
@@ -572,6 +591,8 @@ func TestUpdateDuties_DoesNothingWhenNotEpochStart_AlreadyExistingAssignments(t 
 				},
 			},
 		},
+		previousDutyDependentRoot: previousRoot,
+		currentDutyDependentRoot:  currentRoot,
 	}
 	client.EXPECT().GetDuties(
 		gomock.Any(),
@@ -579,6 +600,89 @@ func TestUpdateDuties_DoesNothingWhenNotEpochStart_AlreadyExistingAssignments(t 
 	).Times(0)
 
 	assert.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
+}
+
+func TestUpdateDuties_RefreshesWhenDependentRootsChange(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := validatormock.NewMockValidatorClient(ctrl)
+
+	slot := primitives.Slot(1)
+	expectedRoots := &stubDutyDependentRootProvider{
+		previous: []byte("new-previous-root"),
+		current:  []byte("new-current-root"),
+	}
+	resp := &qrysmpb.DutiesResponse{
+		CurrentEpochDuties: []*qrysmpb.DutiesResponse_Duty{},
+		NextEpochDuties:    []*qrysmpb.DutiesResponse_Duty{},
+	}
+	v := validator{
+		keyManager:                newMockKeymanager(t, randKeypair(t)),
+		validatorClient:           client,
+		dutyDependentRootProvider: expectedRoots,
+		duties: &qrysmpb.DutiesResponse{
+			CurrentEpochDuties: []*qrysmpb.DutiesResponse_Duty{{CommitteeIndex: 1}},
+		},
+		previousDutyDependentRoot: []byte("old-previous-root"),
+		currentDutyDependentRoot:  []byte("old-current-root"),
+	}
+	client.EXPECT().GetDuties(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(resp, nil)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	client.EXPECT().SubscribeCommitteeSubnets(
+		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
+	).DoAndReturn(func(_ context.Context, _ *qrysmpb.CommitteeSubnetsSubscribeRequest, _ []primitives.ValidatorIndex) (*emptypb.Empty, error) {
+		wg.Done()
+		return nil, nil
+	})
+
+	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
+	util.WaitTimeout(&wg, 2*time.Second)
+	assert.DeepEqual(t, expectedRoots.previous, v.previousDutyDependentRoot)
+	assert.DeepEqual(t, expectedRoots.current, v.currentDutyDependentRoot)
+}
+
+func TestUpdateDuties_RefreshesWhenDependentRootsUnavailable(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := validatormock.NewMockValidatorClient(ctrl)
+
+	slot := primitives.Slot(1)
+	resp := &qrysmpb.DutiesResponse{
+		CurrentEpochDuties: []*qrysmpb.DutiesResponse_Duty{},
+		NextEpochDuties:    []*qrysmpb.DutiesResponse_Duty{},
+	}
+	v := validator{
+		keyManager:      newMockKeymanager(t, randKeypair(t)),
+		validatorClient: client,
+		duties: &qrysmpb.DutiesResponse{
+			CurrentEpochDuties: []*qrysmpb.DutiesResponse_Duty{{CommitteeIndex: 1}},
+		},
+	}
+	client.EXPECT().GetDuties(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(resp, nil)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	client.EXPECT().SubscribeCommitteeSubnets(
+		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
+	).DoAndReturn(func(_ context.Context, _ *qrysmpb.CommitteeSubnetsSubscribeRequest, _ []primitives.ValidatorIndex) (*emptypb.Empty, error) {
+		wg.Done()
+		return nil, nil
+	})
+
+	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
+	util.WaitTimeout(&wg, 2*time.Second)
 }
 
 func TestUpdateDuties_ReturnsError(t *testing.T) {
