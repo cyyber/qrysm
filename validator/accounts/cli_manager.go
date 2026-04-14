@@ -80,6 +80,7 @@ func (acm *AccountsCLIManager) prepareBeaconClients(ctx context.Context) (*iface
 		grpcConn,
 		acm.beaconApiEndpoint,
 		acm.beaconApiTimeout,
+		grpcConn.Close,
 	)
 
 	validatorClient := validatorClientFactory.NewValidatorClient(conn)

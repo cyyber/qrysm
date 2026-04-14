@@ -139,7 +139,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 
 	s.ctx = grpcutil.AppendHeaders(ctx, s.grpcHeaders)
 
-	grpcConn, err := grpc.DialContext(ctx, s.endpoint, dialOpts...)
+	grpcConn, err := newGrpcConnectionProvider(s.ctx, s.endpoint, dialOpts)
 	if err != nil {
 		return s, err
 	}
@@ -150,6 +150,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		grpcConn,
 		cfg.BeaconApiEndpoint,
 		cfg.BeaconApiTimeout,
+		grpcConn.Close,
 	)
 
 	return s, nil
@@ -221,6 +222,9 @@ func (v *ValidatorService) Start() {
 		proposerSettings:         v.proposerSettings,
 		walletInitializedChannel: make(chan *wallet.Wallet, 1),
 	}
+	if tracker, ok := v.conn.GetGrpcClientConn().(grpcHealthTracker); ok {
+		valStruct.grpcHealthTracker = tracker
+	}
 
 	// To resolve a race condition at startup due to the interface
 	// nature of the abstracted block type. We initialize
@@ -241,7 +245,7 @@ func (v *ValidatorService) Stop() error {
 	v.cancel()
 	log.Info("Stopping service")
 	if v.conn != nil {
-		return v.conn.GetGrpcClientConn().Close()
+		return v.conn.Close()
 	}
 	return nil
 }
@@ -259,10 +263,18 @@ func (v *ValidatorService) waitForRunnerRecovery(ctx context.Context) error {
 		return err
 	}
 	for {
-		if _, err := v.Syncing(ctx); err == nil {
+		if tracker, ok := v.conn.GetGrpcClientConn().(grpcHealthTracker); ok {
+			if err := tracker.EnsureHealthy(ctx); err == nil {
+				return nil
+			} else {
+				log.WithError(err).Warn("Validator service health check failed, waiting for healthy beacon node...")
+			}
+		} else if syncing, err := v.Syncing(ctx); err == nil && !syncing {
 			return nil
-		} else {
+		} else if err != nil {
 			log.WithError(err).Warn("Validator service health check failed, waiting for healthy beacon node...")
+		} else {
+			log.Warn("Validator service health check failed, waiting for healthy beacon node...")
 		}
 		if err := waitForRetry(ctx); err != nil {
 			return err

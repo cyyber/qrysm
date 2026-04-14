@@ -98,6 +98,7 @@ type validator struct {
 	interopKeysConfig                  *local.InteropKeymanagerConfig
 	wallet                             *wallet.Wallet
 	graffitiStruct                     *graffiti.Graffiti
+	grpcHealthTracker                  grpcHealthTracker
 	node                               iface.NodeClient
 	db                                 vdb.Database
 	beaconClient                       iface.BeaconChainClient
@@ -273,6 +274,12 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 func (v *validator) WaitForSync(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForSync")
 	defer span.End()
+
+	if v.grpcHealthTracker != nil {
+		if err := v.grpcHealthTracker.EnsureHealthy(ctx); err == nil {
+			return nil
+		}
+	}
 
 	s, err := v.node.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
