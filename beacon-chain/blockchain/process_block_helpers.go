@@ -131,6 +131,9 @@ func (s *Service) updateFinalized(ctx context.Context, cp *qrysmpb.Checkpoint) e
 	if err := s.cfg.BeaconDB.SaveFinalizedCheckpoint(ctx, cp); err != nil {
 		return err
 	}
+	if s.checkpointStateCache != nil {
+		s.checkpointStateCache.EvictUpTo(cp.Epoch)
+	}
 
 	fRoot := bytesutil.ToBytes32(cp.Root)
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(fRoot)

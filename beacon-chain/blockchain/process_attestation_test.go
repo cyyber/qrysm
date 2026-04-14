@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/theQRL/qrysm/beacon-chain/core/transition"
+	"github.com/theQRL/qrysm/beacon-chain/state"
 	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
@@ -261,6 +262,72 @@ func TestStore_UpdateCheckpointState(t *testing.T) {
 	cached, err = service.checkpointStateCache.StateByCheckpoint(newCheckpoint)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, returned.ToProtoUnsafe(), cached.ToProtoUnsafe())
+}
+
+func TestUpdateFinalized_EvictsCheckpointStateCache(t *testing.T) {
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
+
+	currentFinalizedBeaconBlock := util.NewBeaconBlockZond()
+	currentFinalizedBeaconBlock.Block.Slot = params.BeaconConfig().SlotsPerEpoch
+	currentFinalizedBlock := util.SaveBlock(t, ctx, service.cfg.BeaconDB, currentFinalizedBeaconBlock)
+	currentFinalizedRoot, err := currentFinalizedBlock.Block().HashTreeRoot()
+	require.NoError(t, err)
+	currentFinalized := &qrysmpb.Checkpoint{
+		Epoch: 1,
+		Root:  currentFinalizedRoot[:],
+	}
+	require.NoError(t, service.cfg.BeaconDB.SaveGenesisBlockRoot(ctx, bytesutil.ToBytes32(currentFinalized.Root)))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &qrysmpb.StateSummary{
+		Root: currentFinalized.Root,
+		Slot: params.BeaconConfig().SlotsPerEpoch,
+	}))
+	require.NoError(t, service.cfg.BeaconDB.SaveFinalizedCheckpoint(ctx, currentFinalized))
+
+	cp1 := &qrysmpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength)}
+	st1, err := util.NewBeaconStateZond()
+	require.NoError(t, err)
+	require.NoError(t, st1.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+	require.NoError(t, service.checkpointStateCache.AddCheckpointState(cp1, st1))
+
+	cp2 := &qrysmpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength)}
+	st2, err := util.NewBeaconStateZond()
+	require.NoError(t, err)
+	require.NoError(t, st2.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(2)))
+	require.NoError(t, service.checkpointStateCache.AddCheckpointState(cp2, st2))
+
+	cp5 := &qrysmpb.Checkpoint{Epoch: 5, Root: bytesutil.PadTo([]byte{'C'}, fieldparams.RootLength)}
+	st5, err := util.NewBeaconStateZond()
+	require.NoError(t, err)
+	require.NoError(t, st5.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(5)))
+	require.NoError(t, service.checkpointStateCache.AddCheckpointState(cp5, st5))
+
+	newFinalizedBeaconBlock := util.NewBeaconBlockZond()
+	newFinalizedBeaconBlock.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(3)
+	newFinalizedBeaconBlock.Block.ParentRoot = currentFinalized.Root
+	newFinalizedBlock := util.SaveBlock(t, ctx, service.cfg.BeaconDB, newFinalizedBeaconBlock)
+	newFinalizedRoot, err := newFinalizedBlock.Block().HashTreeRoot()
+	require.NoError(t, err)
+	newFinalized := &qrysmpb.Checkpoint{Epoch: 3, Root: newFinalizedRoot[:]}
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &qrysmpb.StateSummary{
+		Root: newFinalized.Root,
+		Slot: params.BeaconConfig().SlotsPerEpoch.Mul(3),
+	}))
+
+	require.NoError(t, service.updateFinalized(ctx, newFinalized))
+
+	cached, err := service.checkpointStateCache.StateByCheckpoint(cp1)
+	require.NoError(t, err)
+	assert.Equal(t, state.BeaconState(nil), cached)
+
+	cached, err = service.checkpointStateCache.StateByCheckpoint(cp2)
+	require.NoError(t, err)
+	assert.Equal(t, state.BeaconState(nil), cached)
+
+	cached, err = service.checkpointStateCache.StateByCheckpoint(cp5)
+	require.NoError(t, err)
+	assert.NotNil(t, cached)
+	assert.Equal(t, st5.Slot(), cached.Slot())
 }
 
 func TestAttEpoch_MatchPrevEpoch(t *testing.T) {
