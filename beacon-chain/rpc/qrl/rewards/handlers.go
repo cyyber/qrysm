@@ -249,7 +249,7 @@ func (s *Server) attRewardsState(w http.ResponseWriter, r *http.Request) (state.
 		return nil, false
 	}
 	currentEpoch := uint64(slots.ToEpoch(s.TimeFetcher.CurrentSlot()))
-	if requestedEpoch+1 >= currentEpoch {
+	if currentEpoch < 2 || requestedEpoch > currentEpoch-2 {
 		http2.HandleError(w,
 			"Attestation rewards are available after two epoch transitions to ensure all attestations have a chance of inclusion",
 			http.StatusNotFound)

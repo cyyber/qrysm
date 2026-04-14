@@ -454,6 +454,19 @@ func TestAttestationRewards(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, e.Code)
 		assert.Equal(t, "Attestation rewards are available after two epoch transitions to ensure all attestations have a chance of inclusion", e.Message)
 	})
+	t.Run("overflow future epoch", func(t *testing.T) {
+		url := "http://only.the.epoch.number.at.the.end.is.important/18446744073709551615"
+		request := httptest.NewRequest("POST", url, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.AttestationRewards(writer, request)
+		assert.Equal(t, http.StatusNotFound, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusNotFound, e.Code)
+		assert.Equal(t, "Attestation rewards are available after two epoch transitions to ensure all attestations have a chance of inclusion", e.Message)
+	})
 }
 
 func TestSyncCommiteeRewards(t *testing.T) {
