@@ -141,6 +141,8 @@ type Service struct {
 	signatureChan                    chan *signatureVerifier
 	clockWaiter                      startup.ClockWaiter
 	initialSyncComplete              chan struct{}
+	subnetPeerSearchesLock           sync.Mutex
+	subnetPeerSearches               map[string]struct{}
 }
 
 // NewService initializes new regular sync service.

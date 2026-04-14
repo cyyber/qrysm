@@ -38,6 +38,20 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+type blockingSubnetSearchP2P struct {
+	*p2ptest.FakeP2P
+	searchContexts chan context.Context
+}
+
+func (p *blockingSubnetSearchP2P) FindPeersWithSubnet(ctx context.Context, _ string, _ uint64, _ int) (bool, error) {
+	select {
+	case p.searchContexts <- ctx:
+	default:
+	}
+	<-ctx.Done()
+	return false, ctx.Err()
+}
+
 func TestSubscribe_ReceivesValidMessage(t *testing.T) {
 	p2pService := p2ptest.NewTestP2P(t)
 	gt := time.Now()
@@ -341,6 +355,47 @@ func TestStaticSubnets(t *testing.T) {
 		t.Errorf("Wanted the number of subnet topics registered to be %d but got %d", params.BeaconNetworkConfig().AttestationSubnetCount, len(topics))
 	}
 	cancel()
+}
+
+func TestSubscribeAggregatorSubnet_SearchDoesNotBlockWantedUpdates(t *testing.T) {
+	currentTimeout := subnetPeerSearchTimeout
+	subnetPeerSearchTimeout = 20 * time.Millisecond
+	defer func() {
+		subnetPeerSearchTimeout = currentTimeout
+	}()
+
+	p2pService := &blockingSubnetSearchP2P{
+		FakeP2P:        p2ptest.NewFuzzTestP2P(),
+		searchContexts: make(chan context.Context, 4),
+	}
+	r := Service{
+		ctx: context.Background(),
+		cfg: &config{
+			p2p: p2pService,
+		},
+	}
+
+	start := time.Now()
+	r.findPeersWithSubnetAsync("topic", 1)
+	require.Equal(t, true, time.Since(start) < 100*time.Millisecond)
+
+	var searchCtx context.Context
+	select {
+	case searchCtx = <-p2pService.searchContexts:
+	case <-time.After(time.Second):
+		t.Fatal("did not start subnet search")
+	}
+
+	deadline, ok := searchCtx.Deadline()
+	require.Equal(t, true, ok)
+	require.Equal(t, true, time.Until(deadline) <= 50*time.Millisecond)
+
+	r.findPeersWithSubnetAsync("topic", 1)
+	select {
+	case <-p2pService.searchContexts:
+		t.Fatal("started duplicate subnet search while one was already running")
+	case <-time.After(40 * time.Millisecond):
+	}
 }
 
 func Test_wrapAndReportValidation(t *testing.T) {

@@ -36,6 +36,8 @@ import (
 
 const pubsubMessageTimeout = 30 * time.Second
 
+var subnetPeerSearchTimeout = 2 * time.Second
+
 // wrappedVal represents a gossip validator which also returns an error along with the result.
 type wrappedVal func(context.Context, peer.ID, *pubsub.Message) (pubsub.ValidationResult, error)
 
@@ -328,20 +330,11 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal,
 				}
 				// Check every slot that there are enough peers
 				for i := range subnetCount {
-					if !s.validPeersExist(s.addDigestAndIndexToTopic(topic, digest, i)) {
-						log.Debugf("No peers found subscribed to attestation gossip subnet with "+
-							"committee index %d. Searching network for peers subscribed to the subnet.", i)
-						_, err := s.cfg.p2p.FindPeersWithSubnet(
-							s.ctx,
-							s.addDigestAndIndexToTopic(topic, digest, i),
-							i,
-							flags.Get().MinimumPeersPerSubnet,
-						)
-						if err != nil {
-							log.WithError(err).Debug("Could not search for peers")
-							return
-						}
-					}
+					s.maybeSearchForSubnetPeers(
+						s.addDigestAndIndexToTopic(topic, digest, i),
+						i,
+						"attestation",
+					)
 				}
 			}
 		}
@@ -435,14 +428,7 @@ func (s *Service) subscribeAggregatorSubnet(
 	if _, exists := subscriptions[idx]; !exists {
 		subscriptions[idx] = s.subscribeWithBase(subnetTopic, validate, handle)
 	}
-	if !s.validPeersExist(subnetTopic) {
-		log.Debugf("No peers found subscribed to attestation gossip subnet with "+
-			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
-		_, err := s.cfg.p2p.FindPeersWithSubnet(s.ctx, subnetTopic, idx, flags.Get().MinimumPeersPerSubnet)
-		if err != nil {
-			log.WithError(err).Debug("Could not search for peers")
-		}
-	}
+	s.maybeSearchForSubnetPeers(subnetTopic, idx, "attestation")
 }
 
 // subscribe missing subnets for our sync committee members.
@@ -461,14 +447,7 @@ func (s *Service) subscribeSyncSubnet(
 	if _, exists := subscriptions[idx]; !exists {
 		subscriptions[idx] = s.subscribeWithBase(subnetTopic, validate, handle)
 	}
-	if !s.validPeersExist(subnetTopic) {
-		log.Debugf("No peers found subscribed to sync gossip subnet with "+
-			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
-		_, err := s.cfg.p2p.FindPeersWithSubnet(s.ctx, subnetTopic, idx, flags.Get().MinimumPeersPerSubnet)
-		if err != nil {
-			log.WithError(err).Debug("Could not search for peers")
-		}
-	}
+	s.maybeSearchForSubnetPeers(subnetTopic, idx, "sync")
 }
 
 // subscribe to a static subnet with the given topic and index. A given validator and subscription handler is
@@ -512,20 +491,11 @@ func (s *Service) subscribeStaticWithSyncSubnets(topic string, validator wrapped
 				}
 				// Check every slot that there are enough peers
 				for i := range params.BeaconConfig().SyncCommitteeSubnetCount {
-					if !s.validPeersExist(s.addDigestAndIndexToTopic(topic, digest, i)) {
-						log.Debugf("No peers found subscribed to sync gossip subnet with "+
-							"committee index %d. Searching network for peers subscribed to the subnet.", i)
-						_, err := s.cfg.p2p.FindPeersWithSubnet(
-							s.ctx,
-							s.addDigestAndIndexToTopic(topic, digest, i),
-							i,
-							flags.Get().MinimumPeersPerSubnet,
-						)
-						if err != nil {
-							log.WithError(err).Debug("Could not search for peers")
-							return
-						}
-					}
+					s.maybeSearchForSubnetPeers(
+						s.addDigestAndIndexToTopic(topic, digest, i),
+						i,
+						"sync",
+					)
 				}
 			}
 		}
@@ -590,15 +560,55 @@ func (s *Service) subscribeDynamicWithSyncSubnets(
 func (s *Service) lookupAttesterSubnets(digest [4]byte, idx uint64) {
 	topic := p2p.GossipTypeMapping[reflect.TypeFor[*qrysmpb.Attestation]()]
 	subnetTopic := fmt.Sprintf(topic, digest, idx)
-	if !s.validPeersExist(subnetTopic) {
-		log.Debugf("No peers found subscribed to attestation gossip subnet with "+
-			"committee index %d. Searching network for peers subscribed to the subnet.", idx)
-		// perform a search for peers with the desired committee index.
-		_, err := s.cfg.p2p.FindPeersWithSubnet(s.ctx, subnetTopic, idx, flags.Get().MinimumPeersPerSubnet)
-		if err != nil {
+	s.maybeSearchForSubnetPeers(subnetTopic, idx, "attestation")
+}
+
+func (s *Service) maybeSearchForSubnetPeers(subnetTopic string, idx uint64, subnetKind string) {
+	if s.validPeersExist(subnetTopic) {
+		return
+	}
+
+	log.Debugf("No peers found subscribed to %s gossip subnet with committee index %d. Searching network for peers subscribed to the subnet.", subnetKind, idx)
+	s.findPeersWithSubnetAsync(subnetTopic, idx)
+}
+
+func (s *Service) findPeersWithSubnetAsync(subnetTopic string, idx uint64) {
+	if !s.startSubnetPeerSearch(subnetTopic) {
+		return
+	}
+
+	go func() {
+		defer s.finishSubnetPeerSearch(subnetTopic)
+
+		ctx, cancel := context.WithTimeout(s.ctx, subnetPeerSearchTimeout)
+		defer cancel()
+
+		_, err := s.cfg.p2p.FindPeersWithSubnet(ctx, subnetTopic, idx, flags.Get().MinimumPeersPerSubnet)
+		if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 			log.WithError(err).Debug("Could not search for peers")
 		}
+	}()
+}
+
+func (s *Service) startSubnetPeerSearch(subnetTopic string) bool {
+	s.subnetPeerSearchesLock.Lock()
+	defer s.subnetPeerSearchesLock.Unlock()
+
+	if s.subnetPeerSearches == nil {
+		s.subnetPeerSearches = make(map[string]struct{})
 	}
+	if _, exists := s.subnetPeerSearches[subnetTopic]; exists {
+		return false
+	}
+	s.subnetPeerSearches[subnetTopic] = struct{}{}
+	return true
+}
+
+func (s *Service) finishSubnetPeerSearch(subnetTopic string) {
+	s.subnetPeerSearchesLock.Lock()
+	defer s.subnetPeerSearchesLock.Unlock()
+
+	delete(s.subnetPeerSearches, subnetTopic)
 }
 
 func (s *Service) unSubscribeFromTopic(topic string) {

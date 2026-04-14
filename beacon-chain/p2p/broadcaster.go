@@ -23,6 +23,10 @@ import (
 // GossipTypeMapping.
 var ErrMessageNotMapped = errors.New("message type is not mapped to a PubSub topic")
 
+const minimumPeersPerSubnetForBroadcast = 1
+
+var broadcastSubnetSearchTimeout = 2 * time.Second
+
 // Broadcast a message to the p2p network, the message is assumed to be
 // broadcasted to the current fork.
 func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
@@ -94,6 +98,26 @@ func (s *Service) BroadcastSyncCommitteeMessage(ctx context.Context, subnet uint
 	return nil
 }
 
+func findPeersForBroadcast(
+	ctx context.Context,
+	finder func(context.Context, string, uint64, int) (bool, error),
+	topic string,
+	subnet uint64,
+) error {
+	searchCtx, cancel := context.WithTimeout(ctx, broadcastSubnetSearchTimeout)
+	defer cancel()
+
+	ok, err := finder(searchCtx, topic, subnet, minimumPeersPerSubnetForBroadcast)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errors.New("failed to find peers for subnet")
+	}
+
+	return nil
+}
+
 func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *qrysmpb.Attestation, forkDigest [4]byte) {
 	_, span := trace.StartSpan(ctx, "p2p.broadcastAttestation")
 	defer span.End()
@@ -119,15 +143,11 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 		if err := func() error {
 			s.subnetLocker(subnet).Lock()
 			defer s.subnetLocker(subnet).Unlock()
-			ok, err := s.FindPeersWithSubnet(ctx, attestationToTopic(subnet, forkDigest), subnet, 1)
-			if err != nil {
+			if err := findPeersForBroadcast(ctx, s.FindPeersWithSubnet, attestationToTopic(subnet, forkDigest), subnet); err != nil {
 				return err
 			}
-			if ok {
-				savedAttestationBroadcasts.Inc()
-				return nil
-			}
-			return errors.New("failed to find peers for subnet")
+			savedAttestationBroadcasts.Inc()
+			return nil
 		}(); err != nil {
 			log.WithError(err).Error("Failed to find peers")
 			tracing.AnnotateError(span, err)
@@ -175,15 +195,11 @@ func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMs
 		if err := func() error {
 			s.subnetLocker(wrappedSubIdx).Lock()
 			defer s.subnetLocker(wrappedSubIdx).Unlock()
-			ok, err := s.FindPeersWithSubnet(ctx, syncCommitteeToTopic(subnet, forkDigest), subnet, 1)
-			if err != nil {
+			if err := findPeersForBroadcast(ctx, s.FindPeersWithSubnet, syncCommitteeToTopic(subnet, forkDigest), subnet); err != nil {
 				return err
 			}
-			if ok {
-				savedSyncCommitteeBroadcasts.Inc()
-				return nil
-			}
-			return errors.New("failed to find peers for subnet")
+			savedSyncCommitteeBroadcasts.Inc()
+			return nil
 		}(); err != nil {
 			log.WithError(err).Error("Failed to find peers")
 			tracing.AnnotateError(span, err)

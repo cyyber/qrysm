@@ -89,6 +89,37 @@ func TestService_Broadcast(t *testing.T) {
 	}
 }
 
+func TestFindPeersForBroadcast_UsesBoundedDiscoveryTimeout(t *testing.T) {
+	currentTimeout := broadcastSubnetSearchTimeout
+	broadcastSubnetSearchTimeout = 20 * time.Millisecond
+	defer func() {
+		broadcastSubnetSearchTimeout = currentTimeout
+	}()
+
+	parentCtx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+
+	searchDeadlines := make(chan time.Time, 1)
+	start := time.Now()
+	err := findPeersForBroadcast(parentCtx, func(ctx context.Context, topic string, subnet uint64, threshold int) (bool, error) {
+		require.Equal(t, "topic", topic)
+		require.Equal(t, uint64(3), subnet)
+		require.Equal(t, minimumPeersPerSubnetForBroadcast, threshold)
+
+		deadline, ok := ctx.Deadline()
+		require.Equal(t, true, ok)
+		searchDeadlines <- deadline
+
+		<-ctx.Done()
+		return false, ctx.Err()
+	}, "topic", 3)
+	require.ErrorContains(t, context.DeadlineExceeded.Error(), err)
+	require.Equal(t, true, time.Since(start) < 100*time.Millisecond)
+
+	searchDeadline := <-searchDeadlines
+	require.Equal(t, true, time.Until(searchDeadline) <= 50*time.Millisecond)
+}
+
 func TestService_Broadcast_ReturnsErr_TopicNotMapped(t *testing.T) {
 	p := Service{
 		genesisTime:           time.Now(),
