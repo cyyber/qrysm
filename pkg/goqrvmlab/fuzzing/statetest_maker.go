@@ -107,7 +107,7 @@ func (g *GstMaker) SetCode(address common.Address, code []byte) {
 	if !exist {
 		account = GenesisAccount{
 			Code:    code,
-			Storage: make(map[common.Hash]common.Hash),
+			Storage: make(map[common.Hash]common.StorageValue),
 			Nonce:   0,
 			Balance: new(big.Int),
 		}
@@ -207,7 +207,7 @@ func BasicStateTest(fork string) *GstMaker {
 	gst.AddAccount(sender, GenesisAccount{
 		Nonce:   0,
 		Balance: big.NewInt(0xffffffffff),
-		Storage: make(map[common.Hash]common.Hash),
+		Storage: make(map[common.Hash]common.StorageValue),
 		Code:    []byte{},
 	})
 	gst.EnableFork(fork)

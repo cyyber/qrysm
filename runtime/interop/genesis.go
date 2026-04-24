@@ -106,9 +106,9 @@ func minerAllocation() depositAllocation {
 }
 
 func defaultDepositContractAllocation(contractAddress string) depositAllocation {
-	s := make(map[common.Hash]common.Hash)
+	s := make(map[common.Hash]common.StorageValue)
 	for k, v := range DefaultDepositContractStorage {
-		s[common.HexToHash(k)] = common.HexToHash(v)
+		s[common.HexToHash(k)] = common.HexToStorageValue(v)
 	}
 	codeBytes, err := hexutil.Decode(DepositContractCode)
 	if err != nil {

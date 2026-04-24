@@ -70,7 +70,7 @@ func createGstMaker(fill *filler.Filler, code []byte) *fuzzing.GstMaker {
 		// Used to be 0xffffffff, increased to prevent sender to little money exceptions
 		// see: https://gist.github.com/MariusVanDerWijden/008b91a61de4b0fb831b72c24600ef59
 		Balance: big.NewInt(0x3fffffffffffffff),
-		Storage: make(map[common.Hash]common.Hash),
+		Storage: make(map[common.Hash]common.StorageValue),
 		Code:    []byte{},
 	})
 	// Add code
@@ -78,7 +78,7 @@ func createGstMaker(fill *filler.Filler, code []byte) *fuzzing.GstMaker {
 	gst.AddAccount(dest, fuzzing.GenesisAccount{
 		Code:    code,
 		Balance: new(big.Int),
-		Storage: make(map[common.Hash]common.Hash),
+		Storage: make(map[common.Hash]common.StorageValue),
 	})
 	// Add the transaction
 	tx := &fuzzing.StTransaction{

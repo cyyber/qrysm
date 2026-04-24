@@ -26,7 +26,10 @@ import (
 )
 
 var (
-	depositEventSignature = hash.Keccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
+	depositEventSignatureHash = hash.Keccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
+	// Log topics are 64 bytes wide after the 48B-address migration; the
+	// 32-byte Keccak-256 signature lands right-aligned in the low half.
+	depositEventSignature = common.BytesToLogTopic(depositEventSignatureHash[:])
 )
 
 const executionDataSavingInterval = 1000

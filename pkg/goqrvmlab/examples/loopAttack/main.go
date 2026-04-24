@@ -233,7 +233,7 @@ func convertToStateTest(name, fork string, alloc core.GenesisAlloc, gasLimit uin
 			fuzzAcc.Balance = new(big.Int)
 		}
 		if fuzzAcc.Storage == nil {
-			fuzzAcc.Storage = make(map[common.Hash]common.Hash)
+			fuzzAcc.Storage = make(map[common.Hash]common.StorageValue)
 		}
 		fuzzGenesisAlloc[k] = fuzzAcc
 	}
@@ -243,7 +243,7 @@ func convertToStateTest(name, fork string, alloc core.GenesisAlloc, gasLimit uin
 		fuzzGenesisAlloc[sender] = fuzzing.GenesisAccount{
 			Balance: big.NewInt(1000000000000000000), // 1 eth
 			Nonce:   0,
-			Storage: make(map[common.Hash]common.Hash),
+			Storage: make(map[common.Hash]common.StorageValue),
 		}
 	}
 

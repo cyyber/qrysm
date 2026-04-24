@@ -30,7 +30,7 @@ func makeTest() *fuzzing.GeneralStateTest {
 		gst.AddAccount(a, fuzzing.GenesisAccount{
 			Code:    aa.Bytecode(),
 			Balance: big.NewInt(5),
-			Storage: make(map[common.Hash]common.Hash),
+			Storage: make(map[common.Hash]common.StorageValue),
 		})
 	}
 	// 0xbb does a call
@@ -54,14 +54,14 @@ func makeTest() *fuzzing.GeneralStateTest {
 		gst.AddAccount(b, fuzzing.GenesisAccount{
 			Code:    bb.Bytecode(),
 			Balance: big.NewInt(5),
-			Storage: make(map[common.Hash]common.Hash),
+			Storage: make(map[common.Hash]common.StorageValue),
 		})
 	}
 
 	// Create the precompile too
 	//gst.AddAccount(precompileAddress, fuzzing.GenesisAccount{
 	//	Balance: big.NewInt(5),
-	//	Storage: make(map[common.Hash]common.Hash),
+	//	Storage: make(map[common.Hash]common.StorageValue),
 	//})
 
 	// The transaction from sender to a

@@ -66,7 +66,7 @@ func fillSstore(gst *GstMaker, fork string) {
 	for _, addr := range nonGenesisAddresses {
 		gst.AddAccount(addr, GenesisAccount{
 			Balance: new(big.Int).SetUint64(1),
-			Storage: make(map[common.Hash]common.Hash),
+			Storage: make(map[common.Hash]common.StorageValue),
 		})
 	}
 	for _, addr := range addrs {
