@@ -282,3 +282,10 @@ replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.201
 
 // See https://github.com/prysmaticlabs/grpc-gateway/issues/2
 replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/theQRL/grpc-gateway/v2 v2.0.0-20250214142603-49067762c97f
+
+// Point go-qrl and go-qrllib at the 48-byte-address branches for the
+// 48B address / 64B VM word migration. Drop these replace directives once
+// the branches are merged to main and tagged upstream.
+replace github.com/theQRL/go-qrl => github.com/adamtka42/go-qrl v0.0.0-20260423194502-7333952e71bf
+
+replace github.com/theQRL/go-qrllib => github.com/adamtka42/go-qrllib v0.0.0-20260420201912-d9fee55b98b7
