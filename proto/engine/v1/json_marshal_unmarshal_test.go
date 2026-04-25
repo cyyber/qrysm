@@ -169,7 +169,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		withdrawalIndex1 := hexutil.Uint64(1)
 		withdrawalAmount1 := hexutil.Uint64(100)
 		withdrawalValidator1 := hexutil.Uint64(1)
-		address1 := common.Address(bytesutil.ToBytes20([]byte("address1")))
+		address1 := common.Address(bytesutil.ToBytes48([]byte("address1")))
 		payloadItems["withdrawals"] = []*withdrawalJSON{
 			{
 				Index:     &withdrawalIndex1,
@@ -230,7 +230,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		withdrawalIndex1 := hexutil.Uint64(1)
 		withdrawalAmount1 := hexutil.Uint64(100)
 		withdrawalValidator1 := hexutil.Uint64(1)
-		address1 := common.Address(bytesutil.ToBytes20([]byte("address1")))
+		address1 := common.Address(bytesutil.ToBytes48([]byte("address1")))
 		payloadItems["withdrawals"] = []*withdrawalJSON{
 			{
 				Index:     &withdrawalIndex1,
@@ -304,7 +304,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		withdrawalIndex1 := hexutil.Uint64(1)
 		withdrawalAmount1 := hexutil.Uint64(100)
 		withdrawalValidator1 := hexutil.Uint64(1)
-		address1 := common.Address(bytesutil.ToBytes20([]byte("address1")))
+		address1 := common.Address(bytesutil.ToBytes48([]byte("address1")))
 		payloadItems["withdrawals"] = []*withdrawalJSON{
 			{
 				Index:     &withdrawalIndex1,
@@ -370,8 +370,8 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		withdrawalAmount2 := hexutil.Uint64(200)
 		withdrawalValidator1 := hexutil.Uint64(1)
 		withdrawalValidator2 := hexutil.Uint64(2)
-		address1 := common.Address(bytesutil.ToBytes20([]byte("address1")))
-		address2 := common.Address(bytesutil.ToBytes20([]byte("address2")))
+		address1 := common.Address(bytesutil.ToBytes48([]byte("address1")))
+		address2 := common.Address(bytesutil.ToBytes48([]byte("address2")))
 		payloadItems["withdrawals"] = []*withdrawalJSON{
 			{
 				Index:     &withdrawalIndex1,
