@@ -239,13 +239,13 @@ func GenerateProtoZondBeaconBlock() *qrysmpb.BeaconBlockZond {
 					{
 						Index:          127,
 						ValidatorIndex: 128,
-						Address:        FillByteSlice(20, 129),
+						Address:        FillByteSlice(48, 129),
 						Amount:         130,
 					},
 					{
 						Index:          131,
 						ValidatorIndex: 132,
-						Address:        FillByteSlice(20, 133),
+						Address:        FillByteSlice(48, 133),
 						Amount:         134,
 					},
 				},
@@ -486,13 +486,13 @@ func GenerateJsonZondBeaconBlock() *apimiddleware.BeaconBlockZondJson {
 					{
 						WithdrawalIndex:  "127",
 						ValidatorIndex:   "128",
-						ExecutionAddress: FillEncodedByteSlice(20, 129),
+						ExecutionAddress: FillEncodedByteSlice(48, 129),
 						Amount:           "130",
 					},
 					{
 						WithdrawalIndex:  "131",
 						ValidatorIndex:   "132",
-						ExecutionAddress: FillEncodedByteSlice(20, 133),
+						ExecutionAddress: FillEncodedByteSlice(48, 133),
 						Amount:           "134",
 					},
 				},
