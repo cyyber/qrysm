@@ -103,7 +103,7 @@ func validateDeposit(depositData *DepositData, credential *Credential) bool {
 		return false
 	}
 
-	if len(withdrawalCredentials) != 32 {
+	if len(withdrawalCredentials) != 64 {
 		panic(fmt.Errorf("failed to derive ML-DSA-87 depositKey from signingSeed | reason %v", err))
 	}
 

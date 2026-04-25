@@ -202,7 +202,7 @@ func syncCommittee(prefix string) *qrysmpb.SyncCommittee {
 
 func executionPayloadHeaderZond() *enginev1.ExecutionPayloadHeaderZond {
 	ph := bytesutil.ToBytes32([]byte("parent"))
-	fr := bytesutil.PadTo([]byte("fee"), 20)
+	fr := bytesutil.PadTo([]byte("fee"), 48)
 	sr := bytesutil.ToBytes32([]byte("state"))
 	rr := bytesutil.ToBytes32([]byte("receipts"))
 	lb := bytesutil.PadTo([]byte("logs"), 256)
