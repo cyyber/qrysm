@@ -1529,7 +1529,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 	require.NoError(t, err)
 	recipient0, err := common.NewAddressFromString("Q055Fb65722E7b2455043BFEBf6177F1D2e9738D9")
 	require.NoError(t, err)
-	recipient1, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000")
+	recipient1, err := common.NewAddressFromString("Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
 	require.NoError(t, err)
 
 	type ExpectedValidatorRegistration struct {
@@ -2137,7 +2137,7 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 
 	// Fee recipients
 	feeRecipient1 := getFeeRecipientFromString(t, "Q1111111111111111111111111111111111111111")
-	feeRecipient2 := getFeeRecipientFromString(t, "Q0000000000000000000000000000000000000000")
+	feeRecipient2 := getFeeRecipientFromString(t, "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
 	feeRecipient3 := getFeeRecipientFromString(t, "Q3333333333333333333333333333333333333333")
 
 	ctrl := gomock.NewController(t)
@@ -2229,7 +2229,7 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 
 	// Fee recipients
 	feeRecipient1 := getFeeRecipientFromString(t, "Q1111111111111111111111111111111111111111")
-	feeRecipient2 := getFeeRecipientFromString(t, "Q0000000000000000000000000000000000000000")
+	feeRecipient2 := getFeeRecipientFromString(t, "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
 	feeRecipient3 := getFeeRecipientFromString(t, "Q3333333333333333333333333333333333333333")
 
 	defaultFeeRecipient := getFeeRecipientFromString(t, "Qdddddddddddddddddddddddddddddddddddddddd")
@@ -2340,7 +2340,7 @@ func TestValidator_buildSignedRegReqs_DefaultConfigDisabled(t *testing.T) {
 	pubkey3 := getPubkeyFromString(t, "0x333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
 
 	// Fee recipients
-	feeRecipient1 := getFeeRecipientFromString(t, "Q0000000000000000000000000000000000000000")
+	feeRecipient1 := getFeeRecipientFromString(t, "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
 	feeRecipient2 := getFeeRecipientFromString(t, "Q2222222222222222222222222222222222222222")
 
 	defaultFeeRecipient := getFeeRecipientFromString(t, "Qdddddddddddddddddddddddddddddddddddddddd")
@@ -2426,7 +2426,7 @@ func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
 	pubkey3 := getPubkeyFromString(t, "0x333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333")
 
 	// Fee recipients
-	feeRecipient1 := getFeeRecipientFromString(t, "Q0000000000000000000000000000000000000000")
+	feeRecipient1 := getFeeRecipientFromString(t, "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
 	feeRecipient2 := getFeeRecipientFromString(t, "Q2222222222222222222222222222222222222222")
 
 	defaultFeeRecipient := getFeeRecipientFromString(t, "Qdddddddddddddddddddddddddddddddddddddddd")
@@ -2552,7 +2552,7 @@ func TestValidator_buildSignedRegReqs_TimestampBeforeGenesis(t *testing.T) {
 	pubkey1 := getPubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
 
 	// Fee recipients
-	feeRecipient1 := getFeeRecipientFromString(t, "Q0000000000000000000000000000000000000000")
+	feeRecipient1 := getFeeRecipientFromString(t, "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
 
 	defaultFeeRecipient := getFeeRecipientFromString(t, "Qdddddddddddddddddddddddddddddddddddddddd")
 

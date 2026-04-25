@@ -44,7 +44,7 @@ func TestNodeClose_OK(t *testing.T) {
 	set.String("datadir", tmp, "node data directory")
 	set.String("p2p-encoding", "ssz", "p2p encoding scheme")
 	set.Bool("demo-config", true, "demo configuration")
-	set.String("deposit-contract", "Q0000000000000000000000000000000000000000", "deposit contract address")
+	set.String("deposit-contract", "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", "deposit contract address")
 	set.String("suggested-fee-recipient", "Q6e35733c5af9B61374A128e6F85f553aF09ff89A", "fee recipient")
 	require.NoError(t, set.Set("suggested-fee-recipient", "Q6e35733c5af9B61374A128e6F85f553aF09ff89A"))
 	cmd.ValidatorMonitorIndicesFlag.Value = &cli.IntSlice{}
