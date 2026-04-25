@@ -95,7 +95,7 @@ func TestNodeStart_Ok_registerDeterministicGenesisService(t *testing.T) {
 	require.NoError(t, set.Set("suggested-fee-recipient", "Q6e35733c5af9B61374A128e6F85f553aF09ff89A"))
 	ee := &enginev1.ExecutionPayloadZond{
 		ParentHash:    make([]byte, 32),
-		FeeRecipient:  make([]byte, 20),
+		FeeRecipient:  make([]byte, 48),
 		StateRoot:     make([]byte, 32),
 		ReceiptsRoot:  make([]byte, 32),
 		LogsBloom:     make([]byte, 256),

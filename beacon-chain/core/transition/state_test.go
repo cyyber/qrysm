@@ -90,7 +90,7 @@ func TestGenesisState_HashEquality(t *testing.T) {
 	require.NoError(t, err)
 	ee1 := &enginev1.ExecutionPayloadZond{
 		ParentHash:    make([]byte, 32),
-		FeeRecipient:  make([]byte, 20),
+		FeeRecipient:  make([]byte, 48),
 		StateRoot:     make([]byte, 32),
 		ReceiptsRoot:  make([]byte, 32),
 		LogsBloom:     make([]byte, 256),
@@ -102,7 +102,7 @@ func TestGenesisState_HashEquality(t *testing.T) {
 	require.NoError(t, err)
 	ee := &enginev1.ExecutionPayloadZond{
 		ParentHash:    make([]byte, 32),
-		FeeRecipient:  make([]byte, 20),
+		FeeRecipient:  make([]byte, 48),
 		StateRoot:     make([]byte, 32),
 		ReceiptsRoot:  make([]byte, 32),
 		LogsBloom:     make([]byte, 256),

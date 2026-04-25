@@ -534,8 +534,8 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		response := &fetchRequestResponse{
 			pid: "abc",
 			blks: []blocks.ROBlock{
-				blocks.ROBlock{ReadOnlySignedBeaconBlock: wsb},
-				blocks.ROBlock{ReadOnlySignedBeaconBlock: wsbCopy},
+				{ReadOnlySignedBeaconBlock: wsb},
+				{ReadOnlySignedBeaconBlock: wsbCopy},
 			},
 		}
 		fsm := &stateMachine{

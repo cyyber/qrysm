@@ -37,7 +37,7 @@ func ezDecodeAddress(t *testing.T, s string) []byte {
 func TestSignedValidatorRegistration_MarshalJSON(t *testing.T) {
 	svr := &qrysmpb.SignedValidatorRegistrationV1{
 		Message: &qrysmpb.ValidatorRegistrationV1{
-			FeeRecipient: make([]byte, 20),
+			FeeRecipient: make([]byte, 48),
 			GasLimit:     0,
 			Timestamp:    0,
 			Pubkey:       make([]byte, field_params.MLDSA87PubkeyLength),

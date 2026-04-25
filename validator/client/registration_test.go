@@ -29,7 +29,7 @@ func TestSubmitValidatorRegistrations(t *testing.T) {
 	require.NoError(t, nil, SubmitValidatorRegistrations(ctx, m.validatorClient, []*qrysmpb.SignedValidatorRegistrationV1{}))
 
 	reg := &qrysmpb.ValidatorRegistrationV1{
-		FeeRecipient: bytesutil.PadTo([]byte("fee"), 20),
+		FeeRecipient: bytesutil.PadTo([]byte("fee"), 48),
 		GasLimit:     123456,
 		Timestamp:    uint64(time.Now().Unix()),
 		Pubkey:       validatorKey.PublicKey().Marshal(),
@@ -55,7 +55,7 @@ func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
 
 	ctx := context.Background()
 	reg := &qrysmpb.ValidatorRegistrationV1{
-		FeeRecipient: bytesutil.PadTo([]byte("fee"), 20),
+		FeeRecipient: bytesutil.PadTo([]byte("fee"), 48),
 		GasLimit:     123456,
 		Timestamp:    uint64(time.Now().Unix()),
 		Pubkey:       validatorKey.PublicKey().Marshal(),
@@ -81,7 +81,7 @@ func Test_signValidatorRegistration(t *testing.T) {
 
 	ctx := context.Background()
 	reg := &qrysmpb.ValidatorRegistrationV1{
-		FeeRecipient: bytesutil.PadTo([]byte("fee"), 20),
+		FeeRecipient: bytesutil.PadTo([]byte("fee"), 48),
 		GasLimit:     123456,
 		Timestamp:    uint64(time.Now().Unix()),
 		Pubkey:       validatorKey.PublicKey().Marshal(),
