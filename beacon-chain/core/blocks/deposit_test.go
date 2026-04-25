@@ -60,7 +60,7 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	deposit := &qrysmpb.Deposit{
 		Data: &qrysmpb.Deposit_Data{
 			PublicKey:             bytesutil.PadTo([]byte{1, 2, 3}, field_params.MLDSA87PubkeyLength),
-			WithdrawalCredentials: make([]byte, 32),
+			WithdrawalCredentials: make([]byte, 64),
 			Signature:             make([]byte, field_params.MLDSA87SignatureLength),
 		},
 	}
@@ -139,7 +139,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 		Data: &qrysmpb.Deposit_Data{
 			PublicKey:             sk.PublicKey().Marshal(),
 			Amount:                1000,
-			WithdrawalCredentials: make([]byte, 32),
+			WithdrawalCredentials: make([]byte, 64),
 			Signature:             make([]byte, field_params.MLDSA87SignatureLength),
 		},
 	}
@@ -352,7 +352,7 @@ func TestProcessDeposit_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) 
 		Data: &qrysmpb.Deposit_Data{
 			PublicKey:             sk.PublicKey().Marshal(),
 			Amount:                1000,
-			WithdrawalCredentials: make([]byte, 32),
+			WithdrawalCredentials: make([]byte, 64),
 			Signature:             make([]byte, field_params.MLDSA87SignatureLength),
 		},
 	}

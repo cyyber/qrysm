@@ -115,9 +115,9 @@ func validateDeposit(depositData *DepositData, credential *Credential) bool {
 		if err != nil {
 			panic(fmt.Errorf("failed to read withdrawal address | reason %v", err))
 		}
-		if !reflect.DeepEqual(withdrawalCredentials[12:], credential.withdrawalAddress.Bytes()) {
-			panic(fmt.Errorf("withdrawalCredentials[12:] %x mismatch with credential.QRLWithdrawalAddress %x",
-				withdrawalCredentials[12:], credential.withdrawalAddress.Bytes()))
+		if !reflect.DeepEqual(withdrawalCredentials[16:], credential.withdrawalAddress.Bytes()) {
+			panic(fmt.Errorf("withdrawalCredentials[16:] %x mismatch with credential.QRLWithdrawalAddress %x",
+				withdrawalCredentials[16:], credential.withdrawalAddress.Bytes()))
 		}
 	} else {
 		panic(fmt.Errorf("invalid prefixbyte withdrawalCredentials[0] %x", withdrawalCredentials[0]))

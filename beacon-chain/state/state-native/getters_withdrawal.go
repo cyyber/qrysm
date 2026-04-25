@@ -10,7 +10,7 @@ import (
 	"github.com/theQRL/qrysm/time/slots"
 )
 
-const ExecutionAddressOffset = 12
+const ExecutionAddressOffset = 16
 
 // NextWithdrawalIndex returns the index that will be assigned to the next withdrawal.
 func (b *BeaconState) NextWithdrawalIndex() (uint64, error) {

@@ -380,7 +380,7 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 			v := &qrysmpb.Validator{}
 			v.EffectiveBalance = maxEffectiveBalance
 			v.WithdrawableEpoch = epochInFuture
-			v.WithdrawalCredentials = make([]byte, 32)
+			v.WithdrawalCredentials = make([]byte, 64)
 			v.WithdrawalCredentials[31] = byte(i)
 			st.Balances[i] = v.EffectiveBalance - uint64(rand.Intn(1000))
 			validators[i] = v
@@ -800,7 +800,7 @@ func TestProcessWithdrawals(t *testing.T) {
 			v := &qrysmpb.Validator{}
 			v.EffectiveBalance = maxEffectiveBalance
 			v.WithdrawableEpoch = epochInFuture
-			v.WithdrawalCredentials = make([]byte, 32)
+			v.WithdrawalCredentials = make([]byte, 64)
 			v.WithdrawalCredentials[31] = byte(i)
 			st.Balances[i] = v.EffectiveBalance - uint64(rand.Intn(1000))
 			validators[i] = v

@@ -48,7 +48,7 @@ func TestProposeAttestation_OK(t *testing.T) {
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
 			PublicKey:             make([]byte, 48),
-			WithdrawalCredentials: make([]byte, 32),
+			WithdrawalCredentials: make([]byte, 64),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
 		}

@@ -877,7 +877,7 @@ func (d *Deposit) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 func (d *Deposit) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size != 8315 {
+	if size != 8347 {
 		return ssz.ErrSize
 	}
 
@@ -894,7 +894,7 @@ func (d *Deposit) UnmarshalSSZ(buf []byte) error {
 	if d.Data == nil {
 		d.Data = new(Deposit_Data)
 	}
-	if err = d.Data.UnmarshalSSZ(buf[1056:8315]); err != nil {
+	if err = d.Data.UnmarshalSSZ(buf[1056:8347]); err != nil {
 		return err
 	}
 
@@ -903,7 +903,7 @@ func (d *Deposit) UnmarshalSSZ(buf []byte) error {
 
 // SizeSSZ returns the ssz encoded size in bytes for the Deposit object
 func (d *Deposit) SizeSSZ() (size int) {
-	size = 8315
+	size = 8347
 	return
 }
 
@@ -2055,7 +2055,7 @@ func (b *BeaconBlockBodyZond) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 
 	// Offset (6) 'Deposits'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.Deposits) * 8315
+	offset += len(b.Deposits) * 8347
 
 	// Offset (7) 'VoluntaryExits'
 	dst = ssz.WriteOffset(dst, offset)
@@ -2292,7 +2292,7 @@ func (b *BeaconBlockBodyZond) UnmarshalSSZ(buf []byte) error {
 	// Field (6) 'Deposits'
 	{
 		buf = tail[o6:o7]
-		num, err := ssz.DivideInt2(len(buf), 8315, 16)
+		num, err := ssz.DivideInt2(len(buf), 8347, 16)
 		if err != nil {
 			return err
 		}
@@ -2301,7 +2301,7 @@ func (b *BeaconBlockBodyZond) UnmarshalSSZ(buf []byte) error {
 			if b.Deposits[ii] == nil {
 				b.Deposits[ii] = new(Deposit)
 			}
-			if err = b.Deposits[ii].UnmarshalSSZ(buf[ii*8315 : (ii+1)*8315]); err != nil {
+			if err = b.Deposits[ii].UnmarshalSSZ(buf[ii*8347 : (ii+1)*8347]); err != nil {
 				return err
 			}
 		}
@@ -2369,7 +2369,7 @@ func (b *BeaconBlockBodyZond) SizeSSZ() (size int) {
 	}
 
 	// Field (6) 'Deposits'
-	size += len(b.Deposits) * 8315
+	size += len(b.Deposits) * 8347
 
 	// Field (7) 'VoluntaryExits'
 	size += len(b.VoluntaryExits) * 4643
@@ -2851,7 +2851,7 @@ func (b *BlindedBeaconBlockBodyZond) MarshalSSZTo(buf []byte) (dst []byte, err e
 
 	// Offset (6) 'Deposits'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.Deposits) * 8315
+	offset += len(b.Deposits) * 8347
 
 	// Offset (7) 'VoluntaryExits'
 	dst = ssz.WriteOffset(dst, offset)
@@ -3088,7 +3088,7 @@ func (b *BlindedBeaconBlockBodyZond) UnmarshalSSZ(buf []byte) error {
 	// Field (6) 'Deposits'
 	{
 		buf = tail[o6:o7]
-		num, err := ssz.DivideInt2(len(buf), 8315, 16)
+		num, err := ssz.DivideInt2(len(buf), 8347, 16)
 		if err != nil {
 			return err
 		}
@@ -3097,7 +3097,7 @@ func (b *BlindedBeaconBlockBodyZond) UnmarshalSSZ(buf []byte) error {
 			if b.Deposits[ii] == nil {
 				b.Deposits[ii] = new(Deposit)
 			}
-			if err = b.Deposits[ii].UnmarshalSSZ(buf[ii*8315 : (ii+1)*8315]); err != nil {
+			if err = b.Deposits[ii].UnmarshalSSZ(buf[ii*8347 : (ii+1)*8347]); err != nil {
 				return err
 			}
 		}
@@ -3165,7 +3165,7 @@ func (b *BlindedBeaconBlockBodyZond) SizeSSZ() (size int) {
 	}
 
 	// Field (6) 'Deposits'
-	size += len(b.Deposits) * 8315
+	size += len(b.Deposits) * 8347
 
 	// Field (7) 'VoluntaryExits'
 	size += len(b.VoluntaryExits) * 4643
@@ -3672,8 +3672,8 @@ func (d *Deposit_Data) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = append(dst, d.PublicKey...)
 
 	// Field (1) 'WithdrawalCredentials'
-	if size := len(d.WithdrawalCredentials); size != 32 {
-		err = ssz.ErrBytesLengthFn("--.WithdrawalCredentials", size, 32)
+	if size := len(d.WithdrawalCredentials); size != 64 {
+		err = ssz.ErrBytesLengthFn("--.WithdrawalCredentials", size, 64)
 		return
 	}
 	dst = append(dst, d.WithdrawalCredentials...)
@@ -3695,7 +3695,7 @@ func (d *Deposit_Data) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 func (d *Deposit_Data) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size != 7259 {
+	if size != 7291 {
 		return ssz.ErrSize
 	}
 
@@ -3707,25 +3707,25 @@ func (d *Deposit_Data) UnmarshalSSZ(buf []byte) error {
 
 	// Field (1) 'WithdrawalCredentials'
 	if cap(d.WithdrawalCredentials) == 0 {
-		d.WithdrawalCredentials = make([]byte, 0, len(buf[2592:2624]))
+		d.WithdrawalCredentials = make([]byte, 0, len(buf[2592:2656]))
 	}
-	d.WithdrawalCredentials = append(d.WithdrawalCredentials, buf[2592:2624]...)
+	d.WithdrawalCredentials = append(d.WithdrawalCredentials, buf[2592:2656]...)
 
 	// Field (2) 'Amount'
-	d.Amount = ssz.UnmarshallUint64(buf[2624:2632])
+	d.Amount = ssz.UnmarshallUint64(buf[2656:2664])
 
 	// Field (3) 'Signature'
 	if cap(d.Signature) == 0 {
-		d.Signature = make([]byte, 0, len(buf[2632:7259]))
+		d.Signature = make([]byte, 0, len(buf[2664:7291]))
 	}
-	d.Signature = append(d.Signature, buf[2632:7259]...)
+	d.Signature = append(d.Signature, buf[2664:7291]...)
 
 	return err
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the Deposit_Data object
 func (d *Deposit_Data) SizeSSZ() (size int) {
-	size = 7259
+	size = 7291
 	return
 }
 
@@ -3746,8 +3746,8 @@ func (d *Deposit_Data) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutBytes(d.PublicKey)
 
 	// Field (1) 'WithdrawalCredentials'
-	if size := len(d.WithdrawalCredentials); size != 32 {
-		err = ssz.ErrBytesLengthFn("--.WithdrawalCredentials", size, 32)
+	if size := len(d.WithdrawalCredentials); size != 64 {
+		err = ssz.ErrBytesLengthFn("--.WithdrawalCredentials", size, 64)
 		return
 	}
 	hh.PutBytes(d.WithdrawalCredentials)
@@ -4188,8 +4188,8 @@ func (d *DepositMessage) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = append(dst, d.PublicKey...)
 
 	// Field (1) 'WithdrawalCredentials'
-	if size := len(d.WithdrawalCredentials); size != 32 {
-		err = ssz.ErrBytesLengthFn("--.WithdrawalCredentials", size, 32)
+	if size := len(d.WithdrawalCredentials); size != 64 {
+		err = ssz.ErrBytesLengthFn("--.WithdrawalCredentials", size, 64)
 		return
 	}
 	dst = append(dst, d.WithdrawalCredentials...)
@@ -4204,7 +4204,7 @@ func (d *DepositMessage) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 func (d *DepositMessage) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size != 2632 {
+	if size != 2664 {
 		return ssz.ErrSize
 	}
 
@@ -4216,19 +4216,19 @@ func (d *DepositMessage) UnmarshalSSZ(buf []byte) error {
 
 	// Field (1) 'WithdrawalCredentials'
 	if cap(d.WithdrawalCredentials) == 0 {
-		d.WithdrawalCredentials = make([]byte, 0, len(buf[2592:2624]))
+		d.WithdrawalCredentials = make([]byte, 0, len(buf[2592:2656]))
 	}
-	d.WithdrawalCredentials = append(d.WithdrawalCredentials, buf[2592:2624]...)
+	d.WithdrawalCredentials = append(d.WithdrawalCredentials, buf[2592:2656]...)
 
 	// Field (2) 'Amount'
-	d.Amount = ssz.UnmarshallUint64(buf[2624:2632])
+	d.Amount = ssz.UnmarshallUint64(buf[2656:2664])
 
 	return err
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the DepositMessage object
 func (d *DepositMessage) SizeSSZ() (size int) {
-	size = 2632
+	size = 2664
 	return
 }
 
@@ -4249,8 +4249,8 @@ func (d *DepositMessage) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutBytes(d.PublicKey)
 
 	// Field (1) 'WithdrawalCredentials'
-	if size := len(d.WithdrawalCredentials); size != 32 {
-		err = ssz.ErrBytesLengthFn("--.WithdrawalCredentials", size, 32)
+	if size := len(d.WithdrawalCredentials); size != 64 {
+		err = ssz.ErrBytesLengthFn("--.WithdrawalCredentials", size, 64)
 		return
 	}
 	hh.PutBytes(d.WithdrawalCredentials)
@@ -4506,7 +4506,7 @@ func (b *BeaconStateZond) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 
 	// Offset (11) 'Validators'
 	dst = ssz.WriteOffset(dst, offset)
-	offset += len(b.Validators) * 2665
+	offset += len(b.Validators) * 2697
 
 	// Offset (12) 'Balances'
 	dst = ssz.WriteOffset(dst, offset)
@@ -4917,7 +4917,7 @@ func (b *BeaconStateZond) UnmarshalSSZ(buf []byte) error {
 	// Field (11) 'Validators'
 	{
 		buf = tail[o11:o12]
-		num, err := ssz.DivideInt2(len(buf), 2665, 1099511627776)
+		num, err := ssz.DivideInt2(len(buf), 2697, 1099511627776)
 		if err != nil {
 			return err
 		}
@@ -4926,7 +4926,7 @@ func (b *BeaconStateZond) UnmarshalSSZ(buf []byte) error {
 			if b.Validators[ii] == nil {
 				b.Validators[ii] = new(Validator)
 			}
-			if err = b.Validators[ii].UnmarshalSSZ(buf[ii*2665 : (ii+1)*2665]); err != nil {
+			if err = b.Validators[ii].UnmarshalSSZ(buf[ii*2697 : (ii+1)*2697]); err != nil {
 				return err
 			}
 		}
@@ -5024,7 +5024,7 @@ func (b *BeaconStateZond) SizeSSZ() (size int) {
 	size += len(b.ExecutionDataVotes) * 72
 
 	// Field (11) 'Validators'
-	size += len(b.Validators) * 2665
+	size += len(b.Validators) * 2697
 
 	// Field (12) 'Balances'
 	size += len(b.Balances) * 8
@@ -6385,8 +6385,8 @@ func (v *Validator) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = append(dst, v.PublicKey...)
 
 	// Field (1) 'WithdrawalCredentials'
-	if size := len(v.WithdrawalCredentials); size != 32 {
-		err = ssz.ErrBytesLengthFn("--.WithdrawalCredentials", size, 32)
+	if size := len(v.WithdrawalCredentials); size != 64 {
+		err = ssz.ErrBytesLengthFn("--.WithdrawalCredentials", size, 64)
 		return
 	}
 	dst = append(dst, v.WithdrawalCredentials...)
@@ -6416,7 +6416,7 @@ func (v *Validator) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 func (v *Validator) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size != 2665 {
+	if size != 2697 {
 		return ssz.ErrSize
 	}
 
@@ -6428,34 +6428,34 @@ func (v *Validator) UnmarshalSSZ(buf []byte) error {
 
 	// Field (1) 'WithdrawalCredentials'
 	if cap(v.WithdrawalCredentials) == 0 {
-		v.WithdrawalCredentials = make([]byte, 0, len(buf[2592:2624]))
+		v.WithdrawalCredentials = make([]byte, 0, len(buf[2592:2656]))
 	}
-	v.WithdrawalCredentials = append(v.WithdrawalCredentials, buf[2592:2624]...)
+	v.WithdrawalCredentials = append(v.WithdrawalCredentials, buf[2592:2656]...)
 
 	// Field (2) 'EffectiveBalance'
-	v.EffectiveBalance = ssz.UnmarshallUint64(buf[2624:2632])
+	v.EffectiveBalance = ssz.UnmarshallUint64(buf[2656:2664])
 
 	// Field (3) 'Slashed'
-	v.Slashed = ssz.UnmarshalBool(buf[2632:2633])
+	v.Slashed = ssz.UnmarshalBool(buf[2664:2665])
 
 	// Field (4) 'ActivationEligibilityEpoch'
-	v.ActivationEligibilityEpoch = github_com_theQRL_qrysm_consensus_types_primitives.Epoch(ssz.UnmarshallUint64(buf[2633:2641]))
+	v.ActivationEligibilityEpoch = github_com_theQRL_qrysm_consensus_types_primitives.Epoch(ssz.UnmarshallUint64(buf[2665:2673]))
 
 	// Field (5) 'ActivationEpoch'
-	v.ActivationEpoch = github_com_theQRL_qrysm_consensus_types_primitives.Epoch(ssz.UnmarshallUint64(buf[2641:2649]))
+	v.ActivationEpoch = github_com_theQRL_qrysm_consensus_types_primitives.Epoch(ssz.UnmarshallUint64(buf[2673:2681]))
 
 	// Field (6) 'ExitEpoch'
-	v.ExitEpoch = github_com_theQRL_qrysm_consensus_types_primitives.Epoch(ssz.UnmarshallUint64(buf[2649:2657]))
+	v.ExitEpoch = github_com_theQRL_qrysm_consensus_types_primitives.Epoch(ssz.UnmarshallUint64(buf[2681:2689]))
 
 	// Field (7) 'WithdrawableEpoch'
-	v.WithdrawableEpoch = github_com_theQRL_qrysm_consensus_types_primitives.Epoch(ssz.UnmarshallUint64(buf[2657:2665]))
+	v.WithdrawableEpoch = github_com_theQRL_qrysm_consensus_types_primitives.Epoch(ssz.UnmarshallUint64(buf[2689:2697]))
 
 	return err
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the Validator object
 func (v *Validator) SizeSSZ() (size int) {
-	size = 2665
+	size = 2697
 	return
 }
 
@@ -6476,8 +6476,8 @@ func (v *Validator) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutBytes(v.PublicKey)
 
 	// Field (1) 'WithdrawalCredentials'
-	if size := len(v.WithdrawalCredentials); size != 32 {
-		err = ssz.ErrBytesLengthFn("--.WithdrawalCredentials", size, 32)
+	if size := len(v.WithdrawalCredentials); size != 64 {
+		err = ssz.ErrBytesLengthFn("--.WithdrawalCredentials", size, 64)
 		return
 	}
 	hh.PutBytes(v.WithdrawalCredentials)
