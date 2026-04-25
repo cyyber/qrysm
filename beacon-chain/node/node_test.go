@@ -106,13 +106,13 @@ func TestNodeStart_Ok_registerDeterministicGenesisService(t *testing.T) {
 	genesisState, _, err := interop.GenerateGenesisStateZond(context.Background(), 0, numValidators, ee, &qrysmpb.ExecutionData{BlockHash: make([]byte, 32)})
 	require.NoError(t, err, "Could not generate genesis beacon state")
 	for i := uint64(1); i < 2; i++ {
-		var someRoot [32]byte
+		var someCreds [64]byte
 		var someKey [field_params.MLDSA87PubkeyLength]byte
-		copy(someRoot[:], strconv.Itoa(int(i)))
+		copy(someCreds[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
 		genesisState.Validators = append(genesisState.Validators, &qrysmpb.Validator{
 			PublicKey:                  someKey[:],
-			WithdrawalCredentials:      someRoot[:],
+			WithdrawalCredentials:      someCreds[:],
 			EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
 			Slashed:                    false,
 			ActivationEligibilityEpoch: 1,
