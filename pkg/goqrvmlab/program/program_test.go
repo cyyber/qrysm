@@ -25,7 +25,7 @@ import (
 )
 
 func TestPush(t *testing.T) {
-	address0, err := common.NewAddressFromString("Qdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+	address0, err := common.NewAddressFromString("Qdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef00000000000000000000000000000000000000000000000000000000")
 	if err != nil {
 		panic(err)
 	}
@@ -55,7 +55,7 @@ func TestPush(t *testing.T) {
 	}
 }
 func TestCall(t *testing.T) {
-	address1, err := common.NewAddressFromString("Q0000000000000000000000000000000000001337")
+	address1, err := common.NewAddressFromString("Q000000000000000000000000000000000000133700000000000000000000000000000000000000000000000000000000")
 	if err != nil {
 		panic(err)
 	}

@@ -363,13 +363,13 @@ func TestWeb3SignerConfig(t *testing.T) {
 
 func TestProposerSettings(t *testing.T) {
 	hook := logtest.NewGlobal()
-	recipient0, err := common.NewAddressFromString("Qae967917c465db8578ca9024c205720b1a3651A9")
+	recipient0, err := common.NewAddressFromString("Qae967917c465db8578ca9024c205720b1a3651A900000000000000000000000000000000000000000000000000000000")
 	require.NoError(t, err)
-	recipient1, err := common.NewAddressFromString("Q50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3")
+	recipient1, err := common.NewAddressFromString("Q50155530FCE8a85ec7055A5F8b2bE214B3DaeFd300000000000000000000000000000000000000000000000000000000")
 	require.NoError(t, err)
-	recipient2, err := common.NewAddressFromString("Q60155530FCE8a85ec7055A5F8b2bE214B3DaeFd4")
+	recipient2, err := common.NewAddressFromString("Q60155530FCE8a85ec7055A5F8b2bE214B3DaeFd400000000000000000000000000000000000000000000000000000000")
 	require.NoError(t, err)
-	recipient3, err := common.NewAddressFromString("Q6e35733c5af9B61374A128e6F85f553aF09ff89A")
+	recipient3, err := common.NewAddressFromString("Q6e35733c5af9B61374A128e6F85f553aF09ff89A00000000000000000000000000000000000000000000000000000000")
 	require.NoError(t, err)
 
 	type proposerSettingsFlag struct {
@@ -565,7 +565,7 @@ func TestProposerSettings(t *testing.T) {
 				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "",
 					url:        "",
-					defaultfee: "Q6e35733c5af9B61374A128e6F85f553aF09ff89A",
+					defaultfee: "Q6e35733c5af9B61374A128e6F85f553aF09ff89A00000000000000000000000000000000000000000000000000000000",
 				},
 			},
 			want: func() *validatorserviceconfig.ProposerSettings {
@@ -586,7 +586,7 @@ func TestProposerSettings(t *testing.T) {
 				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "",
 					url:        "",
-					defaultfee: "Q6e35733c5af9B61374A128e6F85f553aF09ff89A",
+					defaultfee: "Q6e35733c5af9B61374A128e6F85f553aF09ff89A00000000000000000000000000000000000000000000000000000000",
 				},
 			},
 			want: func() *validatorserviceconfig.ProposerSettings {
@@ -612,7 +612,7 @@ func TestProposerSettings(t *testing.T) {
 				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "",
 					url:        "",
-					defaultfee: "Q6e35733c5af9B61374A128e6F85f553aF09ff89A",
+					defaultfee: "Q6e35733c5af9B61374A128e6F85f553aF09ff89A00000000000000000000000000000000000000000000000000000000",
 					defaultgas: "50000000",
 				},
 			},
@@ -639,7 +639,7 @@ func TestProposerSettings(t *testing.T) {
 				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
 					url:        "",
-					defaultfee: "Q6e35733c5af9B61374A128e6F85f553aF09ff89B",
+					defaultfee: "Q6e35733c5af9B61374A128e6F85f553aF09ff89B00000000000000000000000000000000000000000000000000000000",
 				},
 			},
 			want: func() *validatorserviceconfig.ProposerSettings {
@@ -668,7 +668,7 @@ func TestProposerSettings(t *testing.T) {
 				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
 					url:        "",
-					defaultfee: "Q6e35733c5af9B61374A128e6F85f553aF09ff89B",
+					defaultfee: "Q6e35733c5af9B61374A128e6F85f553aF09ff89B00000000000000000000000000000000000000000000000000000000",
 				},
 			},
 			want: func() *validatorserviceconfig.ProposerSettings {

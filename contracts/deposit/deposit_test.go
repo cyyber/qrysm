@@ -24,7 +24,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 	k1, err := ml_dsa_87.SecretKeyFromSeed(seed[:])
 	require.NoError(t, err)
 
-	withdrawalAddr, err := common.NewAddressFromString("Q1234567890123456789012345678901234567890")
+	withdrawalAddr, err := common.NewAddressFromString("Q123456789012345678901234567890123456789000000000000000000000000000000000000000000000000000000000")
 	require.NoError(t, err)
 
 	result, _, err := deposit.DepositInput(k1, withdrawalAddr, 0, nil)
@@ -96,12 +96,12 @@ func TestWithdrawalCredentialsAddress(t *testing.T) {
 		},
 		{
 			name:    "leading zeros preserved",
-			addrHex: "Q000102030405060708090a0b0c0d0e0f10111213",
+			addrHex: "Q000102030405060708090a0b0c0d0e0f1011121300000000000000000000000000000000000000000000000000000000",
 			wantHex: "0x000000000000000000000000000102030405060708090a0b0c0d0e0f10111213",
 		},
 		{
 			name:    "all 0xff",
-			addrHex: "Qffffffffffffffffffffffffffffffffffffffff",
+			addrHex: "Qffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000",
 			wantHex: "0x000000000000000000000000ffffffffffffffffffffffffffffffffffffffff",
 		},
 	}
