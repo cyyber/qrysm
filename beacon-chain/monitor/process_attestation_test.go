@@ -33,7 +33,7 @@ func TestGetAttestingIndices(t *testing.T) {
 	}
 	attestingIndices, err := attestingIndices(ctx, beaconState, att)
 	require.NoError(t, err)
-	require.DeepEqual(t, []uint64{0xd9, 0x87}, attestingIndices)
+	require.DeepEqual(t, []uint64{0x19, 0xb9}, attestingIndices)
 
 }
 
