@@ -748,7 +748,7 @@ func newTestIPCServer(t *testing.T) *rpc.Server {
 
 func fixtures() map[string]any {
 	foo := bytesutil.ToBytes32([]byte("foo"))
-	bar := bytesutil.PadTo([]byte("bar"), 20)
+	bar := bytesutil.PadTo([]byte("bar"), fieldparams.FeeRecipientLength)
 	baz := bytesutil.PadTo([]byte("baz"), 256)
 	baseFeePerGas := big.NewInt(12345)
 	executionPayloadFixtureZond := &pb.ExecutionPayloadZond{
