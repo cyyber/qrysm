@@ -15,14 +15,12 @@ import (
 )
 
 func TestSetupRegistrationContract_OK(t *testing.T) {
-	t.Skip("deposit contract bytecode is pre-migration EVM-style and reverts on the new 64-byte-word QRVM; pending hyperion compiler 64B-word completion")
 	_, err := mock.Setup()
 	assert.NoError(t, err, "Can not deploy validator registration contract")
 }
 
 // negative test case, deposit with less than 1 Quanta which is less than the top off amount.
 func TestRegister_Below1Quanta(t *testing.T) {
-	t.Skip("deposit contract bytecode is pre-migration EVM-style and reverts on the new 64-byte-word QRVM; pending hyperion compiler 64B-word completion")
 	testAccount, err := mock.Setup()
 	require.NoError(t, err)
 
@@ -41,7 +39,6 @@ func TestRegister_Below1Quanta(t *testing.T) {
 
 // normal test case, test depositing 40000 Quanta and verify HashChainValue event is correctly emitted.
 func TestValidatorRegister_OK(t *testing.T) {
-	t.Skip("deposit contract bytecode is pre-migration EVM-style and reverts on the new 64-byte-word QRVM; pending hyperion compiler 64B-word completion")
 	testAccount, err := mock.Setup()
 	require.NoError(t, err)
 	testAccount.TxOpts.Value = mock.Amount40000Quanta()

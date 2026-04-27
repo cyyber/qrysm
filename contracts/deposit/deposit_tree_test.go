@@ -14,7 +14,6 @@ import (
 )
 
 func TestDepositTrieRoot_OK(t *testing.T) {
-	t.Skip("deposit contract bytecode is pre-migration EVM-style and reverts on the new 64-byte-word QRVM; pending hyperion compiler 64B-word completion")
 	testAcc, err := depositcontract.Setup()
 	require.NoError(t, err)
 
@@ -57,7 +56,6 @@ func TestDepositTrieRoot_OK(t *testing.T) {
 }
 
 func TestDepositTrieRoot_Fail(t *testing.T) {
-	t.Skip("deposit contract bytecode is pre-migration EVM-style and reverts on the new 64-byte-word QRVM; pending hyperion compiler 64B-word completion")
 	testAcc, err := depositcontract.Setup()
 	require.NoError(t, err)
 
