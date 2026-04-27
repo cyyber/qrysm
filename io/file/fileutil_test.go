@@ -22,6 +22,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"sort"
+	"syscall"
 	"testing"
 
 	"github.com/theQRL/qrysm/config/params"
@@ -63,6 +64,8 @@ func TestMkdirAll_AlreadyExists_Override(t *testing.T) {
 }
 
 func TestHandleBackupDir_AlreadyExists_Override(t *testing.T) {
+	old := syscall.Umask(0o022)
+	t.Cleanup(func() { syscall.Umask(old) })
 	dirName := t.TempDir() + "somedir"
 	err := os.MkdirAll(dirName, os.ModePerm)
 	require.NoError(t, err)
@@ -76,6 +79,8 @@ func TestHandleBackupDir_AlreadyExists_Override(t *testing.T) {
 }
 
 func TestHandleBackupDir_AlreadyExists_No_Override(t *testing.T) {
+	old := syscall.Umask(0o022)
+	t.Cleanup(func() { syscall.Umask(old) })
 	dirName := t.TempDir() + "somedir"
 	err := os.MkdirAll(dirName, os.ModePerm)
 	require.NoError(t, err)
