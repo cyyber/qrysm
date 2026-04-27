@@ -49,7 +49,7 @@ func setupService(t *testing.T) *Service {
 		1:   true,
 		15:  true,
 		25:  true,
-		112: true,
+		67: true,
 		185: true,
 	}
 	latestPerformance := map[primitives.ValidatorIndex]ValidatorLatestPerformance{
@@ -71,7 +71,7 @@ func setupService(t *testing.T) *Service {
 			timelySource: true,
 			timelyTarget: true,
 		},
-		112: {
+		67: {
 			balance: 40000000000000,
 		},
 	}
@@ -90,7 +90,7 @@ func setupService(t *testing.T) *Service {
 			totalSyncCommitteeAggregations:  0,
 		},
 		25:  {},
-		112: {},
+		67: {},
 		185: {},
 		15:  {},
 	}
@@ -201,7 +201,7 @@ func TestStart(t *testing.T) {
 	// wait for Logrus
 	time.Sleep(1000 * time.Millisecond)
 	require.LogsContain(t, hook, "Synced to head epoch, starting reporting performance")
-	require.LogsContain(t, hook, "\"Starting service\" ValidatorIndices=\"[1 15 25 185]\"")
+	require.LogsContain(t, hook, "\"Starting service\" ValidatorIndices=\"[1 15 25 67 185]\"")
 	s.Lock()
 	require.Equal(t, s.isLogging, true, "monitor is not running")
 	s.Unlock()
@@ -226,6 +226,9 @@ func TestInitializePerformanceStructures(t *testing.T) {
 		25: {
 			balance: 40000000000000,
 		},
+		67: {
+			balance: 40000000000000,
+		},
 		185: {
 			balance: 40000000000000,
 		},
@@ -238,6 +241,9 @@ func TestInitializePerformanceStructures(t *testing.T) {
 			startBalance: 40000000000000,
 		},
 		25: {
+			startBalance: 40000000000000,
+		},
+		67: {
 			startBalance: 40000000000000,
 		},
 		185: {
@@ -275,11 +281,11 @@ func TestMonitorRoutine(t *testing.T) {
 	}
 
 	trackedVals := map[primitives.ValidatorIndex]bool{
-		112: true,
+		22: true,
 	}
 
 	latestPerformance := map[primitives.ValidatorIndex]ValidatorLatestPerformance{
-		112: {
+		22: {
 			balance: 39999900000000,
 		},
 	}
@@ -335,7 +341,7 @@ func TestMonitorRoutine(t *testing.T) {
 
 	// wait for Logrus
 	time.Sleep(1000 * time.Millisecond)
-	wanted1 := fmt.Sprintf("\"Proposed beacon block was included\" BalanceChange=100000000 BlockRoot=%#x NewBalance=40000000000000 ParentRoot=0x95a850980dc4 ProposerIndex=112 Slot=1 Version=0 prefix=monitor", bytesutil.Trunc(root[:]))
+	wanted1 := fmt.Sprintf("\"Proposed beacon block was included\" BalanceChange=100000000 BlockRoot=%#x NewBalance=40000000000000 ParentRoot=0x94aa18823444 ProposerIndex=22 Slot=1 Version=0 prefix=monitor", bytesutil.Trunc(root[:]))
 	require.LogsContain(t, hook, wanted1)
 
 }

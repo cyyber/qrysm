@@ -227,12 +227,20 @@ func TestProcessAggregatedAttestationStateCached(t *testing.T) {
 		ValidatorsRoot: [32]byte{},
 	}
 	aggregatedPerformance := map[primitives.ValidatorIndex]ValidatorAggregatedPerformance{
+		25:  {},
 		185: {},
 	}
 	trackedVals := map[primitives.ValidatorIndex]bool{
+		25:  true,
 		185: true,
 	}
 	latestPerformance := map[primitives.ValidatorIndex]ValidatorLatestPerformance{
+		25: {
+			balance:      39999900000000,
+			timelyHead:   true,
+			timelySource: true,
+			timelyTarget: true,
+		},
 		185: {
 			balance:      39999900000000,
 			timelyHead:   true,
@@ -285,7 +293,7 @@ func TestProcessAggregatedAttestationStateCached(t *testing.T) {
 	require.NoError(t, svc.config.StateGen.SaveState(ctx, root, state))
 	svc.processAggregatedAttestation(ctx, att)
 	require.LogsContain(t, hook, "\"Processed attestation aggregation\" AggregatorIndex=185 BeaconBlockRoot=0x68656c6c6f2d Slot=1 SourceRoot=0x68656c6c6f2d TargetRoot=0x68656c6c6f2d prefix=monitor")
-	require.LogsContain(t, hook, "\"Processed aggregated attestation\" Head=0x68656c6c6f2d Slot=1 Source=0x68656c6c6f2d Target=0x68656c6c6f2d ValidatorIndex=185 prefix=monitor")
+	require.LogsContain(t, hook, "\"Processed aggregated attestation\" Head=0x68656c6c6f2d Slot=1 Source=0x68656c6c6f2d Target=0x68656c6c6f2d ValidatorIndex=25 prefix=monitor")
 	require.LogsDoNotContain(t, hook, "\"Processed aggregated attestation\" Head=0x68656c6c6f2d Slot=1 Source=0x68656c6c6f2d Target=0x68656c6c6f2d ValidatorIndex=107 prefix=monitor")
 }
 

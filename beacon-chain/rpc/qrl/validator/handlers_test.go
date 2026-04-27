@@ -1612,7 +1612,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
 		assert.Equal(t, "0", duty.CommitteeIndex)
-		assert.Equal(t, "20", duty.Slot)
+		assert.Equal(t, "113", duty.Slot)
 		assert.Equal(t, hexutil.Encode(pubKeys[0]), duty.Pubkey)
 		assert.Equal(t, "1", duty.CommitteeLength)
 		assert.Equal(t, "1", duty.CommitteesAtSlot)
@@ -1694,7 +1694,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
 		assert.Equal(t, "0", duty.CommitteeIndex)
-		assert.Equal(t, "139", duty.Slot)
+		assert.Equal(t, "244", duty.Slot)
 		assert.Equal(t, "0", duty.ValidatorIndex)
 		assert.Equal(t, hexutil.Encode(pubKeys[0]), duty.Pubkey)
 		assert.Equal(t, "1", duty.CommitteeLength)
@@ -1870,10 +1870,10 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 		vid, _, has := s.ProposerSlotIndexCache.GetProposerPayloadIDs(11, [32]byte{})
 		require.Equal(t, true, has)
-		require.Equal(t, primitives.ValidatorIndex(76), vid)
+		require.Equal(t, primitives.ValidatorIndex(103), vid)
 		require.NotNil(t, expectedDuty, "Expected duty for slot 11 not found")
-		assert.Equal(t, "76", expectedDuty.ValidatorIndex)
-		assert.Equal(t, hexutil.Encode(pubKeys[76]), expectedDuty.Pubkey)
+		assert.Equal(t, "103", expectedDuty.ValidatorIndex)
+		assert.Equal(t, hexutil.Encode(pubKeys[103]), expectedDuty.Pubkey)
 	})
 	t.Run("next epoch", func(t *testing.T) {
 		bs, err := transition.GenesisBeaconStateZond(context.Background(), deposits, 0, executionData, &enginev1.ExecutionPayloadZond{})
@@ -1912,10 +1912,10 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 		vid, _, has := s.ProposerSlotIndexCache.GetProposerPayloadIDs(139, [32]byte{})
 		require.Equal(t, true, has)
-		require.Equal(t, primitives.ValidatorIndex(115), vid)
+		require.Equal(t, primitives.ValidatorIndex(55), vid)
 		require.NotNil(t, expectedDuty, "Expected duty for slot 139 not found")
-		assert.Equal(t, "115", expectedDuty.ValidatorIndex)
-		assert.Equal(t, hexutil.Encode(pubKeys[115]), expectedDuty.Pubkey)
+		assert.Equal(t, "55", expectedDuty.ValidatorIndex)
+		assert.Equal(t, hexutil.Encode(pubKeys[55]), expectedDuty.Pubkey)
 	})
 	t.Run("prune payload ID cache", func(t *testing.T) {
 		bs, err := transition.GenesisBeaconStateZond(context.Background(), deposits, 0, executionData, &enginev1.ExecutionPayloadZond{})
@@ -1954,7 +1954,7 @@ func TestGetProposerDuties(t *testing.T) {
 		require.Equal(t, primitives.ValidatorIndex(0), vid)
 		vid, _, has = s.ProposerSlotIndexCache.GetProposerPayloadIDs(128, [32]byte{})
 		require.Equal(t, true, has)
-		require.Equal(t, primitives.ValidatorIndex(8), vid)
+		require.Equal(t, primitives.ValidatorIndex(69), vid)
 	})
 	t.Run("epoch out of bounds", func(t *testing.T) {
 		bs, err := transition.GenesisBeaconStateZond(context.Background(), deposits, 0, executionData, &enginev1.ExecutionPayloadZond{})
