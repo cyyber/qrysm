@@ -49,8 +49,8 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 		Control control
 	}
 	executionAddress := func(i primitives.ValidatorIndex) []byte {
-		wc := make([]byte, 20)
-		wc[19] = byte(i)
+		wc := make([]byte, 48)
+		wc[47] = byte(i)
 		return wc
 	}
 	withdrawalAmount := func(i primitives.ValidatorIndex) uint64 {
@@ -381,7 +381,7 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 			v.EffectiveBalance = maxEffectiveBalance
 			v.WithdrawableEpoch = epochInFuture
 			v.WithdrawalCredentials = make([]byte, 64)
-			v.WithdrawalCredentials[31] = byte(i)
+			v.WithdrawalCredentials[63] = byte(i)
 			st.Balances[i] = v.EffectiveBalance - uint64(rand.Intn(1000))
 			validators[i] = v
 		}
@@ -469,8 +469,8 @@ func TestProcessWithdrawals(t *testing.T) {
 		Control control
 	}
 	executionAddress := func(i primitives.ValidatorIndex) []byte {
-		wc := make([]byte, 20)
-		wc[19] = byte(i)
+		wc := make([]byte, 48)
+		wc[47] = byte(i)
 		return wc
 	}
 	withdrawalAmount := func(i primitives.ValidatorIndex) uint64 {
@@ -801,7 +801,7 @@ func TestProcessWithdrawals(t *testing.T) {
 			v.EffectiveBalance = maxEffectiveBalance
 			v.WithdrawableEpoch = epochInFuture
 			v.WithdrawalCredentials = make([]byte, 64)
-			v.WithdrawalCredentials[31] = byte(i)
+			v.WithdrawalCredentials[63] = byte(i)
 			st.Balances[i] = v.EffectiveBalance - uint64(rand.Intn(1000))
 			validators[i] = v
 		}
