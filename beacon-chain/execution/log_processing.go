@@ -28,7 +28,8 @@ import (
 var (
 	depositEventSignatureHash = hash.Keccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
 	// Log topics are 64 bytes wide after the 48B-address migration; the
-	// 32-byte Keccak-256 signature lands right-aligned in the low half.
+	// 32-byte Keccak-256 signature lands left-aligned in the high half,
+	// mirroring how the QRVM serialises a PUSH32 stack value into LOG topics.
 	depositEventSignature = common.BytesToLogTopic(depositEventSignatureHash[:])
 )
 
