@@ -36,6 +36,16 @@ func (s *FakeSyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundar
 	return nil
 }
 
+// UpdatePositionsInCommitteeWithClearCount -- fake.
+func (s *FakeSyncCommitteeCache) UpdatePositionsInCommitteeWithClearCount(syncCommitteeBoundaryRoot [32]byte, state state.BeaconState, _ uint64) error {
+	return nil
+}
+
+// SnapshotClearCount -- fake.
+func (s *FakeSyncCommitteeCache) SnapshotClearCount() uint64 {
+	return 0
+}
+
 // Clear -- fake.
 func (s *FakeSyncCommitteeCache) Clear() {
 	return

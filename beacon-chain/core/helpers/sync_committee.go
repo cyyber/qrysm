@@ -74,9 +74,12 @@ func IsCurrentPeriodSyncCommittee(st state.BeaconState, valIdx primitives.Valida
 			return false, err
 		}
 
-		// Fill in the cache on miss.
+		// Fill in the cache on miss. Snapshot the clear-count synchronously
+		// so that any Clear() that runs before the goroutine is dispatched
+		// causes the update to be abandoned.
+		clearCount := syncCommitteeCache.SnapshotClearCount()
 		go func() {
-			if err := syncCommitteeCache.UpdatePositionsInCommittee(root, st); err != nil {
+			if err := syncCommitteeCache.UpdatePositionsInCommitteeWithClearCount(root, st, clearCount); err != nil {
 				log.WithError(err).Error("Could not fill sync committee cache on miss")
 			}
 		}()
@@ -138,9 +141,12 @@ func CurrentPeriodSyncSubcommitteeIndices(
 			return nil, err
 		}
 
-		// Fill in the cache on miss.
+		// Fill in the cache on miss. Snapshot the clear-count synchronously
+		// so that any Clear() that runs before the goroutine is dispatched
+		// causes the update to be abandoned.
+		clearCount := syncCommitteeCache.SnapshotClearCount()
 		go func() {
-			if err := syncCommitteeCache.UpdatePositionsInCommittee(root, st); err != nil {
+			if err := syncCommitteeCache.UpdatePositionsInCommitteeWithClearCount(root, st, clearCount); err != nil {
 				log.WithError(err).Error("Could not fill sync committee cache on miss")
 			}
 		}()
