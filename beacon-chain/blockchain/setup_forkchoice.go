@@ -104,7 +104,13 @@ func (s *Service) setupForkchoiceRoot(st state.BeaconState) error {
 		if err != nil {
 			return errors.Wrap(err, "could not get last validated checkpoint")
 		}
-		if bytes.Equal(fRoot[:], lastValidatedCheckpoint.Root) {
+		// On a fresh genesis startup the last validated checkpoint defaults to a
+		// zero root. The finalized checkpoint root is then resolved to the genesis
+		// block root via ensureRootNotZeros, so the equality check above never
+		// fires and the genesis node stays optimistic forever, blocking the chain.
+		// Treat the genesis case as fully validated.
+		isGenesisFinalized := finalizedBlock.Block().Slot() == 0
+		if bytes.Equal(fRoot[:], lastValidatedCheckpoint.Root) || isGenesisFinalized {
 			if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(s.ctx, fRoot); err != nil {
 				return errors.Wrap(err, "could not set finalized block as validated")
 			}
