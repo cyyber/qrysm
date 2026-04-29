@@ -286,6 +286,6 @@ replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/theQRL/grpc-gate
 // Point go-qrl and go-qrllib at the 48-byte-address branches for the
 // 48B address / 64B VM word migration. Drop these replace directives once
 // the branches are merged to main and tagged upstream.
-replace github.com/theQRL/go-qrl => /home/adamtkaczyk/zond-testnetv1/go-qrl
+replace github.com/theQRL/go-qrl => github.com/adamtka42/go-qrl v0.0.0-20260427223623-3f5f0fabb2e5
 
 replace github.com/theQRL/go-qrllib => github.com/adamtka42/go-qrllib v0.0.0-20260420201912-d9fee55b98b7
