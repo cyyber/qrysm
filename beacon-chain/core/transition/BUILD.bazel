@@ -50,7 +50,6 @@ go_test(
     size = "small",
     srcs = [
         "benchmarks_test.go",
-        "zond_transition_no_verify_sig_test.go",
         "skip_slot_cache_test.go",
         "state_fuzz_test.go",
         "state_test.go",
@@ -58,6 +57,7 @@ go_test(
         "transition_fuzz_test.go",
         "transition_no_verify_sig_test.go",
         "transition_test.go",
+        "zond_transition_no_verify_sig_test.go",
     ],
     data = [
         "//testing/benchmark/benchmark_files:benchmark_data",

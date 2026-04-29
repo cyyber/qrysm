@@ -35,13 +35,13 @@ go_library(
         "//runtime/version",
         "//time",
         "@com_github_pkg_errors//:errors",
-        "@com_github_theqrl_go_qrllib//wallet/ml_dsa_87",
         "@com_github_theqrl_go_qrl//common",
         "@com_github_theqrl_go_qrl//common/hexutil",
         "@com_github_theqrl_go_qrl//core",
         "@com_github_theqrl_go_qrl//core/types",
         "@com_github_theqrl_go_qrl//crypto/pqcrypto",
         "@com_github_theqrl_go_qrl//params",
+        "@com_github_theqrl_go_qrllib//wallet/ml_dsa_87",
     ],
 )
 

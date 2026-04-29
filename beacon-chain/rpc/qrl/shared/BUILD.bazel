@@ -14,6 +14,7 @@ go_library(
     deps = [
         "//beacon-chain/blockchain",
         "//beacon-chain/rpc/lookup",
+        "//beacon-chain/state/stategen",
         "//beacon-chain/sync",
         "//config/fieldparams",
         "//consensus-types/blocks",
@@ -36,6 +37,9 @@ go_test(
     srcs = ["errors_test.go"],
     embed = [":shared"],
     deps = [
+        "//beacon-chain/rpc/lookup",
+        "//beacon-chain/state/stategen",
+        "//network/http",
         "//testing/assert",
         "@com_github_pkg_errors//:errors",
     ],
