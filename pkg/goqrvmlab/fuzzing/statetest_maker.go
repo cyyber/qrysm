@@ -36,7 +36,7 @@ import (
 const DisallowEOF = true
 
 // The sender
-var sender, _ = common.NewAddressFromString("Qa94f5374fce5edbc8e2a8697c15331677e6ebf0b")
+var sender, _ = common.NewAddressFromString("Qbe6c1fd78f40b86a24dc2d7d633e2912d71e5d166f8be2c850d5727f0adcc170c7741b784295eae0c4f28291d0928dc7")
 var pKey = hexutil.MustDecode("0x45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8")
 
 // GstMaker is a construct to generate General State Tests
