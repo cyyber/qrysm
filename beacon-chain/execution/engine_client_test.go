@@ -432,7 +432,7 @@ func TestReconstructFullBlock(t *testing.T) {
 
 		jsonPayload := make(map[string]any)
 
-		to, err := common.NewAddressFromString("Q095e7baea6a6c7c4c2dfeb977efac326af552d8700000000000000000000000000000000000000000000000000000000")
+		to, err := common.NewAddressFromString("Q00000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
 		require.NoError(t, err)
 		tx := gqrltypes.NewTx(&gqrltypes.DynamicFeeTx{
 			Nonce: 0,
@@ -528,7 +528,7 @@ func TestReconstructFullBlockBatch(t *testing.T) {
 
 		jsonPayload := make(map[string]any)
 
-		to, err := common.NewAddressFromString("Q095e7baea6a6c7c4c2dfeb977efac326af552d8700000000000000000000000000000000000000000000000000000000")
+		to, err := common.NewAddressFromString("Q00000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
 		require.NoError(t, err)
 		tx := gqrltypes.NewTx(&gqrltypes.DynamicFeeTx{
 			Nonce: 0,
@@ -1238,7 +1238,7 @@ func TestZond_PayloadBodiesByHash(t *testing.T) {
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
-					Address:        hexutil.MustDecodeQ("Qcf8e0d4e9587369b2301d0790347320302cc094300000000000000000000000000000000000000000000000000000000"),
+					Address:        hexutil.MustDecodeQ("Q00000000000000000000000000000000000000000000000000000000cf8e0d4e9587369b2301d0790347320302cc0943"),
 					Amount:         1,
 				}},
 			}
@@ -1279,7 +1279,7 @@ func TestZond_PayloadBodiesByHash(t *testing.T) {
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
-					Address:        hexutil.MustDecodeQ("Qcf8e0d4e9587369b2301d0790347320302cc094300000000000000000000000000000000000000000000000000000000"),
+					Address:        hexutil.MustDecodeQ("Q00000000000000000000000000000000000000000000000000000000cf8e0d4e9587369b2301d0790347320302cc0943"),
 					Amount:         1,
 				}},
 			}
@@ -1320,7 +1320,7 @@ func TestZond_PayloadBodiesByHash(t *testing.T) {
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
-					Address:        hexutil.MustDecodeQ("Qcf8e0d4e9587369b2301d0790347320302cc094300000000000000000000000000000000000000000000000000000000"),
+					Address:        hexutil.MustDecodeQ("Q00000000000000000000000000000000000000000000000000000000cf8e0d4e9587369b2301d0790347320302cc0943"),
 					Amount:         1,
 				}},
 			}
@@ -1329,7 +1329,7 @@ func TestZond_PayloadBodiesByHash(t *testing.T) {
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          2,
 					ValidatorIndex: 1,
-					Address:        hexutil.MustDecodeQ("Qcf8e0d4e9587369b2301d0790347320302cc094300000000000000000000000000000000000000000000000000000000"),
+					Address:        hexutil.MustDecodeQ("Q00000000000000000000000000000000000000000000000000000000cf8e0d4e9587369b2301d0790347320302cc0943"),
 					Amount:         1,
 				}},
 			}
@@ -1489,7 +1489,7 @@ func TestZond_PayloadBodiesByRange(t *testing.T) {
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
-					Address:        hexutil.MustDecodeQ("Qcf8e0d4e9587369b2301d0790347320302cc094300000000000000000000000000000000000000000000000000000000"),
+					Address:        hexutil.MustDecodeQ("Q00000000000000000000000000000000000000000000000000000000cf8e0d4e9587369b2301d0790347320302cc0943"),
 					Amount:         1,
 				}},
 			}
@@ -1530,7 +1530,7 @@ func TestZond_PayloadBodiesByRange(t *testing.T) {
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
-					Address:        hexutil.MustDecodeQ("Qcf8e0d4e9587369b2301d0790347320302cc094300000000000000000000000000000000000000000000000000000000"),
+					Address:        hexutil.MustDecodeQ("Q00000000000000000000000000000000000000000000000000000000cf8e0d4e9587369b2301d0790347320302cc0943"),
 					Amount:         1,
 				}},
 			}
@@ -1571,7 +1571,7 @@ func TestZond_PayloadBodiesByRange(t *testing.T) {
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
-					Address:        hexutil.MustDecodeQ("Qcf8e0d4e9587369b2301d0790347320302cc094300000000000000000000000000000000000000000000000000000000"),
+					Address:        hexutil.MustDecodeQ("Q00000000000000000000000000000000000000000000000000000000cf8e0d4e9587369b2301d0790347320302cc0943"),
 					Amount:         1,
 				}},
 			}
@@ -1580,7 +1580,7 @@ func TestZond_PayloadBodiesByRange(t *testing.T) {
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          2,
 					ValidatorIndex: 1,
-					Address:        hexutil.MustDecodeQ("Qcf8e0d4e9587369b2301d0790347320302cc094300000000000000000000000000000000000000000000000000000000"),
+					Address:        hexutil.MustDecodeQ("Q00000000000000000000000000000000000000000000000000000000cf8e0d4e9587369b2301d0790347320302cc0943"),
 					Amount:         1,
 				}},
 			}

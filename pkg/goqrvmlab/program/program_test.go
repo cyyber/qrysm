@@ -25,7 +25,7 @@ import (
 )
 
 func TestPush(t *testing.T) {
-	address0, err := common.NewAddressFromString("Qdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef00000000000000000000000000000000000000000000000000000000")
+	address0, err := common.NewAddressFromString("Q00000000000000000000000000000000000000000000000000000000deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
 	if err != nil {
 		panic(err)
 	}
