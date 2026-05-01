@@ -1443,7 +1443,7 @@ func TestGetDepositContract(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig().Copy()
 	config.DepositChainID = uint64(10)
-	config.DepositContractAddress = "Q4242424242424242424242424242424242424242"
+	config.DepositContractAddress = "Q424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242"
 	params.OverrideBeaconConfig(config)
 
 	request := httptest.NewRequest(http.MethodGet, "/qrl/v1/beacon/states/{state_id}/finality_checkpoints", nil)
@@ -1456,5 +1456,5 @@ func TestGetDepositContract(t *testing.T) {
 	response := DepositContractResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &response))
 	assert.Equal(t, "10", response.Data.ChainId)
-	assert.Equal(t, "Q4242424242424242424242424242424242424242", response.Data.Address)
+	assert.Equal(t, "Q424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242", response.Data.Address)
 }
