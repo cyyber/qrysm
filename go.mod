@@ -288,4 +288,4 @@ replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/theQRL/grpc-gate
 // the branches are merged to main and tagged upstream.
 replace github.com/theQRL/go-qrl => github.com/adamtka42/go-qrl v0.0.0-20260427223623-3f5f0fabb2e5
 
-replace github.com/theQRL/go-qrllib => github.com/adamtka42/go-qrllib v0.0.0-20260420201912-d9fee55b98b7
+replace github.com/theQRL/go-qrllib => github.com/adamtka42/go-qrllib v0.0.0-20260503054743-9de9b1f5333a
