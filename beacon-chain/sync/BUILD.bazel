@@ -170,6 +170,7 @@ go_test(
         "//beacon-chain/blockchain/testing",
         "//beacon-chain/cache",
         "//beacon-chain/core/altair",
+        "//beacon-chain/core/blocks",
         "//beacon-chain/core/feed",
         "//beacon-chain/core/feed/operation",
         "//beacon-chain/core/helpers",

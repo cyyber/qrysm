@@ -18,7 +18,6 @@ go_library(
         "//beacon-chain/cache",
         "//beacon-chain/core/feed/operation",
         "//beacon-chain/core/helpers",
-        "//beacon-chain/core/transition",
         "//beacon-chain/db",
         "//beacon-chain/db/kv",
         "//beacon-chain/operations/attestations",
