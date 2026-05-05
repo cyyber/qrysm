@@ -18,8 +18,8 @@ const defaultMixhash = "0x000000000000000000000000000000000000000000000000000000
 const defaultParenthash = "0x0000000000000000000000000000000000000000000000000000000000000000"
 const defaultTestAccountBalance = "80000000000000000000000000"
 
-var defaultTestAccountAddress, _ = common.NewAddressFromString("Qc0e6dd0e844e0048dcb0bd3fdcc44a970beca38d")
-var defaultCoinbase, _ = common.NewAddressFromString("Q0000000000000000000000000000000000000000")
+var defaultTestAccountAddress, _ = common.NewAddressFromString("Q00000000000000000000000000000000000000000000000000000000c0e6dd0e844e0048dcb0bd3fdcc44a970beca38d")
+var defaultCoinbase, _ = common.NewAddressFromString("Q000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
 
 // DepositContractCode is the compiled deposit contract code, via https://github.com/protolambda/merge-genesis-tools
 // This is embedded into genesis so that we can start the chain at a merge block.
@@ -106,9 +106,9 @@ func minerAllocation() depositAllocation {
 }
 
 func defaultDepositContractAllocation(contractAddress string) depositAllocation {
-	s := make(map[common.Hash]common.Hash)
+	s := make(map[common.Hash]common.StorageValue)
 	for k, v := range DefaultDepositContractStorage {
-		s[common.HexToHash(k)] = common.HexToHash(v)
+		s[common.HexToHash(k)] = common.HexToStorageValue(v)
 	}
 	codeBytes, err := hexutil.Decode(DepositContractCode)
 	if err != nil {

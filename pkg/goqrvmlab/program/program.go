@@ -50,10 +50,14 @@ func (p *Program) pushBig(val *big.Int) {
 		valBytes = append(valBytes, 0)
 	}
 	bLen := len(valBytes)
-	if bLen > 32 {
+	if bLen > 64 {
 		panic(fmt.Sprintf("Push value too large, %d bytes", bLen))
 	}
-	p.add(byte(vm.PUSH1) - 1 + byte(bLen))
+	if bLen <= 32 {
+		p.add(byte(vm.PUSH1) - 1 + byte(bLen))
+	} else {
+		p.add(byte(vm.PUSH33) + byte(bLen-33))
+	}
 	p.AddAll(valBytes)
 
 }

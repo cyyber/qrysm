@@ -2,8 +2,9 @@ package p2p
 
 import (
 	"context"
-	"fmt"
+	"net"
 	"testing"
+	"time"
 
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/theQRL/go-qrl/crypto"
@@ -17,6 +18,16 @@ import (
 // Test `verifyConnectivity` function by trying to connect to google.com (successfully)
 // and then by connecting to an unreachable IP and ensuring that a log is emitted
 func TestVerifyConnectivity(t *testing.T) {
+	// Reachability check dials a public Google IP; skip when running in a
+	// network-restricted environment (CI sandbox, offline build).
+	if testing.Short() {
+		t.Skip("skipping network-dependent connectivity test in short mode")
+	}
+	conn, err := net.DialTimeout("tcp", "142.250.68.46:80", 500*time.Millisecond)
+	if err != nil {
+		t.Skipf("skipping: outbound network unavailable (%v)", err)
+	}
+	conn.Close()
 	params.SetupTestConfigCleanup(t)
 	hook := logTest.NewGlobal()
 	cases := []struct {
@@ -29,7 +40,7 @@ func TestVerifyConnectivity(t *testing.T) {
 		{"123.123.123.123", 19000, false, "Dialing an unreachable IP: 123.123.123.123:19000"},
 	}
 	for _, tc := range cases {
-		t.Run(fmt.Sprintf(tc.name),
+		t.Run(tc.name,
 			func(t *testing.T) {
 				verifyConnectivity(tc.address, tc.port, "tcp")
 				logMessage := "IP address is not accessible"

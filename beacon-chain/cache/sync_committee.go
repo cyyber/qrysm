@@ -170,14 +170,27 @@ func (s *SyncCommitteeCache) idxPositionInCommittee(
 	return positions[0], nil
 }
 
+// SnapshotClearCount returns the current clear-count, intended to be captured
+// by callers that schedule UpdatePositionsInCommitteeWithClearCount on a
+// background goroutine. Snapshotting in the caller (synchronously) means the
+// value reflects the cache state at scheduling time rather than at goroutine
+// dispatch time, which can race with intervening Clear() calls.
+func (s *SyncCommitteeCache) SnapshotClearCount() uint64 {
+	return s.cleared.Load()
+}
+
 // UpdatePositionsInCommittee updates caching of validators position in sync committee in respect to
 // current epoch and next epoch. This should be called when `current_sync_committee` and `next_sync_committee`
 // change and that happens every `EPOCHS_PER_SYNC_COMMITTEE_PERIOD`.
 func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, st state.BeaconState) error {
-	// since we call UpdatePositionsInCommittee asynchronously, keep track of the cache value
-	// seen at the beginning of the routine and compare at the end before updating. If the underlying value has been
-	// cycled (new address), don't update it.
-	clearCount := s.cleared.Load()
+	return s.UpdatePositionsInCommitteeWithClearCount(syncCommitteeBoundaryRoot, st, s.cleared.Load())
+}
+
+// UpdatePositionsInCommitteeWithClearCount is the variant intended for async
+// callers: they snapshot the clear-count synchronously before scheduling, so
+// any Clear() that happens before the goroutine actually runs is detected and
+// the update abandoned.
+func (s *SyncCommitteeCache) UpdatePositionsInCommitteeWithClearCount(syncCommitteeBoundaryRoot [32]byte, st state.BeaconState, clearCount uint64) error {
 	csc, err := st.CurrentSyncCommittee()
 	if err != nil {
 		return err

@@ -61,12 +61,12 @@ func (vs *Server) getSyncAggregate(ctx context.Context, slot primitives.Slot, ro
 
 	subcommitteeCount := params.BeaconConfig().SyncCommitteeSubnetCount
 	var bitsHolder [][]byte
-	for i := uint64(0); i < subcommitteeCount; i++ {
+	for range subcommitteeCount {
 		bitsHolder = append(bitsHolder, qrysmpb.NewSyncCommitteeAggregationBits())
 	}
 	sigsHolder := make([][]byte, 0, params.BeaconConfig().SyncCommitteeSize/subcommitteeCount)
 
-	for i := uint64(0); i < subcommitteeCount; i++ {
+	for i := range subcommitteeCount {
 		cs := proposerContributions.filterBySubIndex(i)
 		aggregates, err := synccontribution.Aggregate(cs)
 		if err != nil {
@@ -113,7 +113,7 @@ func (vs *Server) aggregatedSyncCommitteeMessages(
 	subcommitteeSize := params.BeaconConfig().SyncCommitteeSize / subcommitteeCount
 	sigsPerSubcommittee := make([][][]byte, subcommitteeCount)
 	bitsPerSubcommittee := make([]bitfield.Bitfield, subcommitteeCount)
-	for i := uint64(0); i < subcommitteeCount; i++ {
+	for i := range subcommitteeCount {
 		sigsPerSubcommittee[i] = make([][]byte, 0, subcommitteeSize)
 		bitsPerSubcommittee[i] = qrysmpb.NewSyncCommitteeAggregationBits()
 	}
@@ -166,7 +166,7 @@ func (vs *Server) aggregatedSyncCommitteeMessages(
 
 	// Pack signatures and bits into per-subcommittee contributions.
 	result := make([]*qrysmpb.SyncCommitteeContribution, 0, subcommitteeCount)
-	for i := uint64(0); i < subcommitteeCount; i++ {
+	for i := range subcommitteeCount {
 		if len(sigsPerSubcommittee[i]) == 0 {
 			continue
 		}

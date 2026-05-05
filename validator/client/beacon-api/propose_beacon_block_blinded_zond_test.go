@@ -270,7 +270,7 @@ func generateSignedBlindedZondBlock() *qrysmpb.GenericSignedBeaconBlock_BlindedZ
 							Proof: test_helpers.FillByteArraySlice(33, test_helpers.FillByteSlice(32, 92)),
 							Data: &qrysmpb.Deposit_Data{
 								PublicKey:             test_helpers.FillByteSlice(2592, 94),
-								WithdrawalCredentials: test_helpers.FillByteSlice(32, 95),
+								WithdrawalCredentials: test_helpers.FillByteSlice(64, 95),
 								Amount:                96,
 								Signature:             test_helpers.FillByteSlice(4627, 97),
 							},
@@ -279,7 +279,7 @@ func generateSignedBlindedZondBlock() *qrysmpb.GenericSignedBeaconBlock_BlindedZ
 							Proof: test_helpers.FillByteArraySlice(33, test_helpers.FillByteSlice(32, 98)),
 							Data: &qrysmpb.Deposit_Data{
 								PublicKey:             test_helpers.FillByteSlice(2592, 100),
-								WithdrawalCredentials: test_helpers.FillByteSlice(32, 101),
+								WithdrawalCredentials: test_helpers.FillByteSlice(64, 101),
 								Amount:                102,
 								Signature:             test_helpers.FillByteSlice(4627, 103),
 							},
@@ -307,7 +307,7 @@ func generateSignedBlindedZondBlock() *qrysmpb.GenericSignedBeaconBlock_BlindedZ
 					},
 					ExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderZond{
 						ParentHash:       test_helpers.FillByteSlice(32, 112),
-						FeeRecipient:     test_helpers.FillByteSlice(20, 113),
+						FeeRecipient:     test_helpers.FillByteSlice(48, 113),
 						StateRoot:        test_helpers.FillByteSlice(32, 114),
 						ReceiptsRoot:     test_helpers.FillByteSlice(32, 115),
 						LogsBloom:        test_helpers.FillByteSlice(256, 116),

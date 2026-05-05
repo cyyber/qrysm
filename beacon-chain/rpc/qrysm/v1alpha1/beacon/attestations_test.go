@@ -492,7 +492,7 @@ func TestServer_mapAttestationToTargetRoot(t *testing.T) {
 
 func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.BeaconConfig())
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	db := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	ctx := context.Background()
@@ -502,6 +502,12 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*qrysmpb.Attestation, 0, count)
 	atts2 := make([]*qrysmpb.Attestation, 0, count)
+
+	// We will set up `numValidators` validators below. With one committee per
+	// slot the committee size is numValidators / SlotsPerEpoch, which is
+	// also the bit length each aggregation bitlist needs to match.
+	const numValidators = uint64(512)
+	committeeSize := numValidators / uint64(params.BeaconConfig().SlotsPerEpoch)
 
 	for i := range count {
 		var targetRoot [32]byte
@@ -525,7 +531,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 					Slot:           i,
 					CommitteeIndex: 0,
 				},
-				AggregationBits: bitfield.NewBitlist(128 / uint64(params.BeaconConfig().SlotsPerEpoch)),
+				AggregationBits: bitfield.NewBitlist(committeeSize),
 			},
 		}
 		util.SaveBlock(t, ctx, db, blockExample)
@@ -537,8 +543,8 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 
 	}
 
-	// We setup 512 validators so that committee size matches the length of attestations' aggregation bits.
-	numValidators := uint64(512)
+	// numValidators is fixed above so that committee size matches the bit
+	// length used for aggregation bits.
 	state, _ := util.DeterministicGenesisStateZond(t, numValidators)
 
 	// Next up we convert the test attestations to indexed form:
@@ -600,7 +606,10 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 
 func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.BeaconConfig())
+	// Force mainnet to keep EpochsPerHistoricalVector matched with the
+	// compile-time fieldparams.RandaoMixesLength (65536); other tests in
+	// the package may have flipped to minimal beforehand.
+	params.OverrideBeaconConfig(params.MainnetConfig())
 	db := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	ctx := context.Background()
