@@ -74,7 +74,7 @@ func createGstMaker(fill *filler.Filler, code []byte) *fuzzing.GstMaker {
 		Code:    []byte{},
 	})
 	// Add code
-	dest, _ := common.NewAddressFromString("Q000000000000000000000000000000ca1100f022")
+	dest, _ := common.NewAddressFromString("Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000ca1100f022")
 	gst.AddAccount(dest, fuzzing.GenesisAccount{
 		Code:    code,
 		Balance: new(big.Int),

@@ -2307,7 +2307,7 @@ func TestProposer_GetFeeRecipientByPubKey(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, params.BeaconConfig().DefaultFeeRecipient.Hex(), hexutil.EncodeQ(resp.FeeRecipient))
-	defaultFeeRecipient, err := common.NewAddressFromString("Q046Fb65722E7b2455012BFEBf6177F1D2e9728D9")
+	defaultFeeRecipient, err := common.NewAddressFromString("Q00000000000000000000000000000000000000000000000000000000046Fb65722E7b2455012BFEBf6177F1D2e9728D9")
 	require.NoError(t, err)
 	params.BeaconConfig().DefaultFeeRecipient = defaultFeeRecipient
 	resp, err = proposerServer.GetFeeRecipientByPubKey(ctx, &qrysmpb.FeeRecipientByPubKeyRequest{
@@ -2320,7 +2320,7 @@ func TestProposer_GetFeeRecipientByPubKey(t *testing.T) {
 		PublicKey: beaconState.Validators()[0].PublicKey,
 	})
 	require.NoError(t, err)
-	feeRecipient, err := common.NewAddressFromString("Q055Fb65722E7b2455012BFEBf6177F1D2e9728D8")
+	feeRecipient, err := common.NewAddressFromString("Q00000000000000000000000000000000000000000000000000000000055Fb65722E7b2455012BFEBf6177F1D2e9728D8")
 	require.NoError(t, err)
 	err = proposerServer.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{index.Index}, []common.Address{feeRecipient})
 	require.NoError(t, err)

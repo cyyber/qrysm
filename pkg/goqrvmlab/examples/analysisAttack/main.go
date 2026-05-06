@@ -120,9 +120,9 @@ func evaluate(ctx *cli.Context) error {
 		initcode = common.HexToHash(fmt.Sprintf("0x62%v565b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
 			strconv.FormatInt(int64(initCodeSize-1), 16)))
 		// Where the payload resides
-		payloadAddr, _ = common.NewAddressFromString("Q000000000000000000000000000000000000c0de")
+		payloadAddr, _ = common.NewAddressFromString("Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0de")
 		// The attacker code
-		attackerAddr, _ = common.NewAddressFromString("Q0000000000000000000000000000000000031337")
+		attackerAddr, _ = common.NewAddressFromString("Q000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000031337")
 	)
 	ruleset, err := ops.LookupChainConfig(fork)
 	if err != nil {

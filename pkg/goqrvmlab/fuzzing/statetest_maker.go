@@ -52,7 +52,7 @@ type GstMaker struct {
 func NewGstMaker() *GstMaker {
 	alloc := make(GenesisAlloc)
 	rnd := common.HexToHash("0x20000")
-	coinbase, _ := common.NewAddressFromString("Qb94f5374fce5edbc8e2a8697c15331677e6ebf0b")
+	coinbase, _ := common.NewAddressFromString("Q00000000000000000000000000000000000000000000000000000000b94f5374fce5edbc8e2a8697c15331677e6ebf0b")
 	gst := &GstMaker{
 		env: &stEnv{
 			// The ENV portion

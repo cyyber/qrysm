@@ -113,7 +113,7 @@ func evaluate(ctx *cli.Context) error {
 		pusher      = ctx.Int(pushFlag.Name)
 		popper      = ctx.Int(popFlag.Name)
 		// The attacker code
-		attackerAddr, _ = common.NewAddressFromString("Q0000000000000000000000000000000000031337")
+		attackerAddr, _ = common.NewAddressFromString("Q000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000031337")
 	)
 	ruleset, err := ops.LookupChainConfig(fork)
 	if err != nil {
