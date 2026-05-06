@@ -103,9 +103,6 @@ func TestConfigureExecutionSetting(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, recipient0, params.BeaconConfig().DefaultFeeRecipient)
 
-	assert.LogsContain(t, hook,
-		"is not a checksum QRL address",
-	)
 	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "Q00000000000000000000000000000000000000000000000000000000aAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa"))
 	cliCtx = cli.NewContext(&app, set, nil)
 	err = configureExecutionSetting(cliCtx)

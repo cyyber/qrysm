@@ -1,8 +1,6 @@
 package node
 
 import (
-	"fmt"
-
 	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/theQRL/go-qrl/common"
 	"github.com/theQRL/qrysm/cmd"
@@ -162,17 +160,6 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	if err != nil {
 		log.Warnf("%s is not a valid fee recipient address, setting suggested-fee-recipient failed", ha)
 		return nil
-	}
-	mixedcaseAddress, err := common.NewMixedcaseAddressFromString(ha)
-	if err != nil {
-		log.WithError(err).Error(fmt.Sprintf("Could not decode fee recipient %s, setting suggested-fee-recipient failed", ha))
-		return nil
-	}
-	if !mixedcaseAddress.ValidChecksum() {
-		log.Warnf("Fee recipient %s is not a checksum QRL address. "+
-			"The checksummed address is %s and will be used as the fee recipient. "+
-			"We recommend using a mixed-case address (checksum) "+
-			"to prevent spelling mistakes in your fee recipient QRL address", ha, checksumAddress.Hex())
 	}
 	c.DefaultFeeRecipient = checksumAddress
 	log.Infof("Default fee recipient is set to %s, recipient may be overwritten from validator client and persist in db."+

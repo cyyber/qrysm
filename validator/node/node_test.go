@@ -416,7 +416,7 @@ func TestProposerSettings(t *testing.T) {
 			},
 		},
 		{
-			name: "Happy Path Config file File, bad checksum",
+			name: "Happy Path Config file File, mixed-case fee recipient",
 			args: args{
 				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "./testdata/good-prepare-beacon-proposer-config-badchecksum.json",
@@ -443,7 +443,6 @@ func TestProposerSettings(t *testing.T) {
 				}
 			},
 			wantErr: "",
-			wantLog: "is not a checksum QRL address",
 		},
 		{
 			name: "Happy Path Config file File multiple fee recipients",

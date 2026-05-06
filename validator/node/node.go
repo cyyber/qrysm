@@ -475,7 +475,7 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 	if err != nil {
 		return nil, err
 	}
-	if err := warnNonChecksummedAddress(fileConfig.DefaultConfig.FeeRecipient); err != nil {
+	if err := validateFeeRecipientAddress(fileConfig.DefaultConfig.FeeRecipient); err != nil {
 		return nil, err
 	}
 	vpSettings.DefaultConfig = &validatorServiceConfig.ProposerOption{
@@ -561,7 +561,7 @@ func verifyOption(key string, option *validatorpb.ProposerOptionPayload) error {
 	if !common.IsAddress(option.FeeRecipient) {
 		return errors.New("fee recipient is not a valid qrl address")
 	}
-	if err := warnNonChecksummedAddress(option.FeeRecipient); err != nil {
+	if err := validateFeeRecipientAddress(option.FeeRecipient); err != nil {
 		return err
 	}
 	return nil
@@ -630,16 +630,10 @@ func BuilderSettingsFromFlags(cliCtx *cli.Context) (*validatorServiceConfig.Buil
 	return nil, nil
 }
 
-func warnNonChecksummedAddress(feeRecipient string) error {
-	mixedcaseAddress, err := common.NewMixedcaseAddressFromString(feeRecipient)
+func validateFeeRecipientAddress(feeRecipient string) error {
+	_, err := common.NewMixedcaseAddressFromString(feeRecipient)
 	if err != nil {
 		return errors.Wrapf(err, "could not decode fee recipient %s", feeRecipient)
-	}
-	if !mixedcaseAddress.ValidChecksum() {
-		log.Warnf("Fee recipient %s is not a checksum QRL address. "+
-			"The checksummed address is %s and will be used as the fee recipient. "+
-			"We recommend using a mixed-case address (checksum) "+
-			"to prevent spelling mistakes in your fee recipient QRL address", feeRecipient, mixedcaseAddress.Address().Hex())
 	}
 	return nil
 }
