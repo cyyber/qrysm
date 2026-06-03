@@ -492,18 +492,12 @@ func TestServer_mapAttestationToTargetRoot(t *testing.T) {
 
 func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 	db := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	ctx := context.Background()
 	targetRoot1 := bytesutil.ToBytes32([]byte("root"))
 	targetRoot2 := bytesutil.ToBytes32([]byte("root2"))
-
-	const numValidators = uint64(512)
-	state, _ := util.DeterministicGenesisStateZond(t, numValidators)
-	committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, 0, 0)
-	require.NoError(t, err)
-	committeeSize := uint64(len(committee))
 
 	count := params.BeaconConfig().SlotsPerEpoch
 	atts := make([]*qrysmpb.Attestation, 0, count)
@@ -531,7 +525,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 					Slot:           i,
 					CommitteeIndex: 0,
 				},
-				AggregationBits: bitfield.NewBitlist(committeeSize),
+				AggregationBits: bitfield.NewBitlist(128 / uint64(params.BeaconConfig().SlotsPerEpoch)),
 			},
 		}
 		util.SaveBlock(t, ctx, db, blockExample)
@@ -542,6 +536,10 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		}
 
 	}
+
+	// We setup 512 validators so that committee size matches the length of attestations' aggregation bits.
+	numValidators := uint64(512)
+	state, _ := util.DeterministicGenesisStateZond(t, numValidators)
 
 	// Next up we convert the test attestations to indexed form:
 	indexedAtts := make([]*qrysmpb.IndexedAttestation, len(atts)+len(atts2))
@@ -568,7 +566,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 		HeadFetcher:        &chainMock.ChainService{State: state},
 		StateGen:           stategen.New(db, doublylinkedtree.New()),
 	}
-	err = db.SaveStateSummary(ctx, &qrysmpb.StateSummary{
+	err := db.SaveStateSummary(ctx, &qrysmpb.StateSummary{
 		Root: targetRoot1[:],
 		Slot: 1,
 	})
@@ -602,8 +600,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 
 func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	// Keep this test on minimal config, but use fieldparams for fixed SSZ vector lengths.
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 	db := dbTest.SetupDB(t)
 	helpers.ClearCache()
 	ctx := context.Background()
@@ -644,7 +641,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 	numValidators := uint64(128)
 	state, _ := util.DeterministicGenesisStateZond(t, numValidators)
 
-	randaoMixes := make([][]byte, fieldparams.RandaoMixesLength)
+	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := range randaoMixes {
 		randaoMixes[i] = make([]byte, fieldparams.RootLength)
 	}

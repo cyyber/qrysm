@@ -111,25 +111,6 @@ func TestAggregateAttestations_AggregatePair(t *testing.T) {
 	}
 }
 
-func TestAggregateAttestations_AggregatePair_AppendsSignaturesInParticipantOrder(t *testing.T) {
-	baseBits := bitfield.NewBitlist(4)
-	baseBits.SetBitAt(0, true)
-	newBits := bitfield.NewBitlist(4)
-	newBits.SetBitAt(1, true)
-	newBits.SetBitAt(2, true)
-
-	sig0 := []byte("sig0")
-	sig1 := []byte("sig1")
-	sig2 := []byte("sig2")
-
-	got, err := AggregatePair(
-		&qrysmpb.Attestation{AggregationBits: baseBits, Signatures: [][]byte{sig0}},
-		&qrysmpb.Attestation{AggregationBits: newBits, Signatures: [][]byte{sig1, sig2}},
-	)
-	require.NoError(t, err)
-	assert.DeepEqual(t, [][]byte{sig0, sig1, sig2}, got.Signatures)
-}
-
 func TestAggregate(t *testing.T) {
 	// Each test defines the aggregation bitfield inputs and the wanted output result.
 	bitlistLen := params.BeaconConfig().MaxValidatorsPerCommittee

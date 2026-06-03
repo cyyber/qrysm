@@ -29,10 +29,6 @@ func (e *DefaultErrorJson) StatusCode() int {
 	return e.Code
 }
 
-func (e *DefaultErrorJson) Error() string {
-	return e.Message
-}
-
 // WriteJson writes the response message in JSON format.
 func WriteJson(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", jsonMediaType)

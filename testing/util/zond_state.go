@@ -47,7 +47,6 @@ func DeterministicGenesisStateZondWithGenesisBlock(
 
 // DeterministicGenesisStateZond returns a genesis state in Zond format made using the deterministic deposits.
 func DeterministicGenesisStateZond(t testing.TB, numValidators uint64) (state.BeaconState, []ml_dsa_87.MLDSA87Key) {
-	resetCache()
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get %d deposits", numValidators))

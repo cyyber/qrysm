@@ -3,7 +3,6 @@ package forkchoice
 import (
 	"testing"
 
-	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/blocks"
 	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/testing/util"
@@ -23,19 +22,9 @@ func TestBuilderTick(t *testing.T) {
 func TestBuilderInvalidBlock(t *testing.T) {
 	st, err := util.NewBeaconStateZond()
 	require.NoError(t, err)
-	genesisBlk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockZond())
+	blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockZond())
 	require.NoError(t, err)
-	parentRoot, err := genesisBlk.Block().HashTreeRoot()
-	require.NoError(t, err)
-	blkPb := util.NewBeaconBlockZond()
-	blkPb.Block.Slot = 1
-	blkPb.Block.ParentRoot = parentRoot[:]
-	blk, err := blocks.NewSignedBeaconBlock(blkPb)
-	require.NoError(t, err)
-	builder := NewBuilder(t, st, genesisBlk)
-	builder.Tick(t, int64(params.BeaconConfig().SecondsPerSlot))
-	status := "INVALID"
-	require.NoError(t, builder.SetPayloadStatus(&MockEngineResp{Status: &status}))
+	builder := NewBuilder(t, st, blk)
 	builder.InvalidBlock(t, blk)
 }
 

@@ -1021,7 +1021,7 @@ func TestServer_ListValidators_DefaultPageSize(t *testing.T) {
 
 func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig().Copy())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 	transition.SkipSlotCache.Disable()
 
 	ctx := context.Background()
@@ -1064,16 +1064,13 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, epochs, len(res.ValidatorList))
 
-	// Capture the genesis-state view; under mainnet preset, querying for a
-	// later epoch replays slots and runs process_epoch, which may rebalance
-	// validators' effective balances. The test only cares that the validator
-	// set itself (set, ordering, indices) is preserved across the replay.
-	want := make([]*qrysmpb.Validators_ValidatorContainer, len(res.ValidatorList))
-	for i, v := range res.ValidatorList {
-		want[i] = &qrysmpb.Validators_ValidatorContainer{
-			Index:     v.Index,
-			Validator: v.Validator,
-		}
+	vals := st.Validators()
+	want := make([]*qrysmpb.Validators_ValidatorContainer, 0)
+	for i, v := range vals {
+		want = append(want, &qrysmpb.Validators_ValidatorContainer{
+			Index:     primitives.ValidatorIndex(i),
+			Validator: v,
+		})
 	}
 	req = &qrysmpb.ListValidatorsRequest{
 		QueryFilter: &qrysmpb.ListValidatorsRequest_Epoch{
@@ -1084,10 +1081,7 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, len(want), len(res.ValidatorList), "incorrect number of validators")
-	for i := range want {
-		assert.Equal(t, want[i].Index, res.ValidatorList[i].Index, "validator index drift at i=%d", i)
-		assert.DeepSSZEqual(t, want[i].Validator.PublicKey, res.ValidatorList[i].Validator.PublicKey, "pubkey drift at i=%d", i)
-	}
+	assert.DeepSSZEqual(t, want, res.ValidatorList, "mismatch in validator values")
 }
 
 func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
@@ -1123,9 +1117,6 @@ func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
 	require.NoError(t, st.SetSlot(headSlot))
 	require.NoError(t, st.SetValidators(validators))
 	require.NoError(t, st.SetBalances(balances))
-	// process_epoch asserts len(InactivityScores) == len(Validators); empty
-	// state initialises InactivityScores to nil, so seed it explicitly.
-	require.NoError(t, st.SetInactivityScores(make([]uint64, numValidators)))
 	b := util.NewBeaconBlockZond()
 	util.SaveBlock(t, ctx, beaconDB, b)
 	gRoot, err := b.Block.HashTreeRoot()
@@ -1365,7 +1356,7 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	helpers.ClearCache()
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig().Copy())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
@@ -1434,7 +1425,7 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 
 func TestServer_GetValidatorParticipation_CurrentAndPrevEpochWithBits(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig().Copy())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 	transition.SkipSlotCache.Disable()
 
 	t.Run("zond", func(t *testing.T) {
@@ -2094,7 +2085,7 @@ func TestServer_GetIndividualVotes_WorkingAltair(t *testing.T) {
 func TestServer_GetIndividualVotes_AltairEndOfEpoch(t *testing.T) {
 	helpers.ClearCache()
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
@@ -2182,7 +2173,7 @@ func TestServer_GetIndividualVotes_AltairEndOfEpoch(t *testing.T) {
 func TestServer_GetIndividualVotes_BellatrixEndOfEpoch(t *testing.T) {
 	helpers.ClearCache()
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
@@ -2270,7 +2261,7 @@ func TestServer_GetIndividualVotes_BellatrixEndOfEpoch(t *testing.T) {
 func TestServer_GetIndividualVotes_ZondEndOfEpoch(t *testing.T) {
 	helpers.ClearCache()
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 

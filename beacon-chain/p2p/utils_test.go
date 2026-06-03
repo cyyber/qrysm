@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"testing"
-	"time"
 
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/theQRL/go-qrl/crypto"
@@ -20,16 +19,6 @@ import (
 // unreachable IP (logs an error). Using a local listener instead of a
 // hardcoded external IP avoids CI flakes when the external host moves.
 func TestVerifyConnectivity(t *testing.T) {
-	// Reachability check dials a public Google IP; skip when running in a
-	// network-restricted environment (CI sandbox, offline build).
-	if testing.Short() {
-		t.Skip("skipping network-dependent connectivity test in short mode")
-	}
-	conn, err := net.DialTimeout("tcp", "142.250.68.46:80", 500*time.Millisecond)
-	if err != nil {
-		t.Skipf("skipping: outbound network unavailable (%v)", err)
-	}
-	require.NoError(t, conn.Close())
 	params.SetupTestConfigCleanup(t)
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")

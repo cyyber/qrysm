@@ -202,6 +202,8 @@ github.com/adamtka42/go-qrl v0.0.0-20260528152854-a02110a14a60 h1:LEBZJjYpofDtPb
 github.com/adamtka42/go-qrl v0.0.0-20260528152854-a02110a14a60/go.mod h1:xSEIOTUU3Pu4Gv7YIJF5adk/xC0TfgQMBd/0LctiTq4=
 github.com/adamtka42/go-qrl v0.0.0-20260528221745-da402874e263 h1:BHgskxz65lT6xkbRt8mwrimBnWl/A2LRhIv/ZfTsfHg=
 github.com/adamtka42/go-qrl v0.0.0-20260528221745-da402874e263/go.mod h1:xSEIOTUU3Pu4Gv7YIJF5adk/xC0TfgQMBd/0LctiTq4=
+github.com/adamtka42/go-qrl v0.0.0-20260602212110-01dae334ef25 h1:LOBa0eVTuVjU2v9xTKQxvh/OllSq1GGA6hNbZU2VcB4=
+github.com/adamtka42/go-qrl v0.0.0-20260602212110-01dae334ef25/go.mod h1:xSEIOTUU3Pu4Gv7YIJF5adk/xC0TfgQMBd/0LctiTq4=
 github.com/adamtka42/go-qrllib v0.0.0-20260528135157-a4888358f555 h1:VECtgGZ+sQfNpAZuGUREE8Jbe7Fm0R20PxyoybbUaWw=
 github.com/adamtka42/go-qrllib v0.0.0-20260528135157-a4888358f555/go.mod h1:ZXa20c5HYw59NNWeS9JgG3TZH0C8dZPSzqRGhJqq6to=
 github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5/go.mod h1:SkGFH1ia65gfNATL8TAiHDNxPzPdmEL5uirI2Uyuz6c=

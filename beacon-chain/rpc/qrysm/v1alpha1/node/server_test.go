@@ -126,20 +126,11 @@ func TestNodeServer_GetPeer(t *testing.T) {
 	}
 	qrysmpb.RegisterNodeServer(server, ns)
 	reflection.Register(server)
-	var firstPeer string
-	for _, peerID := range peersProvider.Peers().All() {
-		res, err := ns.GetPeer(context.Background(), &qrysmpb.PeerRequest{PeerId: peerID.String()})
-		require.NoError(t, err)
-		if res.Direction == qrysmpb.PeerDirection_INBOUND {
-			firstPeer = peerID.String()
-			break
-		}
-	}
-	require.NotEqual(t, "", firstPeer)
+	firstPeer := peersProvider.Peers().All()[0]
 
-	res, err := ns.GetPeer(context.Background(), &qrysmpb.PeerRequest{PeerId: firstPeer})
+	res, err := ns.GetPeer(context.Background(), &qrysmpb.PeerRequest{PeerId: firstPeer.String()})
 	require.NoError(t, err)
-	assert.Equal(t, firstPeer, res.PeerId, "Unexpected peer ID")
+	assert.Equal(t, firstPeer.String(), res.PeerId, "Unexpected peer ID")
 	assert.Equal(t, int(qrysmpb.PeerDirection_INBOUND), int(res.Direction), "Expected 1st peer to be an inbound connection")
 	assert.Equal(t, qrysmpb.ConnectionState_CONNECTED, res.ConnectionState, "Expected peer to be connected")
 }
@@ -156,12 +147,8 @@ func TestNodeServer_ListPeers(t *testing.T) {
 	res, err := ns.ListPeers(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(res.Peers))
-	directionCounts := make(map[qrysmpb.PeerDirection]int)
-	for _, peer := range res.Peers {
-		directionCounts[peer.Direction]++
-	}
-	assert.Equal(t, 1, directionCounts[qrysmpb.PeerDirection_INBOUND])
-	assert.Equal(t, 1, directionCounts[qrysmpb.PeerDirection_OUTBOUND])
+	assert.Equal(t, int(qrysmpb.PeerDirection_INBOUND), int(res.Peers[0].Direction))
+	assert.Equal(t, qrysmpb.PeerDirection_OUTBOUND, res.Peers[1].Direction)
 }
 
 func TestNodeServer_GetExecutionConnectionStatus(t *testing.T) {

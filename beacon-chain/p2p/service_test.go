@@ -276,7 +276,7 @@ func TestListenForNewNodes(t *testing.T) {
 
 func TestPeer_Disconnect(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	h1, _, _ := createHost(t, 0)
+	h1, _, _ := createHost(t, 5000)
 	defer func() {
 		if err := h1.Close(); err != nil {
 			t.Log(err)
@@ -287,14 +287,14 @@ func TestPeer_Disconnect(t *testing.T) {
 		host: h1,
 	}
 
-	h2, _, _ := createHost(t, 0)
+	h2, _, ipaddr := createHost(t, 5001)
 	defer func() {
 		if err := h2.Close(); err != nil {
 			t.Log(err)
 		}
 	}()
 
-	h2Addr, err := multiaddr.NewMultiaddr(fmt.Sprintf("%s/p2p/%s", h2.Addrs()[0], h2.ID()))
+	h2Addr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d/p2p/%s", ipaddr, 5001, h2.ID()))
 	require.NoError(t, err)
 	addrInfo, err := peer.AddrInfoFromP2pAddr(h2Addr)
 	require.NoError(t, err)

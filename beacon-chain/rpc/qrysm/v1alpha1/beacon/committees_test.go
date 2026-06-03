@@ -84,7 +84,7 @@ func addDefaultReplayerBuilder(s *Server, h stategen.HistoryAccessor) {
 
 func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	params.OverrideBeaconConfig(params.BeaconConfig())
 	ctx := context.Background()
 
 	db := dbTest.SetupDB(t)
@@ -93,7 +93,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	numValidators := 128
 	headState := setupActiveValidators(t, numValidators)
 
-	mixes := make([][]byte, fieldparams.RandaoMixesLength)
+	mixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
 	for i := range mixes {
 		mixes[i] = make([]byte, fieldparams.RootLength)
 	}

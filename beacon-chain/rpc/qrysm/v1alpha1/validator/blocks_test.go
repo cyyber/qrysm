@@ -71,7 +71,6 @@ func TestServer_StreamAltairBlocks_ContextCanceled(t *testing.T) {
 }
 
 func TestServer_StreamAltairBlocks_OnHeadUpdated(t *testing.T) {
-	skipPlainGoTestUntilMinimalSSZStubs(t)
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.BeaconConfig())
 	ctx := context.Background()
@@ -114,7 +113,6 @@ func TestServer_StreamAltairBlocks_OnHeadUpdated(t *testing.T) {
 }
 
 func TestServer_StreamZondBlocks_OnHeadUpdated(t *testing.T) {
-	skipPlainGoTestUntilMinimalSSZStubs(t)
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.BeaconConfig())
 	ctx := context.Background()
@@ -157,7 +155,6 @@ func TestServer_StreamZondBlocks_OnHeadUpdated(t *testing.T) {
 }
 
 func TestServer_StreamAltairBlocksVerified_OnHeadUpdated(t *testing.T) {
-	skipPlainGoTestUntilMinimalSSZStubs(t)
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	beaconState, privs := util.DeterministicGenesisStateZond(t, 32)
@@ -201,7 +198,6 @@ func TestServer_StreamAltairBlocksVerified_OnHeadUpdated(t *testing.T) {
 }
 
 func TestServer_StreamZondBlocksVerified_OnHeadUpdated(t *testing.T) {
-	skipPlainGoTestUntilMinimalSSZStubs(t)
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	beaconState, privs := util.DeterministicGenesisStateZond(t, 32)

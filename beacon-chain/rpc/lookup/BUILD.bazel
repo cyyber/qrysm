@@ -10,7 +10,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/blockchain",
-        "//beacon-chain/core/transition",
         "//beacon-chain/db",
         "//beacon-chain/state",
         "//beacon-chain/state/stategen",

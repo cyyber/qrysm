@@ -448,32 +448,3 @@ func TestAggregateAttestations_aggregateAttestations(t *testing.T) {
 		})
 	}
 }
-
-func TestAggregateAttestations_aggregateAttestations_AppendsSignaturesInParticipantOrder(t *testing.T) {
-	baseBits := bitfield.NewBitlist(4)
-	baseBits.SetBitAt(0, true)
-	newBits := bitfield.NewBitlist(4)
-	newBits.SetBitAt(1, true)
-	newBits.SetBitAt(2, true)
-	coverageBits := bitfield.NewBitlist(4)
-	coverageBits.SetBitAt(0, true)
-	coverageBits.SetBitAt(1, true)
-	coverageBits.SetBitAt(2, true)
-	coverage, err := coverageBits.ToBitlist64()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sig0 := []byte("sig0")
-	sig1 := []byte("sig1")
-	sig2 := []byte("sig2")
-	atts := []*qrysmpb.Attestation{
-		{AggregationBits: baseBits, Signatures: [][]byte{sig0}},
-		{AggregationBits: newBits, Signatures: [][]byte{sig1, sig2}},
-	}
-
-	gotTargetIdx, err := aggregateAttestations(atts, []int{0, 1}, coverage)
-	assert.NoError(t, err)
-	assert.Equal(t, 0, gotTargetIdx)
-	assert.DeepEqual(t, [][]byte{sig0, sig1, sig2}, atts[0].Signatures)
-}

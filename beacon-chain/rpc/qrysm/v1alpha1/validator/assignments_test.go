@@ -99,7 +99,6 @@ func TestGetDuties_OK(t *testing.T) {
 }
 
 func TestGetZondDuties_SyncCommitteeOK(t *testing.T) {
-	skipPlainGoTestUntilMinimalSSZStubs(t)
 	helpers.ClearCache()
 	params.SetupTestConfigCleanup(t)
 
@@ -347,8 +346,8 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	res, err := vs.GetDuties(context.Background(), req)
 	require.NoError(t, err, "Could not call epoch committee assignment")
 	assert.Equal(t, 2, len(res.CurrentEpochDuties))
-	require.Equal(t, true, res.CurrentEpochDuties[0].AttesterSlot < params.BeaconConfig().SlotsPerEpoch)
-	require.Equal(t, true, res.CurrentEpochDuties[1].AttesterSlot < params.BeaconConfig().SlotsPerEpoch)
+	assert.Equal(t, primitives.Slot(3), res.CurrentEpochDuties[0].AttesterSlot)
+	assert.Equal(t, primitives.Slot(3), res.CurrentEpochDuties[1].AttesterSlot)
 }
 
 func TestGetDuties_SyncNotReady(t *testing.T) {

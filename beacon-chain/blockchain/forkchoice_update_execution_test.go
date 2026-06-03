@@ -217,11 +217,11 @@ func TestShouldOverrideFCU(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, headRoot, head)
 
-	fcs.SetGenesisTime(uint64(time.Now().Unix()) - uint64(2*params.BeaconConfig().SecondsPerSlot) - 1)
-	require.Equal(t, false, service.shouldOverrideFCU(parentRoot, 3))
+	fcs.SetGenesisTime(uint64(time.Now().Unix()) - 125)
+	require.Equal(t, true, service.shouldOverrideFCU(parentRoot, 3))
 	require.LogsDoNotContain(t, hook, "10 seconds")
-	fcs.SetGenesisTime(uint64(time.Now().Unix()) - uint64(10*params.BeaconConfig().SecondsPerSlot))
+	fcs.SetGenesisTime(uint64(time.Now().Unix()) - 120)
 	service.SetGenesisTime(time.Now().Add(-time.Duration(2*params.BeaconConfig().SecondsPerSlot+10) * time.Second))
 	require.Equal(t, false, service.shouldOverrideFCU(parentRoot, 3))
-	require.LogsDoNotContain(t, hook, "10 seconds")
+	require.LogsContain(t, hook, "10 seconds")
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/theQRL/qrysm/beacon-chain/rpc/apimiddleware"
+	"github.com/theQRL/qrysm/build/bazel"
 	field_params "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/encoding/bytesutil"
 	"github.com/theQRL/qrysm/io/file"
@@ -61,7 +62,7 @@ func TestWriteSignedVoluntaryExitJSON(t *testing.T) {
 		Signature: []byte{0x01, 0x02},
 	}
 
-	output := path.Join(t.TempDir(), "TestWriteSignedVoluntaryExitJSON")
+	output := path.Join(bazel.TestTmpDir(), "TestWriteSignedVoluntaryExitJSON")
 	require.NoError(t, writeSignedVoluntaryExitJSON(context.Background(), sve, output))
 
 	b, err := file.ReadFileAsBytes(path.Join(output, "validator-exit-300.json"))

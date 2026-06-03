@@ -26,12 +26,12 @@ import (
 )
 
 // RandStorage sets some slots
-func RandStorage(maxSlots, maxVal int) map[common.Hash]common.StorageValue {
-	storage := make(map[common.Hash]common.StorageValue)
+func RandStorage(maxSlots, maxVal int) map[common.Hash]common.StorageValue64 {
+	storage := make(map[common.Hash]common.StorageValue64)
 	numSlots := rand.Intn(maxSlots)
 	for range numSlots {
 		v, slot := byte(rand.Intn(maxVal)), byte(rand.Intn(numSlots))
-		storage[common.BytesToHash([]byte{slot})] = common.BytesToStorageValue([]byte{v})
+		storage[common.BytesToHash([]byte{slot})] = common.BytesToStorageValue64([]byte{v})
 	}
 	return storage
 }

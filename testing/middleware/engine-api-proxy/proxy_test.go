@@ -17,10 +17,6 @@ import (
 	"github.com/theQRL/qrysm/testing/require"
 )
 
-func randomTestPort(r *rand.Rand) int {
-	return 10000 + r.Intn(50000)
-}
-
 func TestProxy(t *testing.T) {
 	t.Run("fails to proxy if destination is down", func(t *testing.T) {
 		logger := logrus.New()
@@ -28,7 +24,7 @@ func TestProxy(t *testing.T) {
 		ctx := context.Background()
 		r := rand.NewGenerator()
 		proxy, err := New(
-			WithPort(randomTestPort(r)),
+			WithPort(r.Intn(50000)),
 			WithDestinationAddress("http://localhost:43239"), // Nothing running at destination server.
 			WithLogger(logger),
 		)
@@ -63,7 +59,7 @@ func TestProxy(t *testing.T) {
 		// Destination address server responds to JSON-RPC requests.
 		r := rand.NewGenerator()
 		proxy, err := New(
-			WithPort(randomTestPort(r)),
+			WithPort(r.Intn(50000)),
 			WithDestinationAddress(srv.URL),
 		)
 		require.NoError(t, err)
@@ -102,7 +98,7 @@ func TestProxy_CustomInterceptors(t *testing.T) {
 		// Destination address server responds to JSON-RPC requests.
 		r := rand.NewGenerator()
 		proxy, err := New(
-			WithPort(randomTestPort(r)),
+			WithPort(r.Intn(50000)),
 			WithDestinationAddress(srv.URL),
 		)
 		require.NoError(t, err)
@@ -153,7 +149,7 @@ func TestProxy_CustomInterceptors(t *testing.T) {
 		// Destination address server responds to JSON-RPC requests.
 		r := rand.NewGenerator()
 		proxy, err := New(
-			WithPort(randomTestPort(r)),
+			WithPort(r.Intn(50000)),
 			WithDestinationAddress(srv.URL),
 		)
 		require.NoError(t, err)
@@ -220,7 +216,7 @@ func TestProxy_CustomInterceptors(t *testing.T) {
 		// Destination address server responds to JSON-RPC requests.
 		r := rand.NewGenerator()
 		proxy, err := New(
-			WithPort(randomTestPort(r)),
+			WithPort(r.Intn(50000)),
 			WithDestinationAddress(srv.URL),
 		)
 		require.NoError(t, err)

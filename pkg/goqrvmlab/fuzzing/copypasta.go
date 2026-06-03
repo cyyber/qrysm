@@ -54,17 +54,17 @@ func (ga *GenesisAlloc) UnmarshalJSON(data []byte) error {
 type GenesisAccount struct {
 	Code []byte `json:"code"`
 	// N.B: parity demands storage even if it's empty
-	Storage map[common.Hash]common.StorageValue `json:"storage"`
-	Balance *big.Int                            `json:"balance" gencodec:"required"`
-	Nonce   uint64                              `json:"nonce"`
-	Seed    []byte                              `json:"seed,omitempty"` // for tests
+	Storage map[common.Hash]common.StorageValue64 `json:"storage"`
+	Balance *big.Int                              `json:"balance" gencodec:"required"`
+	Nonce   uint64                                `json:"nonce"`
+	Seed    []byte                                `json:"seed,omitempty"` // for tests
 }
 
 type genesisAccountMarshaling struct {
 	Code       hexutil.Bytes
 	Balance    *math.HexOrDecimal256
 	Nonce      math.HexOrDecimal64
-	Storage    map[storageKeyJSON]storageValueJSON
+	Storage    map[storageKeyJSON]storageValue64JSON
 	PrivateKey hexutil.Bytes
 }
 
@@ -89,11 +89,11 @@ func (h storageKeyJSON) MarshalText() ([]byte, error) {
 	return hexutil.Bytes(h[:]).MarshalText()
 }
 
-// storageValueJSON represents a 512 bit byte array (storage slot value),
+// storageValue64JSON represents a 512 bit byte array (storage slot value),
 // but allows less than 512 bits when unmarshaling from hex.
-type storageValueJSON common.StorageValue
+type storageValue64JSON common.StorageValue64
 
-func (h *storageValueJSON) UnmarshalText(text []byte) error {
+func (h *storageValue64JSON) UnmarshalText(text []byte) error {
 	text = bytes.TrimPrefix(text, []byte("0x"))
 	if len(text) > 128 {
 		return fmt.Errorf("too many hex characters in storage value %q", text)
@@ -106,7 +106,7 @@ func (h *storageValueJSON) UnmarshalText(text []byte) error {
 	return nil
 }
 
-func (h storageValueJSON) MarshalText() ([]byte, error) {
+func (h storageValue64JSON) MarshalText() ([]byte, error) {
 	return hexutil.Bytes(h[:]).MarshalText()
 }
 

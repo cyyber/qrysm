@@ -8,12 +8,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	// SSZ encoding is always emitted for the mainnet preset (proto/qrysm
-	// generated.ssz.go has hardcoded 16-byte SyncCommitteeBits, 1024 Slashings,
-	// etc.) so the runtime config has to match — otherwise every state read
-	// trips an "expected N got M" length mismatch. Pin mainnet here even
-	// though it's slower than the minimal preset; switching back to minimal
-	// requires regenerating the SSZ stubs with `-tags minimal`.
+	// Use minimal config to reduce test setup time.
 	prevConfig := params.BeaconConfig().Copy()
 	defer params.OverrideBeaconConfig(prevConfig)
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())

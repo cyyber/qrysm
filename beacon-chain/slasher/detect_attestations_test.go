@@ -253,23 +253,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 			}()
 			s.attsQueue.extend(tt.args.attestationQueue)
 			currentSlotChan <- slot
-			// Wait for slasher's batch processing log before cancelling — the
-			// 200ms hard sleep used to be enough on an idle laptop but races
-			// under -p 2 + other test load.
-			deadline := time.Now().Add(2 * time.Second)
-			for time.Now().Before(deadline) {
-				gotDone := false
-				for _, e := range hook.AllEntries() {
-					if e.Message == "Done checking slashable attestations" {
-						gotDone = true
-						break
-					}
-				}
-				if gotDone {
-					break
-				}
-				time.Sleep(20 * time.Millisecond)
-			}
+			time.Sleep(time.Millisecond * 200)
 			cancel()
 			s.wg.Wait()
 			if tt.shouldNotBeSlashable {

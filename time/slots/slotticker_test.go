@@ -140,11 +140,6 @@ func TestGetSlotTickerWithOffset_OK(t *testing.T) {
 }
 
 func TestGetSlotTickerWitIntervals(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
-	cfg.SecondsPerSlot = 3
-	params.OverrideBeaconConfig(cfg)
-
 	genesisTime := time.Now()
 	offset := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second / 3
 	intervals := []time.Duration{offset, 2 * offset}

@@ -109,7 +109,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		withdrawal := &enginev1.Withdrawal{
 			Index:          0,
 			ValidatorIndex: 3,
-			Address:        s.validators[3].WithdrawalCredentials[:],
+			Address:        s.validators[3].WithdrawalCredentials,
 			Amount:         s.balances[3],
 		}
 		require.DeepEqual(t, withdrawal, expected[0])
@@ -136,7 +136,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		withdrawal := &enginev1.Withdrawal{
 			Index:          0,
 			ValidatorIndex: 3,
-			Address:        s.validators[3].WithdrawalCredentials[:],
+			Address:        s.validators[3].WithdrawalCredentials,
 			Amount:         params.BeaconConfig().MinDepositAmount,
 		}
 		require.DeepEqual(t, withdrawal, expected[0])
@@ -166,13 +166,13 @@ func TestExpectedWithdrawals(t *testing.T) {
 		withdrawalFull := &enginev1.Withdrawal{
 			Index:          1,
 			ValidatorIndex: 7,
-			Address:        s.validators[7].WithdrawalCredentials[:],
+			Address:        s.validators[7].WithdrawalCredentials,
 			Amount:         s.balances[7],
 		}
 		withdrawalPartial := &enginev1.Withdrawal{
 			Index:          0,
 			ValidatorIndex: 3,
-			Address:        s.validators[3].WithdrawalCredentials[:],
+			Address:        s.validators[3].WithdrawalCredentials,
 			Amount:         params.BeaconConfig().MinDepositAmount,
 		}
 		require.DeepEqual(t, withdrawalPartial, expected[0])
@@ -199,7 +199,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		withdrawal := &enginev1.Withdrawal{
 			Index:          0,
 			ValidatorIndex: 0,
-			Address:        s.validators[0].WithdrawalCredentials[:],
+			Address:        s.validators[0].WithdrawalCredentials,
 			Amount:         1,
 		}
 		require.DeepEqual(t, withdrawal, expected[0])
@@ -225,7 +225,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		withdrawal := &enginev1.Withdrawal{
 			Index:          0,
 			ValidatorIndex: 0,
-			Address:        s.validators[0].WithdrawalCredentials[:],
+			Address:        s.validators[0].WithdrawalCredentials,
 			Amount:         params.BeaconConfig().MaxEffectiveBalance,
 		}
 		require.DeepEqual(t, withdrawal, expected[0])
@@ -251,7 +251,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		withdrawal := &enginev1.Withdrawal{
 			Index:          0,
 			ValidatorIndex: 0,
-			Address:        s.validators[0].WithdrawalCredentials[:],
+			Address:        s.validators[0].WithdrawalCredentials,
 			Amount:         params.BeaconConfig().MaxEffectiveBalance + 1,
 		}
 		require.DeepEqual(t, withdrawal, expected[0])
@@ -303,7 +303,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		withdrawal := &enginev1.Withdrawal{
 			Index:          0,
 			ValidatorIndex: 3,
-			Address:        s.validators[3].WithdrawalCredentials[:],
+			Address:        s.validators[3].WithdrawalCredentials,
 			Amount:         params.BeaconConfig().MinDepositAmount,
 		}
 		require.DeepEqual(t, withdrawal, expected[0])

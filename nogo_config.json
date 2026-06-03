@@ -20,8 +20,7 @@
   "nilness": {
     "exclude_files": {
       "external/.*": "Third party code",
-      "rules_go_work-.*": "Third party code",
-      "cmd/staking-deposit-cli/.*": "Pre-existing lint, not on critical path"
+      "rules_go_work-.*": "Third party code"
     }
   },
   "pkgfact": {
@@ -147,8 +146,7 @@
     "exclude_files": {
       "external/.*": "Third party code",
       "rules_go_work-.*": "Third party code",
-      "tools/analyzers/slicedirect/testdata/slice.go": "Analyzer testdata has to break rules",
-      "cmd/staking-deposit-cli/.*": "Pre-existing lint, not on critical path"
+      "tools/analyzers/slicedirect/testdata/slice.go": "Analyzer testdata has to break rules"
     }
   },
   "ineffassign": {
@@ -226,16 +224,12 @@
   },
   "any": {
     "exclude_files": {
-      "external/.*": "Third party code",
-      "beacon-chain/sync/.*": "Pre-existing lint, not on critical path",
-      "validator/client/.*": "Pre-existing lint, not on critical path"
+      "external/.*": "Third party code"
     }
   },
   "appendclipped": {
     "exclude_files": {
-      "external/.*": "Third party code",
-      "validator/client/.*": "Pre-existing lint, not on critical path",
-      "cmd/staking-deposit-cli/.*": "Pre-existing lint, not on critical path"
+      "external/.*": "Third party code"
     }
   },
   "fmtappendf": {
@@ -255,9 +249,7 @@
   },
   "minmax": {
     "exclude_files": {
-      "external/.*": "Third party code",
-      "beacon-chain/sync/.*": "Pre-existing lint, not on critical path",
-      "beacon-chain/db/slasherkv/.*": "Pre-existing lint, not on critical path"
+      "external/.*": "Third party code"
     }
   },
   "newexpr": {
@@ -272,8 +264,7 @@
   },
   "rangeint": {
     "exclude_files": {
-      "external/.*": "Third party code",
-      "cmd/qrysmctl/p2p/.*": "Standalone p2p tool, not on critical path"
+      "external/.*": "Third party code"
     }
   },
   "reflecttypefor": {
@@ -283,8 +274,7 @@
   },
   "slicescontains": {
     "exclude_files": {
-      "external/.*": "Third party code",
-      "api/gateway/.*": "Pre-existing lint, not on critical path"
+      "external/.*": "Third party code"
     }
   },
   "slicessort": {
@@ -317,9 +307,7 @@
       ".*/.*_test\\.go": "Tests are OK",
       ".*/main\\.go": "main methods are OK",
       "external/.*": "Third party code",
-      "pkg/.*": "Excluded pkg directory",
-      "cmd/qrysmctl/p2p/.*": "Standalone p2p tool, not on critical path",
-      "cmd/staking-deposit-cli/.*": "Pre-existing lints, not on critical path"
+      "pkg/.*": "Excluded pkg directory"
     }
   },
   "logcapitalization": {
@@ -327,9 +315,7 @@
       "external/.*": "Third party code",
       "rules_go_work-.*": "Third party code",
       ".*/.*_test\\.go": "Test logs can be less formal",
-      "tools/analyzers/logcapitalization/testdata/.*": "Analyzer testdata has to break rules",
-      "cmd/qrysmctl/checkpointsync/.*": "Pre-existing lint, not on critical path",
-      "beacon-chain/rpc/qrysm/v1alpha1/validator/.*": "Pre-existing lint, not on critical path"
+      "tools/analyzers/logcapitalization/testdata/.*": "Analyzer testdata has to break rules"
     }
   }
 }

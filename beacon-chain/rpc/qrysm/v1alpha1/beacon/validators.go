@@ -477,7 +477,6 @@ func (bs *Server) GetValidatorParticipation(
 	currentEpoch := slots.ToEpoch(currentSlot)
 
 	var requestedEpoch primitives.Epoch
-	useHeadState := false
 	switch q := req.QueryFilter.(type) {
 	case *qrysmpb.GetValidatorParticipationRequest_Genesis:
 		requestedEpoch = 0
@@ -485,7 +484,6 @@ func (bs *Server) GetValidatorParticipation(
 		requestedEpoch = q.Epoch
 	default:
 		requestedEpoch = currentEpoch
-		useHeadState = true
 	}
 
 	if requestedEpoch > currentEpoch {
@@ -496,34 +494,24 @@ func (bs *Server) GetValidatorParticipation(
 			requestedEpoch,
 		)
 	}
-	var beaconState state.BeaconState
-	var err error
-	if useHeadState && bs.HeadFetcher != nil {
-		beaconState, err = bs.HeadFetcher.HeadState(ctx)
-		if err != nil {
-			return nil, status.Error(codes.Internal, fmt.Sprintf("error getting head state: %v", err))
-		}
-		requestedEpoch = slots.ToEpoch(beaconState.Slot())
-	} else {
-		// Use the last slot of requested epoch to obtain current and previous epoch attestations.
-		// This ensures that we don't miss previous attestations when input requested epochs.
-		endSlot, err := slots.EpochEnd(requestedEpoch)
-		if err != nil {
-			return nil, err
-		}
-		// Get as close as we can to the end of the current epoch without going past the current slot.
-		// The above check ensures a future *epoch* isn't requested, but the end slot of the requested epoch could still
-		// be past the current slot. In that case, use the current slot as the best approximation of the requested epoch.
-		// Replayer will make sure the slot ultimately used is canonical.
-		if endSlot > currentSlot {
-			endSlot = currentSlot
-		}
+	// Use the last slot of requested epoch to obtain current and previous epoch attestations.
+	// This ensures that we don't miss previous attestations when input requested epochs.
+	endSlot, err := slots.EpochEnd(requestedEpoch)
+	if err != nil {
+		return nil, err
+	}
+	// Get as close as we can to the end of the current epoch without going past the current slot.
+	// The above check ensures a future *epoch* isn't requested, but the end slot of the requested epoch could still
+	// be past the current slot. In that case, use the current slot as the best approximation of the requested epoch.
+	// Replayer will make sure the slot ultimately used is canonical.
+	if endSlot > currentSlot {
+		endSlot = currentSlot
+	}
 
-		// ReplayerBuilder ensures that a canonical chain is followed to the slot
-		beaconState, err = bs.ReplayerBuilder.ReplayerForSlot(endSlot).ReplayBlocks(ctx)
-		if err != nil {
-			return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", endSlot, err))
-		}
+	// ReplayerBuilder ensures that a canonical chain is followed to the slot
+	beaconState, err := bs.ReplayerBuilder.ReplayerForSlot(endSlot).ReplayBlocks(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", endSlot, err))
 	}
 	var v []*precompute.Validator
 	var b *precompute.Balance

@@ -133,6 +133,8 @@ type config struct {
 // Validator Registration Contract on the execution chain to kick off the beacon
 // chain's validator registration process.
 type Service struct {
+	connectedExecution      bool
+	isRunning               bool
 	processingLock          sync.RWMutex
 	latestExecutionDataLock sync.RWMutex
 	cfg                     *config
@@ -146,11 +148,9 @@ type Service struct {
 	depositContractCaller   *contracts.DepositContractCaller
 	depositTrie             cache.MerkleTree
 	chainStartData          *qrysmpb.ChainStartData
+	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
 	preGenesisState         state.BeaconState
-	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
-	connectedExecution      bool
-	isRunning               bool
 	// genesisBlockResolved guards the one-shot genesis block height lookup so a pruned
 	// execution client doesn't make us spam HeaderByHash + retry on every loop iteration.
 	genesisBlockResolved bool
@@ -443,7 +443,6 @@ func (s *Service) handleExecutionFollowDistance() {
 	blockHeight := s.latestExecutionData.BlockHeight
 	s.latestExecutionDataLock.RUnlock()
 	// check that web3 client is syncing
-	// lint:ignore uintcast -- Execution block timestamps are Unix seconds and fit in int64 for supported networks.
 	if time.Unix(int64(blockTime), 0).Before(fiveMinutesTimeout) {
 		log.Warn("Execution client is not syncing")
 	}

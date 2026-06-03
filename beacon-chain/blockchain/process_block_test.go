@@ -1005,7 +1005,6 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 		var wg sync.WaitGroup
 		wg.Add(4)
 		go func() {
-			defer wg.Done()
 			preState, err := service.getBlockPreState(ctx, wsb1.Block())
 			require.NoError(t, err)
 			postState, err := service.validateStateTransition(ctx, preState, wsb1)
@@ -1013,9 +1012,9 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 			roblock, err := consensusblocks.NewROBlockWithRoot(wsb1, r1)
 			require.NoError(t, err)
 			require.NoError(t, service.postBlockProcess(ctx, roblock, postState, true))
+			wg.Done()
 		}()
 		go func() {
-			defer wg.Done()
 			preState, err := service.getBlockPreState(ctx, wsb2.Block())
 			require.NoError(t, err)
 			postState, err := service.validateStateTransition(ctx, preState, wsb2)
@@ -1023,9 +1022,9 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 			roblock, err := consensusblocks.NewROBlockWithRoot(wsb2, r2)
 			require.NoError(t, err)
 			require.NoError(t, service.postBlockProcess(ctx, roblock, postState, true))
+			wg.Done()
 		}()
 		go func() {
-			defer wg.Done()
 			preState, err := service.getBlockPreState(ctx, wsb3.Block())
 			require.NoError(t, err)
 			postState, err := service.validateStateTransition(ctx, preState, wsb3)
@@ -1033,9 +1032,9 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 			roblock, err := consensusblocks.NewROBlockWithRoot(wsb3, r3)
 			require.NoError(t, err)
 			require.NoError(t, service.postBlockProcess(ctx, roblock, postState, true))
+			wg.Done()
 		}()
 		go func() {
-			defer wg.Done()
 			preState, err := service.getBlockPreState(ctx, wsb4.Block())
 			require.NoError(t, err)
 			postState, err := service.validateStateTransition(ctx, preState, wsb4)
@@ -1043,6 +1042,7 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 			roblock, err := consensusblocks.NewROBlockWithRoot(wsb4, r4)
 			require.NoError(t, err)
 			require.NoError(t, service.postBlockProcess(ctx, roblock, postState, true))
+			wg.Done()
 		}()
 		wg.Wait()
 		require.LogsDoNotContain(t, logHook, "New head does not exist in DB. Do nothing")

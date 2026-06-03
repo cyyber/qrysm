@@ -165,7 +165,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	deposit := &qrysmpb.Deposit{
 		Data: &qrysmpb.Deposit_Data{
 			Amount:                params.BeaconConfig().EffectiveBalanceIncrement, // incomplete deposit
-			WithdrawalCredentials: bytesutil.PadTo([]byte("testing"), 64),
+			WithdrawalCredentials: bytesutil.PadTo([]byte("testing"), field_params.WithdrawalCredentialsLength),
 			Signature:             bytesutil.PadTo([]byte("test"), field_params.MLDSA87SignatureLength),
 		},
 	}
@@ -236,14 +236,6 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := range keys {
-		dt, _, err := util.DepositTrieFromDeposits(deposits[:i+1])
-		require.NoError(t, err)
-		proof, err := dt.MerkleProof(i)
-		require.NoError(t, err)
-		deposits[i].Proof = proof
-		root, err := dt.HashTreeRoot()
-		require.NoError(t, err)
-		executionData.DepositRoot = root[:]
 		executionData.DepositCount = uint64(i + 1)
 		err = web3Service.processDeposit(context.Background(), executionData, deposits[i])
 		require.NoError(t, err, fmt.Sprintf("Could not process deposit at %d", i))

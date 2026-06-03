@@ -15,7 +15,7 @@ func fillBlake(gst *GstMaker, fork string) {
 	gst.AddAccount(dest, GenesisAccount{
 		Code:    RandCallBlake(),
 		Balance: new(big.Int),
-		Storage: make(map[common.Hash]common.StorageValue),
+		Storage: make(map[common.Hash]common.StorageValue64),
 	})
 	// The transaction
 	gst.SetTx(&StTransaction{

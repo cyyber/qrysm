@@ -1,7 +1,6 @@
 package slasher
 
 import (
-	"maps"
 	"context"
 	"fmt"
 	"time"
@@ -29,7 +28,9 @@ func (s *Service) checkSlashableAttestations(
 		return nil, errors.Wrap(err, "could not check slashable double votes")
 	}
 	log.WithField("elapsed", time.Since(start)).Debug("Done checking double votes")
-	maps.Copy(slashings, doubleVoteSlashings)
+	for root, slashing := range doubleVoteSlashings {
+		slashings[root] = slashing
+	}
 
 	// Save the attestation records to our database.
 	// This must happen after the double-vote check so that the on-disk lookup
@@ -65,7 +66,9 @@ func (s *Service) checkSlashableAttestations(
 		if err != nil {
 			return nil, err
 		}
-		maps.Copy(slashings, attSlashings)
+		for root, slashing := range attSlashings {
+			slashings[root] = slashing
+		}
 
 		// Memoize updated chunks across iterations so many validator-chunk-index
 		// passes are coalesced into a single disk save call.
@@ -84,6 +87,7 @@ func (s *Service) checkSlashableAttestations(
 			maxChunkByChunkIndexByValidatorChunkIndex = make(map[uint64]map[uint64]Chunker, groupedAttsCount)
 			chunksAccumulated = 0
 		}
+
 		indices := s.params.validatorIndicesInChunk(validatorChunkIdx)
 		for _, idx := range indices {
 			s.latestEpochWrittenForValidator[idx] = currentEpoch
@@ -192,8 +196,12 @@ func (s *Service) detectAllAttesterSlashings(
 	}
 
 	slashings := make(map[[fieldparams.RootLength]byte]*qrysmpb.AttesterSlashing, len(surroundingSlashings)+len(surroundedSlashings))
-	maps.Copy(slashings, surroundingSlashings)
-	maps.Copy(slashings, surroundedSlashings)
+	for root, slashing := range surroundingSlashings {
+		slashings[root] = slashing
+	}
+	for root, slashing := range surroundedSlashings {
+		slashings[root] = slashing
+	}
 
 	return slashings, updatedMinChunks, updatedMaxChunks, nil
 }
@@ -240,7 +248,9 @@ func (s *Service) checkDoubleVotes(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not check attestation double votes on disk")
 	}
-	maps.Copy(slashings, moreSlashings)
+	for root, slashing := range moreSlashings {
+		slashings[root] = slashing
+	}
 	return slashings, nil
 }
 

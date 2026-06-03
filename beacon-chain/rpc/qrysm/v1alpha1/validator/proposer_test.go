@@ -59,7 +59,6 @@ import (
 )
 
 func TestServer_GetBeaconBlock_Zond(t *testing.T) {
-	skipPlainGoTestUntilMinimalSSZStubs(t)
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 	transition.SkipSlotCache.Disable()
@@ -298,7 +297,6 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 }
 
 func TestProposer_ComputeStateRoot_OK(t *testing.T) {
-	skipPlainGoTestUntilMinimalSSZStubs(t)
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 

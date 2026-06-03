@@ -125,25 +125,6 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *qrysmpb.DoppelGang
 		return resp, nil
 	}
 
-	needsPrevState := false
-	for _, v := range req.ValidatorRequests {
-		if v.Epoch+2 >= currEpoch {
-			continue
-		}
-		isRecentlyActivated, exists, err := validatorRecentlyActivated(headState, v.PublicKey, currEpoch)
-		if err != nil {
-			return nil, status.Error(codes.Internal, "Could not get validator from head state")
-		}
-		if !exists || isRecentlyActivated {
-			continue
-		}
-		needsPrevState = true
-		break
-	}
-	if !needsPrevState {
-		return duplicateFalseResponses(req), nil
-	}
-
 	// We request a state 32 slots ago. We are guaranteed to have
 	// currentSlot > 32 since we assume that we are in Altair's fork.
 	prevStateSlot := headSlot - params.BeaconConfig().SlotsPerEpoch
@@ -189,21 +170,6 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *qrysmpb.DoppelGang
 				})
 			continue
 		}
-		isRecentlyActivated, exists, err := validatorRecentlyActivated(headState, v.PublicKey, currEpoch)
-		if err != nil {
-			return nil, status.Error(codes.Internal, "Could not get validator from head state")
-		}
-		if !exists {
-			continue
-		}
-		if isRecentlyActivated {
-			resp.Responses = append(resp.Responses,
-				&qrysmpb.DoppelGangerResponse_ValidatorResponse{
-					PublicKey:       v.PublicKey,
-					DuplicateExists: false,
-				})
-			continue
-		}
 		valIndex, ok := prevState.ValidatorIndexByPubkey(bytesutil.ToBytes2592(v.PublicKey))
 		if !ok {
 			// Ignore if validator pubkey doesn't exist.
@@ -228,36 +194,6 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *qrysmpb.DoppelGang
 			})
 	}
 	return resp, nil
-}
-
-func duplicateFalseResponses(req *qrysmpb.DoppelGangerRequest) *qrysmpb.DoppelGangerResponse {
-	resp := &qrysmpb.DoppelGangerResponse{
-		Responses: make([]*qrysmpb.DoppelGangerResponse_ValidatorResponse, 0, len(req.ValidatorRequests)),
-	}
-	for _, v := range req.ValidatorRequests {
-		resp.Responses = append(resp.Responses,
-			&qrysmpb.DoppelGangerResponse_ValidatorResponse{
-				PublicKey:       v.PublicKey,
-				DuplicateExists: false,
-			})
-	}
-	return resp
-}
-
-func validatorRecentlyActivated(headState state.ReadOnlyBeaconState, pubKey []byte, currEpoch primitives.Epoch) (bool, bool, error) {
-	valIndex, ok := headState.ValidatorIndexByPubkey(bytesutil.ToBytes2592(pubKey))
-	if !ok {
-		return false, false, nil
-	}
-	val, err := headState.ValidatorAtIndexReadOnly(valIndex)
-	if err != nil {
-		return false, true, err
-	}
-	activationEpoch := val.ActivationEpoch()
-	if activationEpoch == params.BeaconConfig().FarFutureEpoch || activationEpoch >= currEpoch {
-		return true, true, nil
-	}
-	return activationEpoch+2 >= currEpoch, true, nil
 }
 
 // activationStatus returns the validator status response for the set of validators
