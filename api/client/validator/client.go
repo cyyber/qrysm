@@ -96,7 +96,7 @@ func (c *Client) GetRemoteValidatorKeys(ctx context.Context) (*apimiddleware.Lis
 }
 */
 
-// GetFeeRecipientAddresses takes a list of validators in hex format and returns an equal length list of fee recipients in hex format.
+// GetFeeRecipientAddresses takes a list of validators in hex format and returns an equal length list of fee recipients as Q-addresses.
 func (c *Client) GetFeeRecipientAddresses(ctx context.Context, validators []string) ([]string, error) {
 	feeRecipients := make([]string, len(validators))
 	for index, validator := range validators {

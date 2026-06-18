@@ -80,7 +80,7 @@ func feeRecipientIsPresent(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 			if bytes.Equal(payload.BlockHash, make([]byte, 32)) {
 				continue
 			}
-			if len(payload.FeeRecipient) == 0 || hexutil.Encode(payload.FeeRecipient) == params.BeaconConfig().QRLBurnAddress {
+			if len(payload.FeeRecipient) == 0 || hexutil.EncodeQ(payload.FeeRecipient) == params.BeaconConfig().QRLBurnAddress {
 				log.WithField("proposer_index", bb.ProposerIndex).WithField("slot", bb.Slot).Error("Fee recipient eval bug")
 				return errors.New("fee recipient is not set")
 			}

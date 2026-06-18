@@ -14,12 +14,18 @@ import (
 	"github.com/theQRL/qrysm/testing/require"
 )
 
+const (
+	testFeeRecipient0 = "Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	testFeeRecipient1 = "Qfedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
+	testFeeRecipient2 = "Q00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+)
+
 func TestStore_ProposerSettings_ReadAndWrite(t *testing.T) {
-	recipient0, err := common.NewAddressFromString("Q000000000000000000000000000000000000000000000000000000000000000000000000000000000000000050155530fCE8A85Ec7055a5F8B2be214B3daEFd3")
+	recipient0, err := common.NewAddressFromString(testFeeRecipient0)
 	require.NoError(t, err)
-	recipient1, err := common.NewAddressFromString("Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89A")
+	recipient1, err := common.NewAddressFromString(testFeeRecipient1)
 	require.NoError(t, err)
-	recipient2, err := common.NewAddressFromString("Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000009995733c5af9B61374A128e6F85f553aF09ff89B")
+	recipient2, err := common.NewAddressFromString(testFeeRecipient2)
 	require.NoError(t, err)
 	t.Run("save to db in full", func(t *testing.T) {
 		ctx := context.Background()

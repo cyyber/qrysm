@@ -7,7 +7,7 @@ type ExpectedWithdrawalsResponse struct {
 }
 
 type ExpectedWithdrawal struct {
-	Address        string `json:"address" hex:"true"`
+	Address        string `json:"address" address:"true"`
 	Amount         string `json:"amount"`
 	Index          string `json:"index"`
 	ValidatorIndex string `json:"validator_index"`

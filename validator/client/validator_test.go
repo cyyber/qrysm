@@ -51,7 +51,17 @@ func init() {
 
 var _ iface.Validator = (*validator)(nil)
 
-const cancelledCtx = "context has been canceled"
+const (
+	cancelledCtx = "context has been canceled"
+
+	validatorTestPushDefaultFeeRecipient = "Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	validatorTestPushFeeRecipient        = "Qfedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
+	validatorTestFeeRecipient1           = "Q11112222333344445555666677778888111122223333444455556666777788881111222233334444555566667777888811112222333344445555666677778888"
+	validatorTestFeeRecipient2           = "Q22223333444455556666777788889999222233334444555566667777888899992222333344445555666677778888999922223333444455556666777788889999"
+	validatorTestFeeRecipient3           = "Q3333444455556666777788889999aaaa3333444455556666777788889999aaaa3333444455556666777788889999aaaa3333444455556666777788889999aaaa"
+	validatorTestFeeRecipient8           = "Q88889999aaaabbbbccccddddeeeeffff88889999aaaabbbbccccddddeeeeffff88889999aaaabbbbccccddddeeeeffff88889999aaaabbbbccccddddeeeeffff"
+	validatorTestDefaultFeeRecipient     = "Qddddeeeeffff00001111222233334444ddddeeeeffff00001111222233334444ddddeeeeffff00001111222233334444ddddeeeeffff00001111222233334444"
+)
 
 type stubDutyDependentRootProvider struct {
 	previous []byte
@@ -1503,12 +1513,12 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 	db := dbTest.SetupDB(t, [][field_params.MLDSA87PubkeyLength]byte{})
 	client := validatormock.NewMockValidatorClient(ctrl)
 	nodeClient := validatormock.NewMockNodeClient(ctrl)
-	defaultFeeStr := "Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000046Fb65722E7b2455043BFEBf6177F1D2e9738D9"
+	defaultFeeStr := validatorTestPushDefaultFeeRecipient
 	defaultFeeAddr, err := common.NewAddressFromString(defaultFeeStr)
 	require.NoError(t, err)
-	byteValueAddress, err := hexutil.DecodeQ("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000046Fb65722E7b2455043BFEBf6177F1D2e9738D9")
+	byteValueAddress, err := hexutil.DecodeQ(validatorTestPushDefaultFeeRecipient)
 	require.NoError(t, err)
-	recipient0, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055Fb65722E7b2455043BFEBf6177F1D2e9738D9")
+	recipient0, err := common.NewAddressFromString(validatorTestPushFeeRecipient)
 	require.NoError(t, err)
 	recipient1, err := common.NewAddressFromString("Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
 	require.NoError(t, err)
@@ -1595,7 +1605,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				return &v
 			},
 			feeRecipientMap: map[primitives.ValidatorIndex]string{
-				1: "Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055Fb65722E7b2455043BFEBf6177F1D2e9738D9",
+				1: validatorTestPushFeeRecipient,
 				2: defaultFeeStr,
 			},
 			mockExpectedRequests: []ExpectedValidatorRegistration{
@@ -1676,7 +1686,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				return &v
 			},
 			feeRecipientMap: map[primitives.ValidatorIndex]string{
-				1: "Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055Fb65722E7b2455043BFEBf6177F1D2e9738D9",
+				1: validatorTestPushFeeRecipient,
 				2: defaultFeeStr,
 			},
 			mockExpectedRequests: []ExpectedValidatorRegistration{
@@ -1741,7 +1751,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				return &v
 			},
 			feeRecipientMap: map[primitives.ValidatorIndex]string{
-				1: "Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055Fb65722E7b2455043BFEBf6177F1D2e9738D9",
+				1: validatorTestPushFeeRecipient,
 				2: defaultFeeStr,
 			},
 			logMessages:       []string{"will not be included in builder validator registration"},
@@ -2060,8 +2070,9 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				// check if Pubkeys are always unique
 				var unique = make(map[string]bool)
 				for _, request := range signedRegisterValidatorRequests {
-					require.Equal(t, unique[common.BytesToAddress(request.Message.Pubkey).Hex()], false)
-					unique[common.BytesToAddress(request.Message.Pubkey).Hex()] = true
+					pubkey := hexutil.Encode(request.Message.Pubkey)
+					require.Equal(t, unique[pubkey], false)
+					unique[pubkey] = true
 				}
 				require.Equal(t, len(tt.mockExpectedRequests), len(signedRegisterValidatorRequests))
 				require.Equal(t, len(signedRegisterValidatorRequests), len(v.signedValidatorRegistrations))
@@ -2116,9 +2127,9 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 	pubkey4 := getPubkeyFromString(t, "0x444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444")
 
 	// Fee recipients
-	feeRecipient1 := getFeeRecipientFromString(t, "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000001111111111111111111111111111111111111111")
+	feeRecipient1 := getFeeRecipientFromString(t, validatorTestFeeRecipient1)
 	feeRecipient2 := getFeeRecipientFromString(t, "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
-	feeRecipient3 := getFeeRecipientFromString(t, "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000003333333333333333333333333333333333333333")
+	feeRecipient3 := getFeeRecipientFromString(t, validatorTestFeeRecipient3)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -2216,12 +2227,12 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 	pubkey8 := getPubkeyFromString(t, "0x888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888")
 
 	// Fee recipients
-	feeRecipient1 := getFeeRecipientFromString(t, "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000001111111111111111111111111111111111111111")
+	feeRecipient1 := getFeeRecipientFromString(t, validatorTestFeeRecipient1)
 	feeRecipient2 := getFeeRecipientFromString(t, "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
-	feeRecipient3 := getFeeRecipientFromString(t, "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000003333333333333333333333333333333333333333")
-	feeRecipient8 := getFeeRecipientFromString(t, "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000008888888888888888888888888888888888888888")
+	feeRecipient3 := getFeeRecipientFromString(t, validatorTestFeeRecipient3)
+	feeRecipient8 := getFeeRecipientFromString(t, validatorTestFeeRecipient8)
 
-	defaultFeeRecipient := getFeeRecipientFromString(t, "Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000dddddddddddddddddddddddddddddddddddddddd")
+	defaultFeeRecipient := getFeeRecipientFromString(t, validatorTestDefaultFeeRecipient)
 
 	pubkeyToStatus := map[[field_params.MLDSA87PubkeyLength]byte]qrysmpb.ValidatorStatus{
 		pubkey1: qrysmpb.ValidatorStatus_ACTIVE,
@@ -2374,9 +2385,9 @@ func TestValidator_buildSignedRegReqs_DefaultConfigDisabled(t *testing.T) {
 
 	// Fee recipients
 	feeRecipient1 := getFeeRecipientFromString(t, "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
-	feeRecipient2 := getFeeRecipientFromString(t, "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000002222222222222222222222222222222222222222")
+	feeRecipient2 := getFeeRecipientFromString(t, validatorTestFeeRecipient2)
 
-	defaultFeeRecipient := getFeeRecipientFromString(t, "Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000dddddddddddddddddddddddddddddddddddddddd")
+	defaultFeeRecipient := getFeeRecipientFromString(t, validatorTestDefaultFeeRecipient)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -2460,9 +2471,9 @@ func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
 
 	// Fee recipients
 	feeRecipient1 := getFeeRecipientFromString(t, "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
-	feeRecipient2 := getFeeRecipientFromString(t, "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000002222222222222222222222222222222222222222")
+	feeRecipient2 := getFeeRecipientFromString(t, validatorTestFeeRecipient2)
 
-	defaultFeeRecipient := getFeeRecipientFromString(t, "Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000dddddddddddddddddddddddddddddddddddddddd")
+	defaultFeeRecipient := getFeeRecipientFromString(t, validatorTestDefaultFeeRecipient)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -2544,7 +2555,7 @@ func TestValidator_buildSignedRegReqs_SignerOnError(t *testing.T) {
 	pubkey1 := getPubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
 
 	// Fee recipients
-	defaultFeeRecipient := getFeeRecipientFromString(t, "Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000dddddddddddddddddddddddddddddddddddddddd")
+	defaultFeeRecipient := getFeeRecipientFromString(t, validatorTestDefaultFeeRecipient)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -2587,7 +2598,7 @@ func TestValidator_buildSignedRegReqs_TimestampBeforeGenesis(t *testing.T) {
 	// Fee recipients
 	feeRecipient1 := getFeeRecipientFromString(t, "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
 
-	defaultFeeRecipient := getFeeRecipientFromString(t, "Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000dddddddddddddddddddddddddddddddddddddddd")
+	defaultFeeRecipient := getFeeRecipientFromString(t, validatorTestDefaultFeeRecipient)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

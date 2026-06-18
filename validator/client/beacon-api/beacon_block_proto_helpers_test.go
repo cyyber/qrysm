@@ -5,6 +5,7 @@ import (
 
 	"github.com/theQRL/go-qrl/common/hexutil"
 	"github.com/theQRL/qrysm/beacon-chain/rpc/apimiddleware"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	enginev1 "github.com/theQRL/qrysm/proto/engine/v1"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/testing/assert"
@@ -919,6 +920,8 @@ func TestBeaconBlockProtoHelpers_ConvertTransactionsToProto(t *testing.T) {
 }
 
 func TestBeaconBlockProtoHelpers_ConvertWithdrawalsToProto(t *testing.T) {
+	address1 := filledBytes(fieldparams.FeeRecipientLength, 3)
+	address2 := filledBytes(fieldparams.FeeRecipientLength, 7)
 	testCases := []struct {
 		name                 string
 		generateInput        func() []*apimiddleware.WithdrawalJson
@@ -977,13 +980,13 @@ func TestBeaconBlockProtoHelpers_ConvertWithdrawalsToProto(t *testing.T) {
 				{
 					Index:          1,
 					ValidatorIndex: 2,
-					Address:        []byte{3},
+					Address:        address1,
 					Amount:         4,
 				},
 				{
 					Index:          5,
 					ValidatorIndex: 6,
-					Address:        []byte{7},
+					Address:        address2,
 					Amount:         8,
 				},
 			},
@@ -1278,13 +1281,13 @@ func generateWithdrawals() []*apimiddleware.WithdrawalJson {
 		{
 			WithdrawalIndex:  "1",
 			ValidatorIndex:   "2",
-			ExecutionAddress: hexutil.Encode([]byte{3}),
+			ExecutionAddress: hexutil.EncodeQ(filledBytes(fieldparams.FeeRecipientLength, 3)),
 			Amount:           "4",
 		},
 		{
 			WithdrawalIndex:  "5",
 			ValidatorIndex:   "6",
-			ExecutionAddress: hexutil.Encode([]byte{7}),
+			ExecutionAddress: hexutil.EncodeQ(filledBytes(fieldparams.FeeRecipientLength, 7)),
 			Amount:           "8",
 		},
 	}

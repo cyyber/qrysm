@@ -29,12 +29,20 @@ import (
 
 var (
 	fork              = "Zond"
-	sender, _         = common.NewAddressFromString("Q00000000000000000000000000000000be6c1fd78f40b86a24dc2d7d633e2912d71e5d166f8be2c850d5727f0adcc170c7741b784295eae0c4f28291d0928dc7")
+	sender            = mustAddress("Q00000000000000000000000000000000be6c1fd78f40b86a24dc2d7d633e2912d71e5d166f8be2c850d5727f0adcc170c7741b784295eae0c4f28291d0928dc7")
 	sk                = hexutil.MustDecode("0x45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8")
 	recursionLevel    = 0
 	maxRecursionLevel = 10
 	minJumpDistance   = 10
 )
+
+func mustAddress(s string) common.Address {
+	addr, err := common.NewAddressFromString(s)
+	if err != nil {
+		panic(err) // lint:nopanic
+	}
+	return addr
+}
 
 // GenerateProgram creates a new qrvm program and returns
 // a gstMaker based on it as well as its program code.
@@ -74,7 +82,7 @@ func createGstMaker(fill *filler.Filler, code []byte) *fuzzing.GstMaker {
 		Code:    []byte{},
 	})
 	// Add code
-	dest, _ := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ca1100f022")
+	dest := mustAddress("Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567000000000000000000000000000000ca1100f022")
 	gst.AddAccount(dest, fuzzing.GenesisAccount{
 		Code:    code,
 		Balance: new(big.Int),

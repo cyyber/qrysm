@@ -188,15 +188,20 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 	w.Header().Set("Content-Type", api.OctetStreamMediaType)
 	w.Header().Set("Content-Disposition", "attachment; filename="+fileName)
 	w.Header().Set(api.VersionHeader, respVersion)
+	statusCode := grpcResp.StatusCode
 	if statusCodeHeader != "" {
 		code, err := strconv.Atoi(statusCodeHeader)
 		if err != nil {
 			return apimiddleware.InternalServerErrorWithMessage(err, "could not parse status code")
 		}
-		w.WriteHeader(code)
-	} else {
-		w.WriteHeader(grpcResp.StatusCode)
+		statusCode = code
 	}
+	if !apimiddleware.ResponseBodyAllowedForStatus(statusCode) {
+		w.Header().Set("Content-Length", "0")
+		w.WriteHeader(statusCode)
+		return nil
+	}
+	w.WriteHeader(statusCode)
 	if _, err := io.Copy(w, io.NopCloser(bytes.NewReader(respSsz))); err != nil {
 		return apimiddleware.InternalServerErrorWithMessage(err, "could not write response message")
 	}

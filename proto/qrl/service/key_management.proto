@@ -128,7 +128,7 @@ service KeyManagement {
   //  };
   //}
 
-  // ListFeeRecipientByPubkey returns the hex encoded fee recipient address for the given pubkey.
+  // ListFeeRecipientByPubkey returns the Q-address fee recipient for the given pubkey.
   //
   // HTTP response status codes:
   //  - 200: Successful response
@@ -345,6 +345,8 @@ message PubkeyRequest {
 message GetFeeRecipientByPubkeyResponse {
   message FeeRecipient {
     bytes pubkey = 1;
+
+    // 64 byte QRL execution address of the fee recipient.
     bytes qrladdress = 2;
   }
   FeeRecipient data = 1;
@@ -352,6 +354,8 @@ message GetFeeRecipientByPubkeyResponse {
 
 message SetFeeRecipientByPubkeyRequest {
   bytes pubkey = 1;
+
+  // 64 byte QRL execution address of the fee recipient.
   bytes qrladdress = 2;
 }
 

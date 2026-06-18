@@ -63,8 +63,8 @@ func (it *instructionIterator) Next() bool {
 	it.op = OpCode(it.code[it.pc])
 	if it.op.HasImmediate() {
 		switch {
-		case it.op >= PUSH1 && it.op <= PUSH32:
-			a := uint64(it.op) - uint64(PUSH1) + 1
+		case it.op.IsPush():
+			a := uint64(it.op.PushSize())
 			u := it.pc + 1 + a
 			if uint64(len(it.code)) < u {
 				it.error = fmt.Errorf("incomplete push instruction at %v", it.pc)

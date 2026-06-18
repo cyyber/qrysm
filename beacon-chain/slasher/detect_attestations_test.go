@@ -14,6 +14,7 @@ import (
 	slashingsmock "github.com/theQRL/qrysm/beacon-chain/operations/slashings/mock"
 	slashertypes "github.com/theQRL/qrysm/beacon-chain/slasher/types"
 	"github.com/theQRL/qrysm/beacon-chain/startup"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
@@ -208,7 +209,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				privKeys[i] = privKey
 				validators[i] = &qrysmpb.Validator{
 					PublicKey:             privKey.PublicKey().Marshal(),
-					WithdrawalCredentials: make([]byte, 64),
+					WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 				}
 			}
 			err = beaconState.SetValidators(validators)

@@ -1,6 +1,7 @@
 package test_helpers
 
 import (
+	"github.com/theQRL/go-qrl/common/hexutil"
 	"github.com/theQRL/qrysm/beacon-chain/rpc/apimiddleware"
 	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/encoding/bytesutil"
@@ -467,7 +468,7 @@ func GenerateJsonZondBeaconBlock() *apimiddleware.BeaconBlockZondJson {
 			},
 			ExecutionPayload: &apimiddleware.ExecutionPayloadZondJson{
 				ParentHash:    FillEncodedByteSlice(32, 112),
-				FeeRecipient:  FillEncodedByteSlice(fieldparams.FeeRecipientLength, 113),
+				FeeRecipient:  hexutil.EncodeQ(FillByteSlice(fieldparams.FeeRecipientLength, 113)),
 				StateRoot:     FillEncodedByteSlice(32, 114),
 				ReceiptsRoot:  FillEncodedByteSlice(32, 115),
 				LogsBloom:     FillEncodedByteSlice(256, 116),
@@ -487,13 +488,13 @@ func GenerateJsonZondBeaconBlock() *apimiddleware.BeaconBlockZondJson {
 					{
 						WithdrawalIndex:  "127",
 						ValidatorIndex:   "128",
-						ExecutionAddress: FillEncodedByteSlice(fieldparams.FeeRecipientLength, 129),
+						ExecutionAddress: hexutil.EncodeQ(FillByteSlice(fieldparams.FeeRecipientLength, 129)),
 						Amount:           "130",
 					},
 					{
 						WithdrawalIndex:  "131",
 						ValidatorIndex:   "132",
-						ExecutionAddress: FillEncodedByteSlice(fieldparams.FeeRecipientLength, 133),
+						ExecutionAddress: hexutil.EncodeQ(FillByteSlice(fieldparams.FeeRecipientLength, 133)),
 						Amount:           "134",
 					},
 				},

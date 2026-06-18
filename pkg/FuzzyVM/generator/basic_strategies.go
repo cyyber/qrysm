@@ -20,6 +20,8 @@ import (
 	"github.com/theQRL/qrysm/pkg/goqrvmlab/ops"
 )
 
+const vmWordBytes = 64
+
 var basicStrategies = []Strategy{
 	new(opcodeGenerator),
 	new(memStorageGenerator),
@@ -85,7 +87,7 @@ type sstoreGenerator struct{}
 func (*sstoreGenerator) Execute(env Environment) {
 	// Store data in storage
 	var (
-		data = make([]byte, env.f.Byte()%32)
+		data = make([]byte, int(env.f.Byte())%(vmWordBytes+1))
 		slot = uint32(env.f.MemInt().Uint64())
 	)
 	env.p.Sstore(slot, data)
@@ -124,7 +126,7 @@ func (*returnGenerator) Importance() int {
 type pushGenerator struct{}
 
 func (*pushGenerator) Execute(env Environment) {
-	b := make([]byte, env.f.Byte()%32)
+	b := make([]byte, int(env.f.Byte())%(vmWordBytes+1))
 	env.p.Push(b)
 }
 

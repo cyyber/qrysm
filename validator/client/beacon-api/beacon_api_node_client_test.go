@@ -1,11 +1,13 @@
 package beacon_api
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/theQRL/go-qrl/common"
 	"github.com/theQRL/go-qrl/common/hexutil"
 	"github.com/theQRL/qrysm/beacon-chain/rpc/apimiddleware"
 	"github.com/theQRL/qrysm/beacon-chain/rpc/qrl/beacon"
@@ -18,6 +20,8 @@ import (
 )
 
 func TestGetGenesis(t *testing.T) {
+	depositContractAddress := bytes.Repeat([]byte{3}, common.AddressLength)
+
 	testCases := []struct {
 		name                    string
 		genesisResponse         *beacon.Genesis
@@ -94,14 +98,14 @@ func TestGetGenesis(t *testing.T) {
 			queriesDepositContract: true,
 			depositContractResponse: apimiddleware.DepositContractResponseJson{
 				Data: &apimiddleware.DepositContractJson{
-					Address: hexutil.Encode([]byte{3}),
+					Address: hexutil.EncodeQ(depositContractAddress),
 				},
 			},
 			expectedResponse: &qrysmpb.Genesis{
 				GenesisTime: &timestamppb.Timestamp{
 					Seconds: 654812,
 				},
-				DepositContractAddress: []byte{3},
+				DepositContractAddress: depositContractAddress,
 				GenesisValidatorsRoot:  []byte{2},
 			},
 		},

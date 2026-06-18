@@ -633,13 +633,13 @@ func genPayloadZond() *enginev1.ExecutionPayloadZond {
 			{
 				Index:          123,
 				ValidatorIndex: 123,
-				Address:        bytes(20),
+				Address:        bytes(64),
 				Amount:         123,
 			},
 			{
 				Index:          124,
 				ValidatorIndex: 456,
-				Address:        bytes(20),
+				Address:        bytes(64),
 				Amount:         456,
 			},
 		},
@@ -678,7 +678,7 @@ func genWithdrawal() *enginev1.Withdrawal {
 	return &enginev1.Withdrawal{
 		Index:          123456,
 		ValidatorIndex: 654321,
-		Address:        bytes(20),
+		Address:        bytes(64),
 		Amount:         55555,
 	}
 }

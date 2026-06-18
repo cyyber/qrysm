@@ -186,7 +186,7 @@ func jsonifyWithdrawals(withdrawals []*enginev1.Withdrawal) []*apimiddleware.Wit
 		jsonWithdrawals[index] = &apimiddleware.WithdrawalJson{
 			WithdrawalIndex:  strconv.FormatUint(withdrawal.Index, 10),
 			ValidatorIndex:   strconv.FormatUint(uint64(withdrawal.ValidatorIndex), 10),
-			ExecutionAddress: hexutil.Encode(withdrawal.Address),
+			ExecutionAddress: hexutil.EncodeQ(withdrawal.Address),
 			Amount:           strconv.FormatUint(withdrawal.Amount, 10),
 		}
 	}

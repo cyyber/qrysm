@@ -70,14 +70,14 @@ message AttesterSlashing {
     IndexedAttestation attestation_2 = 2;
 }
 
-// Deposit into the Ethereum consensus from the QRL deposit contract.
+// Deposit into QRL consensus from the QRL deposit contract.
 message Deposit {
     // DepositData that is encoded into a deposit signature.
     message Data {
         // 2592 byte ML-DSA-87 public key of the validator.
         bytes public_key = 1 [(theqrl.qrl.ext.ssz_size) = "2592", (theqrl.qrl.ext.spec_name) = "pubkey"];
 
-        // A 32 byte hash of the withdrawal address public key.
+        // 64 byte withdrawal credentials.
         bytes withdrawal_credentials = 2 [(theqrl.qrl.ext.ssz_size) = "64"];
 
         // Deposit amount in shor.
@@ -293,6 +293,7 @@ message BlindedBeaconBlockBodyZond {
 }
 
 message ValidatorRegistrationV1 {
+    // 64 byte QRL execution address of the fee recipient.
     bytes fee_recipient = 1 [(theqrl.qrl.ext.ssz_size) = "64"];
     uint64 gas_limit = 2;
     uint64 timestamp = 3;

@@ -16,7 +16,7 @@ Expected exception: None
 
 State before: CacheState {
     accounts: {
-        0x1000000000000000000000000000000000000000: CacheAccount {
+        0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345671000000000000000000000000000000000000000: CacheAccount {
             account: Some(
                 PlainAccount {
                     info: AccountInfo {
@@ -35,7 +35,7 @@ State before: CacheState {
             ),
             status: Loaded,
         },
-        0xffffffffffffffffffffffffffffffffffffffff: CacheAccount {
+        0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567ffffffffffffffffffffffffffffffffffffffff: CacheAccount {
             account: Some(
                 PlainAccount {
                     info: AccountInfo {
@@ -54,7 +54,7 @@ State before: CacheState {
             ),
             status: Loaded,
         },
-        0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b: CacheAccount {
+        0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567a94f5374fce5edbc8e2a8697c15331677e6ebf0b: CacheAccount {
             account: Some(
                 PlainAccount {
                     info: AccountInfo {
@@ -73,7 +73,7 @@ State before: CacheState {
             ),
             status: Loaded,
         },
-        0xc94f5374fce5edbc8e2a8697c15331677e6ebf0b: CacheAccount {
+        0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567c94f5374fce5edbc8e2a8697c15331677e6ebf0b: CacheAccount {
             account: Some(
                 PlainAccount {
                     info: AccountInfo {
@@ -99,7 +99,7 @@ State before: CacheState {
 
 State after: CacheState {
     accounts: {
-        0x1000000000000000000000000000000000000000: CacheAccount {
+        0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345671000000000000000000000000000000000000000: CacheAccount {
             account: Some(
                 PlainAccount {
                     info: AccountInfo {
@@ -118,7 +118,7 @@ State after: CacheState {
             ),
             status: Loaded,
         },
-        0xffffffffffffffffffffffffffffffffffffffff: CacheAccount {
+        0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567ffffffffffffffffffffffffffffffffffffffff: CacheAccount {
             account: Some(
                 PlainAccount {
                     info: AccountInfo {
@@ -137,7 +137,7 @@ State after: CacheState {
             ),
             status: Loaded,
         },
-        0x0000000000000000000000000000000000000000: CacheAccount {
+        0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345670000000000000000000000000000000000000000: CacheAccount {
             account: Some(
                 PlainAccount {
                     info: AccountInfo {
@@ -161,7 +161,7 @@ State after: CacheState {
             ),
             status: InMemoryChange,
         },
-        0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b: CacheAccount {
+        0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567a94f5374fce5edbc8e2a8697c15331677e6ebf0b: CacheAccount {
             account: Some(
                 PlainAccount {
                     info: AccountInfo {
@@ -180,7 +180,7 @@ State after: CacheState {
             ),
             status: Loaded,
         },
-        0xc94f5374fce5edbc8e2a8697c15331677e6ebf0b: CacheAccount {
+        0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567c94f5374fce5edbc8e2a8697c15331677e6ebf0b: CacheAccount {
             account: Some(
                 PlainAccount {
                     info: AccountInfo {
@@ -215,7 +215,7 @@ Environment: Env {
     },
     block: BlockEnv {
         number: 0x0000000000000000000000000000000000000000000000000000000000000001_U256,
-        coinbase: 0xb94f5374fce5edbc8e2a8697c15331677e6ebf0b,
+        coinbase: 0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567b94f5374fce5edbc8e2a8697c15331677e6ebf0b,
         timestamp: 0x00000000000000000000000000000000000000000000000000000000000003e8_U256,
         gas_limit: 0x0000000000000000000000000000000000000000000000000026e1f476fe1e22_U256,
         basefee: 0x0_U256,
@@ -228,11 +228,11 @@ Environment: Env {
         ),
     },
     tx: TxEnv {
-        caller: 0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b,
+        caller: 0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567a94f5374fce5edbc8e2a8697c15331677e6ebf0b,
         gas_limit: 3000000,
         gas_price: 0x0000000000000000000000000000000000000000000000000000000000000004_U256,
         transact_to: Call(
-            0xc94f5374fce5edbc8e2a8697c15331677e6ebf0b,
+            0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567c94f5374fce5edbc8e2a8697c15331677e6ebf0b,
         ),
         value: 0x0_U256,
         data: 0x6103ee61027b6347cfe65df0306101326101726311ecd01bf07a53bcc4a3a53996be367ec98cb6fe85797e1d020284d4d302c8b4eb60e665b28a9c64a9ae692ad6894716732f245e7f6adc5243f79a0ae9b8d8900c77aa1c5796a2854ceddb00a82b4ec01b513ed61cce89400a067ffe90a109bad6d5e028143e7552930136347eb71a49db0072c87bd437b9cd7b2f7c7e6e9f3a85875c9ede360f9d06d4c2e82caf2e87043c0bf5a235431acb78b35dcbfc7b86074b99c9e6f959d84184e5e40c854c280218c064cd4e98dc3b68c44f7d651d7191ead464be3aaa66577c719af4fbf6b9741d3c2c1eca7446e7b87ce36eb18a407fca527573156e7983888dff152dc41fd0f98972d3a02f8465d755c426de2e81e23e6cd5b68990e3c73c65071b0c7bae9d3a6101ec6101316101246103b373ffffffffffffffffffffffffffffffffffffffff63459d135bfa,

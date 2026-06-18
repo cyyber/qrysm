@@ -12,6 +12,7 @@ import (
 	mockslashings "github.com/theQRL/qrysm/beacon-chain/operations/slashings/mock"
 	"github.com/theQRL/qrysm/beacon-chain/startup"
 	mockstategen "github.com/theQRL/qrysm/beacon-chain/state/stategen/mock"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
@@ -78,7 +79,7 @@ func TestEndToEnd_SlasherSimulator(t *testing.T) {
 		privKeys[primitives.ValidatorIndex(valIdx)] = privKey
 		validators[valIdx] = &qrysmpb.Validator{
 			PublicKey:             privKey.PublicKey().Marshal(),
-			WithdrawalCredentials: make([]byte, 64),
+			WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 		}
 	}
 	err = beaconState.SetValidators(validators)

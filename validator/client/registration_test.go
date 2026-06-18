@@ -95,7 +95,7 @@ func TestValidator_SignValidatorRegistrationRequest(t *testing.T) {
 	_, m, validatorKey, finish := setup(t)
 	defer finish()
 	ctx := context.Background()
-	byteval, err := hexutil.DecodeQ("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000878705ba3f8bc32fcf7f4caa1a35e72af65cf766")
+	byteval, err := hexutil.DecodeQ("Q89abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567")
 	require.NoError(t, err)
 	tests := []struct {
 		name            string
@@ -220,7 +220,7 @@ func TestValidator_SignValidatorRegistrationRequest(t *testing.T) {
 				}
 				require.Equal(t, got.Message.Timestamp, tt.arg.Timestamp)
 				require.Equal(t, got.Message.GasLimit, tt.arg.GasLimit)
-				require.Equal(t, hexutil.Encode(got.Message.FeeRecipient), hexutil.Encode(tt.arg.FeeRecipient))
+				require.Equal(t, hexutil.EncodeQ(got.Message.FeeRecipient), hexutil.EncodeQ(tt.arg.FeeRecipient))
 				require.DeepEqual(t, got, v.signedValidatorRegistrations[bytesutil.ToBytes2592(tt.arg.Pubkey)])
 			}
 		})

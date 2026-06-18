@@ -135,7 +135,7 @@ func (b *BeaconBlockZond) ToConsensus() (*qrysmpb.BeaconBlockZond, error) {
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayload.ParentHash")
 	}
-	payloadFeeRecipient, err := DecodeAddressWithLength(b.Body.ExecutionPayload.FeeRecipient, fieldparams.FeeRecipientLength)
+	payloadFeeRecipient, err := DecodeAddress(b.Body.ExecutionPayload.FeeRecipient)
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayload.FeeRecipient")
 	}
@@ -208,7 +208,7 @@ func (b *BeaconBlockZond) ToConsensus() (*qrysmpb.BeaconBlockZond, error) {
 		if err != nil {
 			return nil, NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].ValidatorIndex", i))
 		}
-		address, err := DecodeAddressWithLength(w.ExecutionAddress, common.AddressLength)
+		address, err := DecodeAddress(w.ExecutionAddress)
 		if err != nil {
 			return nil, NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].ExecutionAddress", i))
 		}
@@ -386,7 +386,7 @@ func (b *BlindedBeaconBlockZond) ToConsensus() (*qrysmpb.BlindedBeaconBlockZond,
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ParentHash")
 	}
-	payloadFeeRecipient, err := DecodeAddressWithLength(b.Body.ExecutionPayloadHeader.FeeRecipient, fieldparams.FeeRecipientLength)
+	payloadFeeRecipient, err := DecodeAddress(b.Body.ExecutionPayloadHeader.FeeRecipient)
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.FeeRecipient")
 	}

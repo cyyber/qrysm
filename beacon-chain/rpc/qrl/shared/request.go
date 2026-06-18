@@ -52,7 +52,7 @@ func ValidateHex(w http.ResponseWriter, name string, s string, length int) ([]by
 	return hexBytes, true
 }
 
-func ValidateAddress(w http.ResponseWriter, name string, s string, length int) ([]byte, bool) {
+func ValidateAddress(w http.ResponseWriter, name string, s string) ([]byte, bool) {
 	if s == "" {
 		errJson := &http2.DefaultErrorJson{
 			Message: name + " is required",
@@ -68,10 +68,6 @@ func ValidateAddress(w http.ResponseWriter, name string, s string, length int) (
 			Code:    http.StatusBadRequest,
 		}
 		http2.WriteError(w, errJson)
-		return nil, false
-	}
-	if len(hexBytes) != length {
-		http2.HandleError(w, fmt.Sprintf("Invalid %s: %s is not length %d", name, s, length), http.StatusBadRequest)
 		return nil, false
 	}
 	return hexBytes, true
@@ -204,15 +200,11 @@ func VerifyMaxLength[T any](v []T, max int) error {
 	return nil
 }
 
-// DecodeAddressWithLength takes a string and a length in bytes,
-// and validates whether the string is an address and has the correct length.
-func DecodeAddressWithLength(s string, length int) ([]byte, error) {
+// DecodeAddress decodes a Q-address string.
+func DecodeAddress(s string) ([]byte, error) {
 	bytes, err := hexutil.DecodeQ(s)
 	if err != nil {
 		return nil, errors.Wrapf(err, "%s is not a valid address", s)
-	}
-	if len(bytes) != length {
-		return nil, fmt.Errorf("%s is not length %d bytes", s, length)
 	}
 	return bytes, nil
 }

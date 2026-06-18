@@ -17,8 +17,6 @@
 package generator
 
 import (
-	"math/big"
-
 	"github.com/theQRL/go-qrl/common"
 	"github.com/theQRL/qrysm/pkg/FuzzyVM/filler"
 	"github.com/theQRL/qrysm/pkg/FuzzyVM/generator/precompiles"
@@ -83,9 +81,9 @@ func (*randomCallGenerator) Execute(env Environment) {
 	var addr common.Address
 	if env.f.Bool() {
 		// call a precompile
-		addr = common.BigToAddress(new(big.Int).Mod(env.f.BigInt16(), big.NewInt(20)))
+		addr = precompiles.RandomAddress(env.f)
 	} else {
-		addr = common.BytesToAddress(env.f.ByteSlice(20))
+		addr = common.BytesToAddress(env.f.ByteSlice(common.AddressLength))
 	}
 
 	c := precompiles.CallObj{

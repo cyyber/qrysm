@@ -18,10 +18,12 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const testFeeRecipientAddress = "Q1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+
 func getValidatorHappyPathTestServer(t *testing.T) *httptest.Server {
 	key1 := "0x855ae9c6184d6edd46351b375f16f541b2d33b0ed0da9be4571b13938588aee840ba606a946f0e8023ae3a4b2a43b4d4"
 	key2 := "0x844ae9c6184d6edd46351b375f16f541b2d33b0ed0da9be4571b13938588aee840ba606a946f0e8023ae3a4b2a43b4d4"
-	address1 := "Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000b698D697092822185bF0311052215d5B5e1F3944"
+	address1 := testFeeRecipientAddress
 	return httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		w.Header().Set("Content-Type", "application/json")
@@ -82,7 +84,7 @@ func TestGetProposerSettings(t *testing.T) {
 	srv.Start()
 	defer srv.Close()
 	hook := logtest.NewGlobal()
-	defaultfeerecipient := "Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000b698D697092822185bF0311052215d5B5e1F3944"
+	defaultfeerecipient := testFeeRecipientAddress
 	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.VXjrSItV_Kmwg_XilpscyPm2SPIsstytYLtr_AuJI8I"
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
@@ -108,20 +110,21 @@ func TestGetProposerSettings(t *testing.T) {
 }
 
 func TestValidateValidateIsExecutionAddress(t *testing.T) {
+	validAddress := testFeeRecipientAddress
 	t.Run("Happy Path", func(t *testing.T) {
-		err := validateIsExecutionAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000b698D697092822185bF0311052215d5B5e1F3933")
+		err := validateIsExecutionAddress(validAddress)
 		require.NoError(t, err)
 	})
 	t.Run("Too Long", func(t *testing.T) {
-		err := validateIsExecutionAddress("Qb698D697092822185bF0311052215d5B5e1F39331")
+		err := validateIsExecutionAddress(validAddress + "1")
 		require.ErrorContains(t, "no default address entered", err)
 	})
 	t.Run("Too Short", func(t *testing.T) {
-		err := validateIsExecutionAddress("Qb698D697092822185bF0311052215d5B5e1F393")
+		err := validateIsExecutionAddress(validAddress[:len(validAddress)-1])
 		require.ErrorContains(t, "no default address entered", err)
 	})
 	t.Run("Prefix missing", func(t *testing.T) {
-		err := validateIsExecutionAddress("b698D697092822185bF0311052215d5B5e1F3933")
+		err := validateIsExecutionAddress(validAddress[1:])
 		require.ErrorContains(t, "no default address entered", err)
 	})
 }

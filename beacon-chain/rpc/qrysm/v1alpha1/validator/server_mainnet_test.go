@@ -43,7 +43,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 				ActivationEpoch:       0,
 				ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 				PublicKey:             pubKey1,
-				WithdrawalCredentials: make([]byte, 64),
+				WithdrawalCredentials: make([]byte, field_params.WithdrawalCredentialsLength),
 			},
 		},
 	}

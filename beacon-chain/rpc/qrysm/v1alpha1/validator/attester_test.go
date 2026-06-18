@@ -17,6 +17,7 @@ import (
 	state_native "github.com/theQRL/qrysm/beacon-chain/state/state-native"
 	"github.com/theQRL/qrysm/beacon-chain/state/stategen"
 	mockSync "github.com/theQRL/qrysm/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
@@ -49,7 +50,7 @@ func TestProposeAttestation_OK(t *testing.T) {
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
 			PublicKey:             make([]byte, 48),
-			WithdrawalCredentials: make([]byte, 64),
+			WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
 		}

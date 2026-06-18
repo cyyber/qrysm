@@ -105,7 +105,7 @@ message Genesis {
     // UTC time specified in the chain start event in the deposit contract.
     google.protobuf.Timestamp genesis_time = 1;
 
-    // Address of the deposit contract in the QRL execution chain.
+    // 64 byte QRL execution address of the deposit contract.
     bytes deposit_contract_address = 2;
 
     // Root of the genesis validators deposits; used for domain separation

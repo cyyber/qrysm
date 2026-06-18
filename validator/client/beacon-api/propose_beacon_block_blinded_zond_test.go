@@ -51,7 +51,7 @@ func TestProposeBeaconBlock_BlindedZond(t *testing.T) {
 					BlockHash:        hexutil.Encode(blindedZondBlock.BlindedZond.Block.Body.ExecutionPayloadHeader.BlockHash),
 					BlockNumber:      uint64ToString(blindedZondBlock.BlindedZond.Block.Body.ExecutionPayloadHeader.BlockNumber),
 					ExtraData:        hexutil.Encode(blindedZondBlock.BlindedZond.Block.Body.ExecutionPayloadHeader.ExtraData),
-					FeeRecipient:     hexutil.Encode(blindedZondBlock.BlindedZond.Block.Body.ExecutionPayloadHeader.FeeRecipient),
+					FeeRecipient:     hexutil.EncodeQ(blindedZondBlock.BlindedZond.Block.Body.ExecutionPayloadHeader.FeeRecipient),
 					GasLimit:         uint64ToString(blindedZondBlock.BlindedZond.Block.Body.ExecutionPayloadHeader.GasLimit),
 					GasUsed:          uint64ToString(blindedZondBlock.BlindedZond.Block.Body.ExecutionPayloadHeader.GasUsed),
 					LogsBloom:        hexutil.Encode(blindedZondBlock.BlindedZond.Block.Body.ExecutionPayloadHeader.LogsBloom),

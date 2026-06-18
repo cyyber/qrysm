@@ -33,7 +33,7 @@ message Validator {
     // 2592 byte ML-DSA-87 public key used for the validator's activities.
     bytes pubkey = 1 [(theqrl.qrl.ext.ssz_size) = "2592", (theqrl.qrl.ext.spec_name) = "pubkey"];
 
-    // 32 byte hash of the withdrawal destination public key.
+    // 64 byte withdrawal credentials.
     bytes withdrawal_credentials = 2 [(theqrl.qrl.ext.ssz_size) = "64"];
 
     // The validators current effective balance in shor.

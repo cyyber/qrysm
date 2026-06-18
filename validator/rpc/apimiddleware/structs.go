@@ -83,7 +83,7 @@ type GetFeeRecipientByPubkeyResponseJson struct {
 }
 
 type SetFeeRecipientByPubkeyRequestJson struct {
-	QRLaddress string `json:"qrladdress" hex:"true"`
+	QRLaddress string `json:"qrladdress" address:"true"`
 }
 
 type DeleteFeeRecipientByPubkeyRequestJson struct {

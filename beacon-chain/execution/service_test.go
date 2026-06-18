@@ -21,6 +21,7 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/execution/types"
 	doublylinkedtree "github.com/theQRL/qrysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/theQRL/qrysm/beacon-chain/state/stategen"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/container/trie"
 	contracts "github.com/theQRL/qrysm/contracts/deposit"
@@ -316,7 +317,7 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 			Deposit: &qrysmpb.Deposit{
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:             bytesutil.PadTo([]byte{0}, 2592),
-					WithdrawalCredentials: make([]byte, 64),
+					WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 					Signature:             make([]byte, 4627),
 				},
 			},
@@ -327,7 +328,7 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 			Deposit: &qrysmpb.Deposit{
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:             bytesutil.PadTo([]byte{1}, 2592),
-					WithdrawalCredentials: make([]byte, 64),
+					WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 					Signature:             make([]byte, 4627),
 				},
 			},
@@ -338,7 +339,7 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 			Deposit: &qrysmpb.Deposit{
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:             bytesutil.PadTo([]byte{2}, 2592),
-					WithdrawalCredentials: make([]byte, 64),
+					WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 					Signature:             make([]byte, 4627),
 				},
 			},

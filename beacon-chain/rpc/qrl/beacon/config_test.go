@@ -18,8 +18,9 @@ import (
 func TestGetSpec(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig().Copy()
-	defaultFeeRecipient, err := common.NewAddressFromString("Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001")
+	defaultFeeRecipient, err := common.NewAddressFromString("Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
 	require.NoError(t, err)
+	depositContractAddress := "Q42424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242"
 
 	config.ConfigName = "ConfigName"
 	config.PresetBase = "PresetBase"
@@ -41,7 +42,7 @@ func TestGetSpec(t *testing.T) {
 	config.SecondsPerExecutionBlock = 17
 	config.DepositChainID = 18
 	config.DepositNetworkID = 19
-	config.DepositContractAddress = "DepositContractAddress"
+	config.DepositContractAddress = depositContractAddress
 	config.MinDepositAmount = 20
 	config.MaxEffectiveBalance = 21
 	config.EjectionBalance = 22
@@ -169,7 +170,7 @@ func TestGetSpec(t *testing.T) {
 		case "DEPOSIT_NETWORK_ID":
 			assert.Equal(t, "19", v)
 		case "DEPOSIT_CONTRACT_ADDRESS":
-			assert.Equal(t, "DepositContractAddress", v)
+			assert.Equal(t, depositContractAddress, v)
 		case "MIN_DEPOSIT_AMOUNT":
 			assert.Equal(t, "20", v)
 		case "MAX_EFFECTIVE_BALANCE":

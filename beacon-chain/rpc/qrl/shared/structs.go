@@ -173,12 +173,9 @@ func (s *ValidatorRegistration) ToConsensus() (*qrysmpb.ValidatorRegistrationV1,
 	if s == nil {
 		return nil, NewDecodeError(errNilValue, "ValidatorRegistration")
 	}
-	feeRecipient, err := hexutil.DecodeQ(s.FeeRecipient)
+	feeRecipient, err := DecodeAddress(s.FeeRecipient)
 	if err != nil {
 		return nil, NewDecodeError(err, "FeeRecipient")
-	}
-	if len(feeRecipient) != fieldparams.FeeRecipientLength {
-		return nil, fmt.Errorf("feeRecipient length was %d when expecting length %d", len(feeRecipient), fieldparams.FeeRecipientLength)
 	}
 	pubKey, err := hexutil.Decode(s.Pubkey)
 	if err != nil {

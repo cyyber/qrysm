@@ -11,9 +11,8 @@ import (
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 )
 
-// DepositInput for a given key. This input data can be used to when making a
-// validator deposit. The input data includes a proof of possession field
-// signed by the deposit key.
+// DepositInput builds QRL validator deposit data for a given key. The input data
+// includes a proof-of-possession field signed with ML-DSA-87 by the deposit key.
 //
 // Spec details about general deposit workflow:
 //
@@ -22,10 +21,10 @@ import (
 //	- Pack the validator's initialization parameters into deposit_data, a Deposit_Data SSZ object.
 //	- Let amount be the amount in Shor to be deposited by the validator where MIN_DEPOSIT_AMOUNT <= amount <= MAX_EFFECTIVE_BALANCE.
 //	- Set deposit_data.amount = amount.
-//	- Let signature be the result of bls_sign of the signing_root(deposit_data) with domain=compute_domain(DOMAIN_DEPOSIT). (Deposits are valid regardless of fork version, compute_domain will default to zeroes there).
-//	- Send a transaction on the QRL execution layer to DEPOSIT_CONTRACT_ADDRESS executing `deposit(pubkey: bytes[48], withdrawal_credentials: bytes[32], signature: bytes[96])` along with a deposit of amount Shor.
-//
-// See: https://github.com/ethereum/consensus-specs/blob/master/specs/validator/0_beacon-chain-validator.md#submit-deposit
+//	- Let signature be the ML-DSA-87 signature of signing_root(deposit_data) with domain=compute_domain(DOMAIN_DEPOSIT).
+//	- Send a transaction on the QRL execution layer to the Hyperion validator deposit contract at DEPOSIT_CONTRACT_ADDRESS.
+//	- Execute deposit(pubkey: bytes, withdrawal_credentials: bytes, signature: bytes, deposit_data_root: bytes32)
+//	  with a 2592-byte pubkey, 64-byte withdrawal credentials, and 4627-byte signature along with amount Shor.
 func DepositInput(depositKey ml_dsa_87.MLDSA87Key, withdrawalAddr common.Address, amountInShor uint64, forkVersion []byte) (*qrysmpb.Deposit_Data, [32]byte, error) {
 	depositMessage := &qrysmpb.DepositMessage{
 		PublicKey:             depositKey.PublicKey().Marshal(),

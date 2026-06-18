@@ -5,6 +5,7 @@ import (
 
 	"github.com/theQRL/go-qrl/common/hexutil"
 	"github.com/theQRL/qrysm/beacon-chain/rpc/apimiddleware"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	enginev1 "github.com/theQRL/qrysm/proto/engine/v1"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/testing/assert"
@@ -571,17 +572,19 @@ func TestBeaconBlockJsonHelpers_JsonifyAttestationData(t *testing.T) {
 }
 
 func TestBeaconBlockJsonHelpers_JsonifyWithdrawals(t *testing.T) {
+	address1 := filledBytes(fieldparams.FeeRecipientLength, 3)
+	address2 := filledBytes(fieldparams.FeeRecipientLength, 7)
 	input := []*enginev1.Withdrawal{
 		{
 			Index:          1,
 			ValidatorIndex: 2,
-			Address:        []byte{3},
+			Address:        address1,
 			Amount:         4,
 		},
 		{
 			Index:          5,
 			ValidatorIndex: 6,
-			Address:        []byte{7},
+			Address:        address2,
 			Amount:         8,
 		},
 	}
@@ -590,17 +593,25 @@ func TestBeaconBlockJsonHelpers_JsonifyWithdrawals(t *testing.T) {
 		{
 			WithdrawalIndex:  "1",
 			ValidatorIndex:   "2",
-			ExecutionAddress: hexutil.Encode([]byte{3}),
+			ExecutionAddress: hexutil.EncodeQ(address1),
 			Amount:           "4",
 		},
 		{
 			WithdrawalIndex:  "5",
 			ValidatorIndex:   "6",
-			ExecutionAddress: hexutil.Encode([]byte{7}),
+			ExecutionAddress: hexutil.EncodeQ(address2),
 			Amount:           "8",
 		},
 	}
 
 	result := jsonifyWithdrawals(input)
 	assert.DeepEqual(t, expectedResult, result)
+}
+
+func filledBytes(length int, value byte) []byte {
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = value
+	}
+	return b
 }

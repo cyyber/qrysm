@@ -1,21 +1,25 @@
 package main
 
 import (
+	"bytes"
+
+	"github.com/theQRL/go-qrl/common"
 	"github.com/theQRL/go-qrl/core/vm"
 	"github.com/theQRL/qrysm/pkg/goqrvmlab/ops"
 	"github.com/theQRL/qrysm/pkg/goqrvmlab/program"
 )
 
 func Selfdestructor() []byte {
-	selfdestructTo := []byte{
+	selfdestructTo := append([]byte{
 		byte(vm.PUSH1),
 		0,
 		byte(vm.CALLDATALOAD),
-		byte(vm.PUSH20),
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		byte(vm.PUSH64),
+	}, bytes.Repeat([]byte{0xFF}, common.AddressLength)...)
+	selfdestructTo = append(selfdestructTo,
 		byte(vm.AND),
 		//byte(vm.SELFDESTRUCT), SELFDESTRUCT bytecode has been removed from go-qrl vm
-	}
+	)
 
 	initcode := program.NewProgram()
 	initcode.Mstore(selfdestructTo, 0)

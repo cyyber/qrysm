@@ -308,7 +308,7 @@ type BlindedBeaconBlockBodyZondJson struct {
 
 type ExecutionPayloadZondJson struct {
 	ParentHash    string            `json:"parent_hash" hex:"true"`
-	FeeRecipient  string            `json:"fee_recipient" hex:"true"`
+	FeeRecipient  string            `json:"fee_recipient" address:"true"`
 	StateRoot     string            `json:"state_root" hex:"true"`
 	ReceiptsRoot  string            `json:"receipts_root" hex:"true"`
 	LogsBloom     string            `json:"logs_bloom" hex:"true"`
@@ -326,7 +326,7 @@ type ExecutionPayloadZondJson struct {
 
 type ExecutionPayloadHeaderZondJson struct {
 	ParentHash       string `json:"parent_hash" hex:"true"`
-	FeeRecipient     string `json:"fee_recipient" hex:"true"`
+	FeeRecipient     string `json:"fee_recipient" address:"true"`
 	StateRoot        string `json:"state_root" hex:"true"`
 	ReceiptsRoot     string `json:"receipts_root" hex:"true"`
 	LogsBloom        string `json:"logs_bloom" hex:"true"`
@@ -447,7 +447,7 @@ type VersionJson struct {
 type WithdrawalJson struct {
 	WithdrawalIndex  string `json:"index"`
 	ValidatorIndex   string `json:"validator_index"`
-	ExecutionAddress string `json:"address" hex:"true"`
+	ExecutionAddress string `json:"address" address:"true"`
 	Amount           string `json:"amount"`
 }
 
@@ -717,7 +717,7 @@ type EventPayloadAttributeV2Json struct {
 type PayloadAttributesV2Json struct {
 	Timestamp             string            `json:"timestamp"`
 	Random                string            `json:"prev_randao" hex:"true"`
-	SuggestedFeeRecipient string            `json:"suggested_fee_recipient" hex:"true"`
+	SuggestedFeeRecipient string            `json:"suggested_fee_recipient" address:"true"`
 	Withdrawals           []*WithdrawalJson `json:"withdrawals"`
 }
 

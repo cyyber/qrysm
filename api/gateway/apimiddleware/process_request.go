@@ -39,6 +39,10 @@ func ProcessRequestContainerFields(requestContainer any) ErrorJson {
 			f:   hexToBase64Processor,
 		},
 		{
+			tag: "address",
+			f:   qAddressToBase64Processor,
+		},
+		{
 			tag: "uint256",
 			f:   uint256ToBase64Processor,
 		},
@@ -144,6 +148,18 @@ func GrpcResponseIsEmpty(grpcResponseBody []byte) bool {
 	return len(grpcResponseBody) == 0 || string(grpcResponseBody) == "{}"
 }
 
+func ResponseBodyAllowedForStatus(status int) bool {
+	switch {
+	case status >= 100 && status <= 199:
+		return false
+	case status == http.StatusNoContent:
+		return false
+	case status == http.StatusNotModified:
+		return false
+	}
+	return true
+}
+
 // DeserializeGrpcResponseBodyIntoContainer deserializes the grpc-gateway's response body into an endpoint-specific struct.
 func DeserializeGrpcResponseBodyIntoContainer(body []byte, responseContainer any) ErrorJson {
 	if err := json.Unmarshal(body, &responseContainer); err != nil {
@@ -207,23 +223,23 @@ func WriteMiddlewareResponseHeadersAndBody(grpcResp *http.Response, responseJson
 			}
 		}
 	}
-	if !GrpcResponseIsEmpty(responseJson) {
-		w.Header().Set("Content-Length", strconv.Itoa(len(responseJson)))
-		if statusCodeHeader != "" {
-			code, err := strconv.Atoi(statusCodeHeader)
-			if err != nil {
-				return InternalServerErrorWithMessage(err, "could not parse status code")
-			}
-			w.WriteHeader(code)
-		} else {
-			w.WriteHeader(grpcResp.StatusCode)
+	statusCode := grpcResp.StatusCode
+	if statusCodeHeader != "" {
+		code, err := strconv.Atoi(statusCodeHeader)
+		if err != nil {
+			return InternalServerErrorWithMessage(err, "could not parse status code")
 		}
+		statusCode = code
+	}
+	if !GrpcResponseIsEmpty(responseJson) && ResponseBodyAllowedForStatus(statusCode) {
+		w.Header().Set("Content-Length", strconv.Itoa(len(responseJson)))
+		w.WriteHeader(statusCode)
 		if _, err := io.Copy(w, io.NopCloser(bytes.NewReader(responseJson))); err != nil {
 			return InternalServerErrorWithMessage(err, "could not write response message")
 		}
 	} else {
 		w.Header().Set("Content-Length", "0")
-		w.WriteHeader(grpcResp.StatusCode)
+		w.WriteHeader(statusCode)
 	}
 	return nil
 }

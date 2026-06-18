@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	statenative "github.com/theQRL/qrysm/beacon-chain/state/state-native"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/encoding/bytesutil"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/testing/assert"
@@ -204,7 +205,7 @@ func TestBeaconState_ValidatorMutation_Zond(t *testing.T) {
 
 	require.NoError(t, testState.UpdateValidatorAtIndex(15, &qrysmpb.Validator{
 		PublicKey:                  make([]byte, 48),
-		WithdrawalCredentials:      make([]byte, 64),
+		WithdrawalCredentials:      make([]byte, fieldparams.WithdrawalCredentialsLength),
 		EffectiveBalance:           1111,
 		Slashed:                    false,
 		ActivationEligibilityEpoch: 1112,
@@ -228,7 +229,7 @@ func TestBeaconState_ValidatorMutation_Zond(t *testing.T) {
 
 	require.NoError(t, newState1.UpdateValidatorAtIndex(150, &qrysmpb.Validator{
 		PublicKey:                  make([]byte, 48),
-		WithdrawalCredentials:      make([]byte, 64),
+		WithdrawalCredentials:      make([]byte, fieldparams.WithdrawalCredentialsLength),
 		EffectiveBalance:           2111,
 		Slashed:                    false,
 		ActivationEligibilityEpoch: 2112,

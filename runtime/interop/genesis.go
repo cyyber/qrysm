@@ -19,8 +19,8 @@ const defaultMixhash = "0x000000000000000000000000000000000000000000000000000000
 const defaultParenthash = "0x0000000000000000000000000000000000000000000000000000000000000000"
 const defaultTestAccountBalance = "80000000000000000000000000"
 
-var defaultTestAccountAddress, _ = common.NewAddressFromString("Qaf84bc06703edfc371a0177ac8b482622d5ad24204145f01746cb381dcd546c53b8825839cc61bfc1fc3d78bc560c7bb7a9895432e1e87435474a1bc5a2e1200")
-var defaultCoinbase, _ = common.NewAddressFromString("Q000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
+var defaultTestAccountAddress = mustAddress("Qaf84bc06703edfc371a0177ac8b482622d5ad24204145f01746cb381dcd546c53b8825839cc61bfc1fc3d78bc560c7bb7a9895432e1e87435474a1bc5a2e1200")
+var defaultCoinbase = mustAddress("Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
 
 // DefaultDepositContractStorage represents the empty deposit trie used by the deposit contract.
 // Keys remain 32-byte storage slots. Values are 64-byte VM storage words, with
@@ -61,6 +61,14 @@ var DefaultDepositContractStorage = map[string]string{
 
 var bigz = big.NewInt(0)
 var testAccountBalance = big.NewInt(0)
+
+func mustAddress(s string) common.Address {
+	addr, err := common.NewAddressFromString(s)
+	if err != nil {
+		panic(err) // lint:nopanic
+	}
+	return addr
+}
 
 // GqrlTestnetGenesis creates a genesis.json for execution clients with a set of defaults suitable for ephemeral testnets,
 // like in an e2e test. The parameters are minimal but the full value is returned unmarshaled so that it can be

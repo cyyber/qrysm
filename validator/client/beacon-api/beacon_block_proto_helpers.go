@@ -389,7 +389,7 @@ func convertWithdrawalsToProto(jsonWithdrawals []*apimiddleware.WithdrawalJson) 
 			return nil, errors.Wrapf(err, "failed to parse validator index `%s`", jsonWithdrawal.ValidatorIndex)
 		}
 
-		executionAddress, err := hexutil.Decode(jsonWithdrawal.ExecutionAddress)
+		executionAddress, err := hexutil.DecodeQ(jsonWithdrawal.ExecutionAddress)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to decode execution address `%s`", jsonWithdrawal.ExecutionAddress)
 		}

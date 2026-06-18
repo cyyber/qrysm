@@ -102,15 +102,20 @@ func base64ToHexProcessor(v reflect.Value) error {
 }
 
 func base64ToChecksumAddressProcessor(v reflect.Value) error {
-	if v.String() == "" {
-		v.SetString("Q")
-		return nil
-	}
 	b, err := base64.StdEncoding.DecodeString(v.String())
 	if err != nil {
 		return err
 	}
 	v.SetString(common.BytesToAddress(b).Hex())
+	return nil
+}
+
+func qAddressToBase64Processor(v reflect.Value) error {
+	b, err := hexutil.DecodeQ(v.String())
+	if err != nil {
+		return err
+	}
+	v.SetString(base64.StdEncoding.EncodeToString(b))
 	return nil
 }
 

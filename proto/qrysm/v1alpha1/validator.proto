@@ -716,7 +716,7 @@ message StreamBlocksRequest {
 
 message PrepareBeaconProposerRequest {
     message FeeRecipientContainer {
-        // The address of the fee recipient.
+        // 64 byte QRL execution address of the fee recipient.
         bytes fee_recipient = 1 [(theqrl.qrl.ext.ssz_size) = "64"];
 
         // The proposer validator index.
@@ -730,6 +730,7 @@ message FeeRecipientByPubKeyRequest {
 }
 
 message FeeRecipientByPubKeyResponse {
+    // 64 byte QRL execution address of the fee recipient.
     bytes fee_recipient = 1 [(theqrl.qrl.ext.ssz_size) = "64"];
 }
 

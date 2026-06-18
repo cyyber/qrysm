@@ -11,8 +11,6 @@ import (
 	"github.com/theQRL/qrysm/time/slots"
 )
 
-const ExecutionAddressOffset = 0
-
 // NextWithdrawalIndex returns the index that will be assigned to the next withdrawal.
 func (b *BeaconState) NextWithdrawalIndex() (uint64, error) {
 	b.lock.RLock()
@@ -57,7 +55,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
 				Index:          withdrawalIndex,
 				ValidatorIndex: validatorIndex,
-				Address:        bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ExecutionAddressOffset:]),
+				Address:        bytesutil.SafeCopyBytes(val.WithdrawalCredentials),
 				Amount:         balance,
 			})
 			withdrawalIndex++
@@ -65,7 +63,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
 				Index:          withdrawalIndex,
 				ValidatorIndex: validatorIndex,
-				Address:        bytesutil.SafeCopyBytes(val.WithdrawalCredentials[ExecutionAddressOffset:]),
+				Address:        bytesutil.SafeCopyBytes(val.WithdrawalCredentials),
 				Amount:         balance - params.BeaconConfig().MaxEffectiveBalance,
 			})
 			withdrawalIndex++
@@ -81,14 +79,13 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 	return withdrawals, nil
 }
 
-// hasExecutionWithdrawalCredential returns whether the validator has an execution
-// withdrawal address. It assumes that the caller has a lock on the state.
-func hasExecutionWithdrawalCredential(val *qrysmpb.Validator) bool {
+// hasWithdrawalAddress returns whether the validator has a withdrawal address.
+// It assumes that the caller has a lock on the state.
+func hasWithdrawalAddress(val *qrysmpb.Validator) bool {
 	if val == nil {
 		return false
 	}
-	cred := val.WithdrawalCredentials
-	return len(cred) == fieldparams.WithdrawalCredentialsLength
+	return len(val.WithdrawalCredentials) == fieldparams.WithdrawalCredentialsLength
 }
 
 // isFullyWithdrawableValidator returns whether the validator is able to perform a full
@@ -98,7 +95,7 @@ func isFullyWithdrawableValidator(val *qrysmpb.Validator, epoch primitives.Epoch
 	if val == nil {
 		return false
 	}
-	return hasExecutionWithdrawalCredential(val) && val.WithdrawableEpoch <= epoch
+	return hasWithdrawalAddress(val) && val.WithdrawableEpoch <= epoch
 }
 
 // isPartiallyWithdrawable returns whether the validator is able to perform a
@@ -109,5 +106,5 @@ func isPartiallyWithdrawableValidator(val *qrysmpb.Validator, balance uint64) bo
 	}
 	hasMaxBalance := val.EffectiveBalance == params.BeaconConfig().MaxEffectiveBalance
 	hasExcessBalance := balance > params.BeaconConfig().MaxEffectiveBalance
-	return hasExecutionWithdrawalCredential(val) && hasExcessBalance && hasMaxBalance
+	return hasWithdrawalAddress(val) && hasExcessBalance && hasMaxBalance
 }

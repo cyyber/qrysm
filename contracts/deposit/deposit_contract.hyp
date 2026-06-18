@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: CC0-1.0
 pragma hyperion >0.1.0;
 
-// This interface is designed to be compatible with the Vyper version.
-/// @notice This is the Ethereum 2.0 deposit contract interface.
-/// For more information see the Phase 0 specification under https://github.com/ethereum/eth2.0-specs
+// QRL validator deposit contract interface.
+/// @notice This is the QRL validator deposit contract interface.
 interface IDepositContract {
     /// @notice A processed deposit event.
     event DepositEvent(
@@ -14,10 +13,10 @@ interface IDepositContract {
         bytes index
     );
 
-    /// @notice Submit a Phase 0 DepositData object.
-    /// @param pubkey A ML-DSA-87 public key.
-    /// @param withdrawal_credentials Commitment to a public key for withdrawals.
-    /// @param signature A ML-DSA-87 signature.
+    /// @notice Submit a QRL validator DepositData object.
+    /// @param pubkey A 2592-byte ML-DSA-87 public key.
+    /// @param withdrawal_credentials A 64-byte QRL withdrawal credential.
+    /// @param signature A 4627-byte ML-DSA-87 signature.
     /// @param deposit_data_root The SHA-256 hash of the SSZ-encoded DepositData object.
     /// Used as a protection against malformed input.
     function deposit(
@@ -47,10 +46,8 @@ interface ERC165 {
     function supportsInterface(bytes4 interfaceId) external pure returns (bool);
 }
 
-// This is a rewrite of the Vyper Eth2.0 deposit contract in Hyperion.
-// It tries to stay as close as possible to the original source code.
-/// @notice This is the Ethereum 2.0 deposit contract interface.
-/// For more information see the Phase 0 specification under https://github.com/ethereum/eth2.0-specs
+// QRL validator deposit contract implemented in Hyperion.
+/// @notice This is the QRL validator deposit contract.
 contract DepositContract is IDepositContract, ERC165 {
     uint constant DEPOSIT_CONTRACT_TREE_DEPTH = 32;
     // NOTE: this also ensures `deposit_count` will fit into 64-bits
@@ -94,7 +91,7 @@ contract DepositContract is IDepositContract, ERC165 {
         bytes calldata signature,
         bytes32 deposit_data_root
     ) override external payable {
-        // Extended ABI length checks since dynamic types are used.
+        // Enforce QRL validator deposit ABI sizes since dynamic types are used.
         require(pubkey.length == 2592, "DepositContract: invalid pubkey length");
         require(withdrawal_credentials.length == 64, "DepositContract: invalid withdrawal_credentials length");
         require(signature.length == 4627, "DepositContract: invalid signature length");

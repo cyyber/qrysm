@@ -5,6 +5,7 @@ import (
 
 	"github.com/theQRL/qrysm/beacon-chain/core/blocks"
 	"github.com/theQRL/qrysm/beacon-chain/core/signing"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	consensusblocks "github.com/theQRL/qrysm/consensus-types/blocks"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
@@ -23,7 +24,7 @@ func TestVerifyBlockHeaderSignature(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, 1)
 	validators[0] = &qrysmpb.Validator{
 		PublicKey:             privKey.PublicKey().Marshal(),
-		WithdrawalCredentials: make([]byte, 64),
+		WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 		EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
 	}
 	err = beaconState.SetValidators(validators)

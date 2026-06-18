@@ -35,6 +35,14 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	nodeFeeRecipient0 = "Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	nodeFeeRecipient1 = "Qfedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
+	nodeFeeRecipient2 = "Q00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+	nodeFeeRecipient3 = "Q89abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567"
+	nodeFeeRecipient4 = "Q76543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba98"
+)
+
 type shutdownCountingService struct {
 	stopCalls int
 }
@@ -363,13 +371,13 @@ func TestWeb3SignerConfig(t *testing.T) {
 
 func TestProposerSettings(t *testing.T) {
 	hook := logtest.NewGlobal()
-	recipient0, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ae967917c465db8578ca9024c205720b1a3651A9")
+	recipient0, err := common.NewAddressFromString(nodeFeeRecipient0)
 	require.NoError(t, err)
-	recipient1, err := common.NewAddressFromString("Q000000000000000000000000000000000000000000000000000000000000000000000000000000000000000050155530FCE8a85ec7055A5F8b2bE214B3DaeFd3")
+	recipient1, err := common.NewAddressFromString(nodeFeeRecipient1)
 	require.NoError(t, err)
-	recipient2, err := common.NewAddressFromString("Q000000000000000000000000000000000000000000000000000000000000000000000000000000000000000060155530FCE8a85ec7055A5F8b2bE214B3DaeFd4")
+	recipient2, err := common.NewAddressFromString(nodeFeeRecipient2)
 	require.NoError(t, err)
-	recipient3, err := common.NewAddressFromString("Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89A")
+	recipient3, err := common.NewAddressFromString(nodeFeeRecipient3)
 	require.NoError(t, err)
 
 	type proposerSettingsFlag struct {
@@ -564,7 +572,7 @@ func TestProposerSettings(t *testing.T) {
 				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "",
 					url:        "",
-					defaultfee: "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89A",
+					defaultfee: nodeFeeRecipient3,
 				},
 			},
 			want: func() *validatorserviceconfig.ProposerSettings {
@@ -585,7 +593,7 @@ func TestProposerSettings(t *testing.T) {
 				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "",
 					url:        "",
-					defaultfee: "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89A",
+					defaultfee: nodeFeeRecipient3,
 				},
 			},
 			want: func() *validatorserviceconfig.ProposerSettings {
@@ -611,7 +619,7 @@ func TestProposerSettings(t *testing.T) {
 				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "",
 					url:        "",
-					defaultfee: "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89A",
+					defaultfee: nodeFeeRecipient3,
 					defaultgas: "50000000",
 				},
 			},
@@ -638,7 +646,7 @@ func TestProposerSettings(t *testing.T) {
 				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
 					url:        "",
-					defaultfee: "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89B",
+					defaultfee: nodeFeeRecipient4,
 				},
 			},
 			want: func() *validatorserviceconfig.ProposerSettings {
@@ -667,7 +675,7 @@ func TestProposerSettings(t *testing.T) {
 				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
 					url:        "",
-					defaultfee: "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89B",
+					defaultfee: nodeFeeRecipient4,
 				},
 			},
 			want: func() *validatorserviceconfig.ProposerSettings {

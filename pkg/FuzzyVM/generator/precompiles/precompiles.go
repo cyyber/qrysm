@@ -31,6 +31,12 @@ var (
 		new(identityCaller),
 		new(bigModExpCaller),
 	}
+	precompileAddresses = []common.Address{
+		depositRootAddr,
+		sha256Addr,
+		identityAddr,
+		bigModExpAddr,
+	}
 )
 
 type precompile interface {
@@ -80,4 +86,9 @@ func CallPrecompile(p *program.Program, f *filler.Filler) {
 	if err := prec.call(p, f); err != nil {
 		panic(err)
 	}
+}
+
+// RandomAddress returns one of the known QRL precompile addresses.
+func RandomAddress(f *filler.Filler) common.Address {
+	return precompileAddresses[int(f.Byte())%len(precompileAddresses)]
 }

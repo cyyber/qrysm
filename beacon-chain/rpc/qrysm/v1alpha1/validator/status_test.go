@@ -15,6 +15,7 @@ import (
 	state_native "github.com/theQRL/qrysm/beacon-chain/state/state-native"
 	mockstategen "github.com/theQRL/qrysm/beacon-chain/state/stategen/mock"
 	mockSync "github.com/theQRL/qrysm/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/container/trie"
@@ -239,7 +240,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 			PublicKey:             pubKey,
-			WithdrawalCredentials: make([]byte, 64),
+			WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 		},
 	})
 	require.NoError(t, err)
@@ -421,7 +422,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	err = st.SetValidators([]*qrysmpb.Validator{{
 		PublicKey:             pubKey,
 		WithdrawableEpoch:     epoch + 1,
-		WithdrawalCredentials: make([]byte, 64)},
+		WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength)},
 	})
 	require.NoError(t, err)
 	depData := &qrysmpb.Deposit_Data{
@@ -608,42 +609,42 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 		{
 			ActivationEpoch:       0,
 			PublicKey:             pubKey(0),
-			WithdrawalCredentials: make([]byte, 64),
+			WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		},
 		{
 			ActivationEpoch:       0,
 			PublicKey:             pubKey(1),
-			WithdrawalCredentials: make([]byte, 64),
+			WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		},
 		{
 			ActivationEpoch:       0,
 			PublicKey:             pubKey(2),
-			WithdrawalCredentials: make([]byte, 64),
+			WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		},
 		{
 			ActivationEpoch:       0,
 			PublicKey:             pubKey(3),
-			WithdrawalCredentials: make([]byte, 64),
+			WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		},
 		{
 			ActivationEpoch:       primitives.Epoch(currentSlot/params.BeaconConfig().SlotsPerEpoch + 1),
 			PublicKey:             pbKey,
-			WithdrawalCredentials: make([]byte, 64),
+			WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		},
 		{
 			ActivationEpoch:       primitives.Epoch(currentSlot/params.BeaconConfig().SlotsPerEpoch + 4),
 			PublicKey:             pubKey(5),
-			WithdrawalCredentials: make([]byte, 64),
+			WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		},

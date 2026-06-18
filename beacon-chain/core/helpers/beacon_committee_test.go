@@ -9,6 +9,7 @@ import (
 	"github.com/theQRL/go-bitfield"
 	"github.com/theQRL/qrysm/beacon-chain/core/time"
 	state_native "github.com/theQRL/qrysm/beacon-chain/state/state-native"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/container/slice"
@@ -31,7 +32,7 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 		copy(k, strconv.Itoa(i))
 		validators[i] = &qrysmpb.Validator{
 			PublicKey:             k,
-			WithdrawalCredentials: make([]byte, 64),
+			WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 		}
 	}

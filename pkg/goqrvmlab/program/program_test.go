@@ -17,6 +17,7 @@
 package program
 
 import (
+	"encoding/hex"
 	"math/big"
 	"testing"
 
@@ -24,8 +25,17 @@ import (
 	"github.com/theQRL/qrysm/pkg/goqrvmlab/ops"
 )
 
+const (
+	programTestAddress0 = "Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+	programTestAddress1 = "Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345670000000000000000000000000000000000001337"
+)
+
+func pushAddress(addr common.Address) string {
+	return "9f" + hex.EncodeToString(addr.Bytes())
+}
+
 func TestPush(t *testing.T) {
-	address0, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+	address0, err := common.NewAddressFromString(programTestAddress0)
 	if err != nil {
 		panic(err)
 	}
@@ -43,8 +53,8 @@ func TestPush(t *testing.T) {
 		{big.NewInt(1), "6001"},
 		{big.NewInt(0xfff), "610fff"},
 		// Addresses
-		{address0, "9f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"},
-		{&common.Address{}, "9f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+		{address0, pushAddress(address0)},
+		{&common.Address{}, pushAddress(common.Address{})},
 	}
 	for i, tc := range tests {
 		p := NewProgram()
@@ -55,14 +65,15 @@ func TestPush(t *testing.T) {
 	}
 }
 func TestCall(t *testing.T) {
-	address1, err := common.NewAddressFromString("Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001337")
+	address1, err := common.NewAddressFromString(programTestAddress1)
 	if err != nil {
 		panic(err)
 	}
+	address1Hex := hex.EncodeToString(address1.Bytes())
 	{ // Nil gas
 		p := NewProgram()
 		p.Call(nil, address1, big.NewInt(1), 1, 2, 3, 4)
-		exp := "600460036002600160019f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000013375af1"
+		exp := "600460036002600160019f" + address1Hex + "5af1"
 		if got := p.Hex(); got != exp {
 			t.Errorf("got %v expected %v", got, exp)
 		}
@@ -70,7 +81,7 @@ func TestCall(t *testing.T) {
 	{ // Non nil gas
 		p := NewProgram()
 		p.Call(big.NewInt(0xffff), address1, big.NewInt(1), 1, 2, 3, 4)
-		exp := "600460036002600160019f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000133761fffff1"
+		exp := "600460036002600160019f" + address1Hex + "61fffff1"
 		if got := p.Hex(); got != exp {
 			t.Errorf("got %v expected %v", got, exp)
 		}

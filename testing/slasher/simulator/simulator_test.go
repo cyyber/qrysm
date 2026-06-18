@@ -6,6 +6,7 @@ import (
 	mock "github.com/theQRL/qrysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/theQRL/qrysm/beacon-chain/db/testing"
 	mockstategen "github.com/theQRL/qrysm/beacon-chain/state/stategen/mock"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
@@ -28,7 +29,7 @@ func setupService(t *testing.T, params *Parameters) *Simulator {
 		privKeys[primitives.ValidatorIndex(valIdx)] = privKey
 		validators[valIdx] = &qrysmpb.Validator{
 			PublicKey:             privKey.PublicKey().Marshal(),
-			WithdrawalCredentials: make([]byte, 64),
+			WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 		}
 	}
 	err = beaconState.SetValidators(validators)

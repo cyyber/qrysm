@@ -198,7 +198,7 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 		Root: b2r[:],
 	}))
 
-	feeRecipient := common.BytesToAddress([]byte("a"))
+	feeRecipient := common.BytesToAddress(bytesutil.PadTo([]byte("a"), common.AddressLength))
 	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []primitives.ValidatorIndex{0}, []common.Address{
 		feeRecipient,
 	}))
@@ -230,7 +230,7 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	require.LogsDoNotContain(t, hook, "Fee recipient address from execution client is not what was expected")
 	hook.Reset()
 
-	evilRecipientAddress := common.BytesToAddress([]byte("evil"))
+	evilRecipientAddress := common.BytesToAddress(bytesutil.PadTo([]byte("evil"), common.AddressLength))
 	payload.FeeRecipient = evilRecipientAddress[:]
 	vs.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
 

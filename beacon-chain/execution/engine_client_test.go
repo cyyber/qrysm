@@ -33,6 +33,11 @@ import (
 	"github.com/theQRL/qrysm/testing/util"
 )
 
+const (
+	testExecutionAddress  = "Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	testWithdrawalAddress = "Qfedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
+)
+
 var (
 	_ = ExecutionPayloadReconstructor(&Service{})
 	_ = EngineCaller(&Service{})
@@ -183,8 +188,8 @@ func TestClient_HTTP(t *testing.T) {
 		payloadAttributes := &pb.PayloadAttributesV2{
 			Timestamp:             1,
 			PrevRandao:            []byte("random"),
-			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
-			Withdrawals:           []*pb.Withdrawal{{ValidatorIndex: 1, Amount: 1}},
+			SuggestedFeeRecipient: bytesutil.PadTo([]byte("suggestedFeeRecipient"), fieldparams.FeeRecipientLength),
+			Withdrawals:           []*pb.Withdrawal{{ValidatorIndex: 1, Address: make([]byte, fieldparams.FeeRecipientLength), Amount: 1}},
 		}
 		p, err := payloadattribute.New(payloadAttributes)
 		require.NoError(t, err)
@@ -207,8 +212,8 @@ func TestClient_HTTP(t *testing.T) {
 		payloadAttributes := &pb.PayloadAttributesV2{
 			Timestamp:             1,
 			PrevRandao:            []byte("random"),
-			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
-			Withdrawals:           []*pb.Withdrawal{{ValidatorIndex: 1, Amount: 1}},
+			SuggestedFeeRecipient: bytesutil.PadTo([]byte("suggestedFeeRecipient"), fieldparams.FeeRecipientLength),
+			Withdrawals:           []*pb.Withdrawal{{ValidatorIndex: 1, Address: make([]byte, fieldparams.FeeRecipientLength), Amount: 1}},
 		}
 		p, err := payloadattribute.New(payloadAttributes)
 		require.NoError(t, err)
@@ -231,7 +236,7 @@ func TestClient_HTTP(t *testing.T) {
 		payloadAttributes := &pb.PayloadAttributesV2{
 			Timestamp:             1,
 			PrevRandao:            []byte("random"),
-			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
+			SuggestedFeeRecipient: bytesutil.PadTo([]byte("suggestedFeeRecipient"), fieldparams.FeeRecipientLength),
 		}
 		p, err := payloadattribute.New(payloadAttributes)
 		require.NoError(t, err)
@@ -254,7 +259,7 @@ func TestClient_HTTP(t *testing.T) {
 		payloadAttributes := &pb.PayloadAttributesV2{
 			Timestamp:             1,
 			PrevRandao:            []byte("random"),
-			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
+			SuggestedFeeRecipient: bytesutil.PadTo([]byte("suggestedFeeRecipient"), fieldparams.FeeRecipientLength),
 		}
 		p, err := payloadattribute.New(payloadAttributes)
 		require.NoError(t, err)
@@ -432,7 +437,7 @@ func TestReconstructFullBlock(t *testing.T) {
 
 		jsonPayload := make(map[string]any)
 
-		to, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
+		to, err := common.NewAddressFromString(testExecutionAddress)
 		require.NoError(t, err)
 		tx := gqrltypes.NewTx(&gqrltypes.DynamicFeeTx{
 			Nonce: 0,
@@ -451,7 +456,7 @@ func TestReconstructFullBlock(t *testing.T) {
 		encodedNum := hexutil.EncodeBig(num)
 		jsonPayload["hash"] = hexutil.Encode(payload.BlockHash)
 		jsonPayload["parentHash"] = common.BytesToHash([]byte("parent"))
-		jsonPayload["miner"] = common.BytesToAddress([]byte("miner"))
+		jsonPayload["miner"] = common.BytesToAddress(bytesutil.PadTo([]byte("miner"), common.AddressLength))
 		jsonPayload["stateRoot"] = common.BytesToHash([]byte("state"))
 		jsonPayload["transactionsRoot"] = common.BytesToHash([]byte("txs"))
 		jsonPayload["receiptsRoot"] = common.BytesToHash([]byte("receipts"))
@@ -528,7 +533,7 @@ func TestReconstructFullBlockBatch(t *testing.T) {
 
 		jsonPayload := make(map[string]any)
 
-		to, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
+		to, err := common.NewAddressFromString(testExecutionAddress)
 		require.NoError(t, err)
 		tx := gqrltypes.NewTx(&gqrltypes.DynamicFeeTx{
 			Nonce: 0,
@@ -546,7 +551,7 @@ func TestReconstructFullBlockBatch(t *testing.T) {
 		encodedNum := hexutil.EncodeBig(num)
 		jsonPayload["hash"] = hexutil.Encode(payload.BlockHash)
 		jsonPayload["parentHash"] = common.BytesToHash([]byte("parent"))
-		jsonPayload["miner"] = common.BytesToAddress([]byte("miner"))
+		jsonPayload["miner"] = common.BytesToAddress(bytesutil.PadTo([]byte("miner"), common.AddressLength))
 		jsonPayload["stateRoot"] = common.BytesToHash([]byte("state"))
 		jsonPayload["transactionsRoot"] = common.BytesToHash([]byte("txs"))
 		jsonPayload["receiptsRoot"] = common.BytesToHash([]byte("receipts"))
@@ -1264,7 +1269,7 @@ func TestZond_PayloadBodiesByHash(t *testing.T) {
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
-					Address:        hexutil.MustDecodeQ("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000cf8e0d4e9587369b2301d0790347320302cc0943"),
+					Address:        hexutil.MustDecodeQ(testWithdrawalAddress),
 					Amount:         1,
 				}},
 			}
@@ -1305,7 +1310,7 @@ func TestZond_PayloadBodiesByHash(t *testing.T) {
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
-					Address:        hexutil.MustDecodeQ("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000cf8e0d4e9587369b2301d0790347320302cc0943"),
+					Address:        hexutil.MustDecodeQ(testWithdrawalAddress),
 					Amount:         1,
 				}},
 			}
@@ -1346,7 +1351,7 @@ func TestZond_PayloadBodiesByHash(t *testing.T) {
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
-					Address:        hexutil.MustDecodeQ("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000cf8e0d4e9587369b2301d0790347320302cc0943"),
+					Address:        hexutil.MustDecodeQ(testWithdrawalAddress),
 					Amount:         1,
 				}},
 			}
@@ -1355,7 +1360,7 @@ func TestZond_PayloadBodiesByHash(t *testing.T) {
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          2,
 					ValidatorIndex: 1,
-					Address:        hexutil.MustDecodeQ("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000cf8e0d4e9587369b2301d0790347320302cc0943"),
+					Address:        hexutil.MustDecodeQ(testWithdrawalAddress),
 					Amount:         1,
 				}},
 			}
@@ -1541,7 +1546,7 @@ func TestZond_PayloadBodiesByRange(t *testing.T) {
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
-					Address:        hexutil.MustDecodeQ("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000cf8e0d4e9587369b2301d0790347320302cc0943"),
+					Address:        hexutil.MustDecodeQ(testWithdrawalAddress),
 					Amount:         1,
 				}},
 			}
@@ -1582,7 +1587,7 @@ func TestZond_PayloadBodiesByRange(t *testing.T) {
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
-					Address:        hexutil.MustDecodeQ("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000cf8e0d4e9587369b2301d0790347320302cc0943"),
+					Address:        hexutil.MustDecodeQ(testWithdrawalAddress),
 					Amount:         1,
 				}},
 			}
@@ -1623,7 +1628,7 @@ func TestZond_PayloadBodiesByRange(t *testing.T) {
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          1,
 					ValidatorIndex: 1,
-					Address:        hexutil.MustDecodeQ("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000cf8e0d4e9587369b2301d0790347320302cc0943"),
+					Address:        hexutil.MustDecodeQ(testWithdrawalAddress),
 					Amount:         1,
 				}},
 			}
@@ -1632,7 +1637,7 @@ func TestZond_PayloadBodiesByRange(t *testing.T) {
 				Withdrawals: []*pb.Withdrawal{{
 					Index:          2,
 					ValidatorIndex: 1,
-					Address:        hexutil.MustDecodeQ("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000cf8e0d4e9587369b2301d0790347320302cc0943"),
+					Address:        hexutil.MustDecodeQ(testWithdrawalAddress),
 					Amount:         1,
 				}},
 			}

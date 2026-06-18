@@ -69,7 +69,7 @@ func TestAttestation_ComputeSubnetForAttestation(t *testing.T) {
 		copy(k, strconv.Itoa(i))
 		validators[i] = &qrysmpb.Validator{
 			PublicKey:             k,
-			WithdrawalCredentials: make([]byte, 64),
+			WithdrawalCredentials: make([]byte, field_params.WithdrawalCredentialsLength),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 		}
 	}

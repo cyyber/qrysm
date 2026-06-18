@@ -17,6 +17,8 @@ import (
 	"github.com/theQRL/qrysm/testing/assert"
 )
 
+const testExecutionAddress = "Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
 func FuzzForkChoiceResponse(f *testing.F) {
 	valHash := common.Hash([32]byte{0xFF, 0x01})
 	payloadID := engine.PayloadID([8]byte{0x01, 0xFF, 0xAA, 0x00, 0xEE, 0xFE, 0x00, 0x00})
@@ -129,7 +131,7 @@ func FuzzExecutionPayload(f *testing.F) {
 func FuzzExecutionBlock(f *testing.F) {
 	f.Skip("Is skipped until false positive rate can be resolved.")
 	logsBloom := [256]byte{'j', 'u', 'n', 'k'}
-	addr, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
+	addr, err := common.NewAddressFromString(testExecutionAddress)
 	assert.NoError(f, err)
 	innerData := &types.DynamicFeeTx{
 		ChainID:   big.NewInt(math.MaxInt),

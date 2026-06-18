@@ -11,6 +11,7 @@ import (
 	doublylinkedtree "github.com/theQRL/qrysm/beacon-chain/forkchoice/doubly-linked-tree"
 	slashingsmock "github.com/theQRL/qrysm/beacon-chain/operations/slashings/mock"
 	"github.com/theQRL/qrysm/beacon-chain/state/stategen"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
 	"github.com/theQRL/qrysm/encoding/bytesutil"
@@ -32,7 +33,7 @@ func TestService_processAttesterSlashings(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, 1)
 	validators[0] = &qrysmpb.Validator{
 		PublicKey:             privKey.PublicKey().Marshal(),
-		WithdrawalCredentials: make([]byte, 64),
+		WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 		EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
 	}
 	err = beaconState.SetValidators(validators)
@@ -142,7 +143,7 @@ func TestService_processProposerSlashings(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, 1)
 	validators[0] = &qrysmpb.Validator{
 		PublicKey:             privKey.PublicKey().Marshal(),
-		WithdrawalCredentials: make([]byte, 64),
+		WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 		EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
 	}
 	err = beaconState.SetValidators(validators)

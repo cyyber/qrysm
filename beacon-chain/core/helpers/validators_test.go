@@ -749,7 +749,7 @@ func TestLastActivatedValidatorIndex_OK(t *testing.T) {
 	for i := range 4 {
 		validators[i] = &qrysmpb.Validator{
 			PublicKey:             make([]byte, field_params.MLDSA87PubkeyLength),
-			WithdrawalCredentials: make([]byte, 64),
+			WithdrawalCredentials: make([]byte, field_params.WithdrawalCredentialsLength),
 			EffectiveBalance:      32 * 1e9,
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 		}

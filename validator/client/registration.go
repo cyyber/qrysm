@@ -1,11 +1,11 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/theQRL/go-qrl/common/hexutil"
 	"github.com/theQRL/qrysm/beacon-chain/builder"
 	"github.com/theQRL/qrysm/beacon-chain/core/signing"
 	"github.com/theQRL/qrysm/config/params"
@@ -98,7 +98,7 @@ func isValidatorRegistrationSame(cachedVR *qrysmpb.ValidatorRegistrationV1, newV
 	if cachedVR.GasLimit != newVR.GasLimit {
 		isSame = false
 	}
-	if hexutil.Encode(cachedVR.FeeRecipient) != hexutil.Encode(newVR.FeeRecipient) {
+	if !bytes.Equal(cachedVR.FeeRecipient, newVR.FeeRecipient) {
 		isSame = false
 	}
 	return isSame
