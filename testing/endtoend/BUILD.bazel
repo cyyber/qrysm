@@ -52,6 +52,7 @@ common_deps = [
     "//beacon-chain/operations/slashings/mock",
     "//beacon-chain/startup",
     "//beacon-chain/state/stategen/mock",
+    "//config/fieldparams",
     "//config/params",
     "//consensus-types/primitives",
     "//crypto/ml_dsa_87",
