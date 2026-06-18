@@ -3,6 +3,7 @@ load("@qrysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "precompiles",
     srcs = [
+        "address.go",
         "bigModExp.go",
         "deposit.go",
         "identity.go",
