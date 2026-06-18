@@ -25,18 +25,11 @@ func TestBuilderInvalidBlock(t *testing.T) {
 	blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockZond())
 	require.NoError(t, err)
 	builder := NewBuilder(t, st, blk)
-	builder.InvalidBlock(t, blk)
-}
 
-/*
-func TestPoWBlock(t *testing.T) {
-	st, err := util.NewBeaconStateZond()
+	invalidBlock := util.NewBeaconBlockZond()
+	invalidBlock.Block.Slot = 1
+	invalidBlock.Block.ParentRoot = []byte("unknown parent root for test----")
+	invalidBlk, err := blocks.NewSignedBeaconBlock(invalidBlock)
 	require.NoError(t, err)
-	blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockZond())
-	require.NoError(t, err)
-	builder := NewBuilder(t, st, blk)
-	builder.PoWBlock(&qrlpb.PowBlock{BlockHash: []byte{1, 2, 3}})
-
-	require.Equal(t, 1, len(builder.execMock.powBlocks))
+	builder.InvalidBlock(t, invalidBlk)
 }
-*/

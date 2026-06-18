@@ -56,7 +56,7 @@ func Test_Proposer_Setting_Cloning(t *testing.T) {
 		coption, k := clone.ProposeConfig[bytesutil.ToBytes2592(key1)]
 		require.Equal(t, true, k)
 		require.NotEqual(t, option.FeeRecipientConfig.FeeRecipient.Hex(), coption.FeeRecipientConfig.FeeRecipient.Hex())
-		require.Equal(t, "Q000000000000000000000000000000000000000000000000000000000000000000000000000000000000000050155530fce8a85ec7055a5f8b2be214b3daefd3", coption.FeeRecipientConfig.FeeRecipient.Hex())
+		require.Equal(t, "Q000000000000000000000000000000000000000000000000000000000000000000000000000000000000000050155530fCE8a85eC7055A5f8b2bE214B3DAeFd3", coption.FeeRecipientConfig.FeeRecipient.Hex())
 	})
 	t.Run("Happy Path Cloning Builder config", func(t *testing.T) {
 		clone := settings.DefaultConfig.BuilderConfig.Clone()
