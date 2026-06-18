@@ -1,8 +1,10 @@
 // Code generated - DO NOT EDIT.
 // This file is a generated binding and any manual changes will be lost.
+
 package deposit
 
 import (
+	"errors"
 	"math/big"
 	"strings"
 
@@ -16,6 +18,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var (
+	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = qrl.NotFound
@@ -23,34 +26,41 @@ var (
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
+	_ = abi.ConvertType
 )
 
-// DepositContractABI is the input ABI used to generate the binding from.
-const DepositContractABI = "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"pubkey\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"withdrawal_credentials\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"amount\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"index\",\"type\":\"bytes\"}],\"name\":\"DepositEvent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"pubkey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"withdrawal_credentials\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"deposit_data_root\",\"type\":\"bytes32\"}],\"name\":\"deposit\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"get_deposit_count\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"get_deposit_root\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}]"
+// DepositContractMetaData contains all meta data concerning the DepositContract contract.
+var DepositContractMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"pubkey\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"withdrawal_credentials\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"amount\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"index\",\"type\":\"bytes\"}],\"name\":\"DepositEvent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"pubkey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"withdrawal_credentials\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"deposit_data_root\",\"type\":\"bytes32\"}],\"name\":\"deposit\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"get_deposit_count\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"get_deposit_root\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}]",
+}
 
-// DepositContract is an auto generated Go binding around an Ethereum contract.
+// DepositContractABI is the input ABI used to generate the binding from.
+// Deprecated: Use DepositContractMetaData.ABI instead.
+var DepositContractABI = DepositContractMetaData.ABI
+
+// DepositContract is an auto generated Go binding around a QRL contract.
 type DepositContract struct {
 	DepositContractCaller     // Read-only binding to the contract
 	DepositContractTransactor // Write-only binding to the contract
 	DepositContractFilterer   // Log filterer for contract events
 }
 
-// DepositContractCaller is an auto generated read-only Go binding around an Ethereum contract.
+// DepositContractCaller is an auto generated read-only Go binding around a QRL contract.
 type DepositContractCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// DepositContractTransactor is an auto generated write-only Go binding around an Ethereum contract.
+// DepositContractTransactor is an auto generated write-only Go binding around a QRL contract.
 type DepositContractTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// DepositContractFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+// DepositContractFilterer is an auto generated log filtering Go binding around a QRL contract events.
 type DepositContractFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// DepositContractSession is an auto generated Go binding around an Ethereum contract,
+// DepositContractSession is an auto generated Go binding around a QRL contract,
 // with pre-set call and transact options.
 type DepositContractSession struct {
 	Contract     *DepositContract  // Generic contract binding to set the session for
@@ -58,31 +68,31 @@ type DepositContractSession struct {
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// DepositContractCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// DepositContractCallerSession is an auto generated read-only Go binding around a QRL contract,
 // with pre-set call options.
 type DepositContractCallerSession struct {
 	Contract *DepositContractCaller // Generic contract caller binding to set the session for
 	CallOpts bind.CallOpts          // Call options to use throughout this session
 }
 
-// DepositContractTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// DepositContractTransactorSession is an auto generated write-only Go binding around a QRL contract,
 // with pre-set transact options.
 type DepositContractTransactorSession struct {
 	Contract     *DepositContractTransactor // Generic contract transactor binding to set the session for
 	TransactOpts bind.TransactOpts          // Transaction auth options to use throughout this session
 }
 
-// DepositContractRaw is an auto generated low-level Go binding around an Ethereum contract.
+// DepositContractRaw is an auto generated low-level Go binding around a QRL contract.
 type DepositContractRaw struct {
 	Contract *DepositContract // Generic contract binding to access the raw methods on
 }
 
-// DepositContractCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+// DepositContractCallerRaw is an auto generated low-level read-only Go binding around a QRL contract.
 type DepositContractCallerRaw struct {
 	Contract *DepositContractCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// DepositContractTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+// DepositContractTransactorRaw is an auto generated low-level write-only Go binding around a QRL contract.
 type DepositContractTransactorRaw struct {
 	Contract *DepositContractTransactor // Generic write-only contract binding to access the raw methods on
 }
@@ -125,11 +135,11 @@ func NewDepositContractFilterer(address common.Address, filterer bind.ContractFi
 
 // bindDepositContract binds a generic wrapper to an already deployed contract.
 func bindDepositContract(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(DepositContractABI))
+	parsed, err := DepositContractMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and
