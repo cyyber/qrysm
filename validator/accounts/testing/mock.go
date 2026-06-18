@@ -99,6 +99,8 @@ func (_ *MockValidator) Done() {
 	panic("implement me")
 }
 
+func (_ *MockValidator) SetTicker() {}
+
 func (_ *MockValidator) GenesisTime() uint64 {
 	panic("implement me")
 }
