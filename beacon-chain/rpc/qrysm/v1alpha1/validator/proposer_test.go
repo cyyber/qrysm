@@ -309,7 +309,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 		StateGen:              stategen.New(db, doublylinkedtree.New()),
 	}
 	req := util.NewBeaconBlockZond()
-	req.Block.ProposerIndex = 35
+	req.Block.ProposerIndex = 73
 	req.Block.ParentRoot = parentRoot[:]
 	req.Block.Slot = 1
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
