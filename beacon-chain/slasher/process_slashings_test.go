@@ -203,7 +203,7 @@ func TestService_processProposerSlashings(t *testing.T) {
 		// Use valid signature for the first header, but bad one for the second.
 		signature := privKey.Sign(signingRoot[:])
 		firstBlockHeader.Signature = signature.Marshal()
-		secondBlockHeader.Signature = make([]byte, 96)
+		secondBlockHeader.Signature = make([]byte, fieldparams.MLDSA87SignatureLength)
 
 		slashings := []*qrysmpb.ProposerSlashing{
 			{
@@ -221,7 +221,7 @@ func TestService_processProposerSlashings(t *testing.T) {
 		hook := logTest.NewGlobal()
 		// Use invalid signature for the first header, but valid for the second.
 		signature := privKey.Sign(signingRoot[:])
-		firstBlockHeader.Signature = make([]byte, 96)
+		firstBlockHeader.Signature = make([]byte, fieldparams.MLDSA87SignatureLength)
 		secondBlockHeader.Signature = signature.Marshal()
 
 		slashings := []*qrysmpb.ProposerSlashing{

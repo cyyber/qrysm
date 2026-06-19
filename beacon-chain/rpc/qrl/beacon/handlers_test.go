@@ -27,6 +27,7 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/rpc/testutil"
 	"github.com/theQRL/qrysm/beacon-chain/state"
 	mockSync "github.com/theQRL/qrysm/beacon-chain/sync/initial-sync/testing"
+	field_params "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/blocks"
 	"github.com/theQRL/qrysm/consensus-types/interfaces"
@@ -1135,7 +1136,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 	b.Block.ParentRoot = bytesutil.PadTo([]byte("parentroot"), 32)
 	b.Block.Body.Graffiti = bytesutil.PadTo([]byte("graffiti"), 32)
 	sb, err := blocks.NewSignedBeaconBlock(b)
-	sb.SetSignature(bytesutil.PadTo([]byte("sig"), 96))
+	sb.SetSignature(bytesutil.PadTo([]byte("sig"), field_params.MLDSA87SignatureLength))
 	require.NoError(t, err)
 
 	mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}

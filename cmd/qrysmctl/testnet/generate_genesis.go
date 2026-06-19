@@ -151,7 +151,7 @@ var (
 // }
 
 // Represents a json object of hex string and uint64 values for
-// validators on Ethereum. This file can be generated using the official staking-deposit-cli.
+// QRL validators. This file can be generated using the staking-deposit-cli.
 type depositDataJSON struct {
 	PubKey                string `json:"pubkey"`
 	Amount                uint64 `json:"amount"`

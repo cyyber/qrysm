@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/theQRL/qrysm/beacon-chain/state"
+	field_params "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
@@ -306,7 +307,7 @@ func TestPool_InsertAttesterSlashing_SigFailsVerify_ClearPool(t *testing.T) {
 		slashings[i] = sl
 	}
 	// We mess up the signature of the second slashing.
-	badSig := make([]byte, 96)
+	badSig := make([]byte, field_params.MLDSA87SignatureLength)
 	copy(badSig, "muahaha")
 	pendingSlashings[1].attesterSlashing.Attestation_1.Signatures = [][]byte{badSig}
 	slashings[1].Attestation_1.Signatures = [][]byte{badSig}

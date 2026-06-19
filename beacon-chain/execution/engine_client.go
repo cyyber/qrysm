@@ -64,8 +64,8 @@ type ExecutionPayloadReconstructor interface {
 	) ([]interfaces.SignedBeaconBlock, error)
 }
 
-// EngineCaller defines a client that can interact with an Ethereum
-// execution node's engine service via JSON-RPC.
+// EngineCaller defines a client that can interact with an execution node's
+// engine service via JSON-RPC.
 type EngineCaller interface {
 	NewPayload(ctx context.Context, payload interfaces.ExecutionData, versionedHashes []common.Hash, parentBlockRoot *common.Hash) ([]byte, error)
 	ForkchoiceUpdated(

@@ -55,7 +55,7 @@ func ValidateSlotTargetEpoch(data *qrysmpb.AttestationData) error {
 //
 // Spec pseudocode definition:
 //
-//	def is_aggregator(state: BeaconState, slot: Slot, index: CommitteeIndex, slot_signature: BLSSignature) -> bool:
+//	def is_aggregator(state: BeaconState, slot: Slot, index: CommitteeIndex, slot_signature: MLDSA87Signature) -> bool:
 //	 committee = get_beacon_committee(state, slot, index)
 //	 modulo = max(1, len(committee) // TARGET_AGGREGATORS_PER_COMMITTEE)
 //	 return bytes_to_uint64(hash(slot_signature)[0:8]) % modulo == 0

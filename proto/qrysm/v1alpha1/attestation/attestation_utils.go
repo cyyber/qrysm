@@ -120,17 +120,17 @@ func AttestingIndices(bf bitfield.Bitfield, committee []primitives.ValidatorInde
 //
 //	def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
 //	 """
-//	 Check if ``indexed_attestation`` is not empty, has sorted and unique indices and has a valid aggregate signature.
+//	 Check if ``indexed_attestation`` is not empty, has sorted and unique indices and has valid signatures.
 //	 """
 //	 # Verify indices are sorted and unique
 //	 indices = indexed_attestation.attesting_indices
 //	 if len(indices) == 0 or not indices == sorted(set(indices)):
 //	     return False
-//	 # Verify aggregate signature
+//	 # Verify ML-DSA-87 signatures
 //	 pubkeys = [state.validators[i].pubkey for i in indices]
 //	 domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
 //	 signing_root = compute_signing_root(indexed_attestation.data, domain)
-//	 return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
+//	 return verify_mldsa87_signatures(pubkeys, signing_root, indexed_attestation.signatures)
 func VerifyIndexedAttestationSigs(ctx context.Context, indexedAtt *qrysmpb.IndexedAttestation, pubKeys []ml_dsa_87.PublicKey, domain []byte) error {
 	_, span := trace.StartSpan(ctx, "attestationutil.VerifyIndexedAttestationSigs")
 	defer span.End()
@@ -178,17 +178,13 @@ func VerifyIndexedAttestationSigs(ctx context.Context, indexedAtt *qrysmpb.Index
 //
 //	def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
 //	  """
-//	  Check if ``indexed_attestation`` is not empty, has sorted and unique indices and has a valid aggregate signature.
+//	  Check if ``indexed_attestation`` is not empty and has sorted and unique indices.
 //	  """
 //	  # Verify indices are sorted and unique
 //	  indices = indexed_attestation.attesting_indices
 //	  if len(indices) == 0 or not indices == sorted(set(indices)):
 //	      return False
-//	  # Verify aggregate signature
-//	  pubkeys = [state.validators[i].pubkey for i in indices]
-//	  domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
-//	  signing_root = compute_signing_root(indexed_attestation.data, domain)
-//	  return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
+//	  return True
 func IsValidAttestationIndices(ctx context.Context, indexedAttestation *qrysmpb.IndexedAttestation) error {
 	_, span := trace.StartSpan(ctx, "attestationutil.IsValidAttestationIndices")
 	defer span.End()
