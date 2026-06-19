@@ -356,7 +356,7 @@ var opCodeInfo = map[OpCode]opInfo{
 	ORIGIN:       {"ORIGIN", nil, []string{"transaction origin"}},
 	CALLER:       {"CALLER", nil, []string{"sender"}},
 	CALLVALUE:    {"CALLVALUE", nil, []string{"call value"}},
-	CALLDATALOAD: {"CALLDATALOAD", []string{"offset"}, []string{"calldata[offset:offset+32]"}},
+	CALLDATALOAD: {"CALLDATALOAD", []string{"offset"}, []string{"calldata[offset:offset+64]"}},
 	CALLDATASIZE: {"CALLDATASIZE", nil, []string{"size of calldata"}},
 	CALLDATACOPY: {"CALLDATACOPY", []string{"memOffset", "dataOffset", "length"}, nil},
 	CODESIZE:     {"CODESIZE", nil, []string{"size of code in this context"}},
@@ -382,7 +382,7 @@ var opCodeInfo = map[OpCode]opInfo{
 	BASEFEE:     {"BASEFEE", nil, []string{"basefee in current block"}},
 
 	POP:      {"POP", []string{"value to pop"}, nil},
-	MLOAD:    {"MLOAD", []string{"offset"}, []string{"value"}},
+	MLOAD:    {"MLOAD", []string{"offset"}, []string{"64-byte value"}},
 	MSTORE:   {"MSTORE", []string{"offset", "value"}, nil},
 	MSTORE8:  {"MSTORE8", []string{"offset", "value"}, nil},
 	SLOAD:    {"SLOAD", []string{"slot"}, []string{"value"}},

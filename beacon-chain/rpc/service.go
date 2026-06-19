@@ -174,10 +174,9 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		}
 		opts = append(opts, grpc.Creds(creds))
 	} else {
-		// TODO(now.youtrack.cloud/issue/TQ-1)
 		log.Warn("You are using an insecure gRPC server. If you are running your beacon node and " +
-			"validator on the same machines, you can ignore this message. If you want to know " +
-			"how to enable secure connections, see: https://docs.prylabs.network/docs/prysm-usage/secure-grpc")
+			"validator on the same machine, you can ignore this message. To use a secure connection, " +
+			"configure the beacon node with certificate and key flags.")
 	}
 	s.grpcServer = grpc.NewServer(opts...)
 

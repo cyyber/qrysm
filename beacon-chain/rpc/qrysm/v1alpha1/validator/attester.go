@@ -42,7 +42,7 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *qrysmpb.Attestati
 }
 
 // ProposeAttestation is a function called by an attester to vote
-// on a block via an attestation object as defined in the Ethereum Serenity specification.
+// on a block via an attestation object as defined by the QRL beacon chain.
 func (vs *Server) ProposeAttestation(ctx context.Context, att *qrysmpb.Attestation) (*qrysmpb.AttestResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "AttesterServer.ProposeAttestation")
 	defer span.End()

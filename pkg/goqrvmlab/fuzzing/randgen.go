@@ -54,7 +54,7 @@ func randInt(chanceOfZero, chanceOfSmall byte) valFunc {
 		if b[1] < chanceOfSmall {
 			return (new(big.Int)).SetBytes(b[2:3])
 		}
-		val := make([]byte, 32)
+		val := make([]byte, common.StorageValue64Length)
 		_, _ = crand.Read(val)
 		return (new(big.Int)).SetBytes(val)
 	}

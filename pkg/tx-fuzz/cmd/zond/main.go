@@ -25,8 +25,6 @@ func main() {
 	// Call coinbase
 	// 5x PUSH0, COINBASE, GAS, CALL
 	exec([]byte{0x5f, 0x5f, 0x5f, 0x5f, 0x5f, 0x41, 0x5A, 0xf1})
-	// 5x PUSH0, COINBASE, GAS, CALLCODE
-	exec([]byte{0x5f, 0x5f, 0x5f, 0x5f, 0x5f, 0x41, 0x5A, 0xf2})
 	// 5x PUSH0, COINBASE, GAS, DELEGATECALL
 	exec([]byte{0x5f, 0x5f, 0x5f, 0x5f, 0x5f, 0x41, 0x5A, 0xf4})
 	// 5x PUSH0, COINBASE, GAS, STATICCALL
@@ -64,12 +62,12 @@ func main() {
 	// PUSH4 size, PUSH0, PUSH0, CREATE
 	for _, size := range sizes {
 		initcode := pushSize(size)
-		exec(append(initcode, []byte{0x57, 0x57, 0xF0}...))
+		exec(append(initcode, []byte{0x5f, 0x5f, 0xF0}...))
 	}
 	// PUSH4 size, PUSH0, PUSH0, CREATE2
 	for _, size := range sizes {
 		initcode := pushSize(size)
-		exec(append(initcode, []byte{0x57, 0x57, 0xF5}...))
+		exec(append(initcode, []byte{0x5f, 0x5f, 0xF5}...))
 	}
 }
 
@@ -105,7 +103,7 @@ func exec(data []byte) {
 
 // PUSH4 size
 func pushSize(size int) []byte {
-	code := []byte{63}
+	code := []byte{0x63}
 	sizeArr := make([]byte, 4)
 	binary.BigEndian.PutUint32(sizeArr, uint32(size))
 	code = append(code, sizeArr...)

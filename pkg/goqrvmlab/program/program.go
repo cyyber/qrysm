@@ -26,6 +26,8 @@ import (
 	"github.com/theQRL/qrysm/pkg/goqrvmlab/ops"
 )
 
+const vmWordSize = common.StorageValue64Length
+
 type Program struct {
 	code []byte
 }
@@ -209,9 +211,9 @@ func (p *Program) InputAddressToStack(inputOffset uint32) {
 // MStore stores the provided data (into the memory area starting at memStart)
 func (p *Program) Mstore(data []byte, memStart uint32) {
 	var idx = 0
-	// We need to store it in chunks of 32 bytes
-	for ; idx+32 <= len(data); idx += 32 {
-		chunk := data[idx : idx+32]
+	// MSTORE writes one full VM word.
+	for ; idx+vmWordSize <= len(data); idx += vmWordSize {
+		chunk := data[idx : idx+vmWordSize]
 		// push the value
 		p.Push(chunk)
 		// push the memory index
@@ -245,12 +247,11 @@ func (p *Program) pushBytes(valBytes []byte) {
 }
 
 // MemToStorage copies the given memory area into SSTORE slots,
-// It expects data to be aligned to 32 byte, and does not zero out
+// It expects data to be aligned to the VM word size, and does not zero out
 // remainders if some data is not
-// I.e, if given a 1-byte area, it will still copy the full 32 bytes to storage
+// I.e, if given a 1-byte area, it will still copy the full VM word to storage
 func (p *Program) MemToStorage(memStart, memSize, startSlot int) {
-	// We need to store it in chunks of 32 bytes
-	for idx := memStart; idx < (memStart + memSize); idx += 32 {
+	for idx := memStart; idx < (memStart + memSize); idx += vmWordSize {
 		dataStart := idx
 		// Mload the chunk
 		p.Push(dataStart)
@@ -263,7 +264,7 @@ func (p *Program) MemToStorage(memStart, memSize, startSlot int) {
 }
 
 // Sstore stores the given byte array to the given slot.
-// OBS! Does not verify that the value indeed fits into 32 bytes
+// OBS! Does not verify that the value indeed fits into one VM word
 // If it does not, it will panic later on via pushBig
 func (p *Program) Sstore(slot any, value any) {
 	p.Push(value)

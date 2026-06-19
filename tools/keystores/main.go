@@ -1,5 +1,5 @@
-// This tool allows for simple encrypting and decrypting of EIP-2335 compliant, BLS12-381
-// keystore.json files which as password protected. This is helpful in development to inspect
+// This tool allows for simple encrypting and decrypting of EIP-2335-style ML-DSA-87
+// keystore.json files which are password protected. This is helpful in development to inspect
 // the contents of keystores created by QRL validator wallets or to easily produce keystores from a
 // specified secret to move them around in a standard format between QRL consensus clients.
 package main

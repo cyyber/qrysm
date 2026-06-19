@@ -6,9 +6,7 @@ datadir: /var/lib/qrysm/beacon
 # http-web3provider: Execution API endpoint, eg. http://localhost:8545 for a local gqrl service on the default port
 http-web3provider: http://localhost:8545
 
-# TODO(now.youtrack.cloud/issue/TQ-1)
 # Optional tuning parameters
-# For full list, see https://docs.prylabs.network/docs/prysm-usage/parameters
 
 # p2p-max-peers: The max number of p2p peers to maintain. Default: 45
 # block-batch-limit: The amount of blocks the local peer is bounded to request and respond to in a batch. Default: 64

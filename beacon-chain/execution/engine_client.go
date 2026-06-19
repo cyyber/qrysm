@@ -577,12 +577,10 @@ func handleRPCError(err error) error {
 	}
 	e, ok := err.(rpc.Error)
 	if !ok {
-		// TODO(now.youtrack.cloud/issue/TQ-1)
 		if strings.Contains(err.Error(), "401 Unauthorized") {
 			log.Error("HTTP authentication to your execution client is not working. Please ensure " +
 				"you are setting a correct value for the --jwt-secret flag in Qrysm, or use an IPC connection if on " +
-				"the same machine. Please see our documentation for more information on authenticating connections " +
-				"here https://docs.prylabs.network/docs/execution-node/authentication")
+				"the same machine.")
 			return fmt.Errorf("could not authenticate connection to execution client: %v", err)
 		}
 		return errors.Wrapf(err, "got an unexpected error in JSON-RPC response")

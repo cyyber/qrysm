@@ -1,5 +1,5 @@
-// Package proxy provides a proxy middleware for engine API requests between Ethereum
-// consensus clients and execution clients accordingly. Allows for customizing
+// Package proxy provides middleware for engine API requests between QRL
+// consensus clients and execution clients. Allows for customizing
 // in-flight requests or responses using custom triggers. Useful for end-to-end testing.
 package proxy
 
