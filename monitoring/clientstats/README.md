@@ -25,8 +25,8 @@ The request JSON object is a non-nested object with the following properties. Th
 |sync_execution_fallback_configured      |bool         |beaconchain          |prom: execution_chain_sync_execution_fallback_configured                             |Whether or not the beacon chain node has a fallback execution endpoint configured.                                                                                           |
 |sync_execution_fallback_connected       |bool         |beaconchain          |prom: execution_chain_sync_execution_fallback_connected                              |Whether or not the beacon chain node is connected to a fallback execution endpoint. A true value indicates a failed or interrupted connection with the primary execution endpoint.|
 |slasher_active                     |bool         |beaconchain          |(coming soon)                                                            |Whether or not slasher functionality is enabled.                                                                                                                        |
-|sync_eth2_fallback_configured      |bool         |validator            |(currently unsupported)                                                  |Whether or not the process has a fallback eth2 endpoint configured                                                                                                      |
-|sync_eth2_fallback_connected       |bool         |validator            |(currently unsupported)                                                  |Weather or not the process has connected to the failover eth2 endpoint. A true value indicates a failed or interrupted connection with the primary eth2 endpoint.       |
+|sync_consensus_fallback_configured |bool         |validator            |(currently unsupported)                                                  |Whether or not the process has a fallback consensus endpoint configured                                                                                                  |
+|sync_consensus_fallback_connected  |bool         |validator            |(currently unsupported)                                                  |Whether or not the process has connected to the failover consensus endpoint. A true value indicates a failed or interrupted connection with the primary consensus endpoint.|
 |validator_total                    |int          |validator            |prom: validator_statuses (count of all peers)                            |The number of validating keys in use.                                                                                                                                   |
 |validator_active                   |int          |validator            |prom: validator_statuses (count of peers w/ "ACTIVE" status label)       |The number of validator keys that are currently active.                                                                                                                 |
 |cpu_cores                          |int          |system               |(currently unsupported)                                                  |The number of CPU cores available on the host machine                                                                                                                   |
@@ -68,8 +68,8 @@ POST https://beaconcha.in/api/v1/stats/$API_KEY/$MACHINE_NAME
    "client_name": "lighthouse",
    "client_version": "1.1.2",
    "client_build": 12,
-   "sync_eth2_fallback_configured": false,
-   "sync_eth2_fallback_connected": false,
+   "sync_consensus_fallback_configured": false,
+   "sync_consensus_fallback_connected": false,
    "validator_total": 3,
    "validator_active": 2
 }
@@ -80,18 +80,18 @@ POST https://beaconcha.in/api/v1/stats/$API_KEY/$MACHINE_NAME
 ```json
 [
    {
-  	"version":1,
-  	"timestamp":1618835497239,
-  	"process":"beaconnode",
-  	"cpu_process_seconds_total":6925,
-  	"memory_process_bytes":1175138304,
-  	"client_name":"lighthouse",
-  	"client_version":"1.1.3",
-  	"client_build":42,
-  	"sync_eth2_fallback_configured":false,
-  	"sync_eth2_fallback_connected":false,
-  	"validator_active":1,
-  	"validator_total":1
+      "version":1,
+      "timestamp":1618835497239,
+      "process":"beaconnode",
+      "cpu_process_seconds_total":6925,
+      "memory_process_bytes":1175138304,
+      "client_name":"lighthouse",
+      "client_version":"1.1.3",
+      "client_build":42,
+      "sync_consensus_fallback_configured":false,
+      "sync_consensus_fallback_connected":false,
+      "validator_active":1,
+      "validator_total":1
    },
    {
   	"version":1,

@@ -29,9 +29,8 @@ var (
 )
 
 var (
-	port = flag.Int("port", 9090, "Port to serve /metrics")
-	// TODO(now.youtrack.cloud/issue/TQ-1)
-	web3URL         = flag.String("web3-provider", "https://goerli.prylabs.net", "Web3 URL to access information about execution")
+	port            = flag.Int("port", 9090, "Port to serve /metrics")
+	web3URL         = flag.String("web3-provider", "http://localhost:8545", "Gqrl HTTP RPC URL used to read execution balances")
 	prefix          = flag.String("prefix", "", "Metrics prefix.")
 	addressFilePath = flag.String("addresses", "", "File path to addresses text file.")
 )
@@ -73,7 +72,7 @@ func main() {
 
 	block := CurrentBlock()
 
-	fmt.Printf("ETHexporter has started on port %v using web3 server: %v at block #%v\n", *port, *web3URL, block)
+	fmt.Printf("QRL exporter has started on port %v using gqrl server: %v at block #%v\n", *port, *web3URL, block)
 
 	http.HandleFunc("/metrics", MetricsHTTP)
 	http.HandleFunc("/reload", ReloadHTTP)

@@ -102,8 +102,8 @@ service BeaconNodeValidator {
     // The request can specify either a validator's public key or validator index.
     //
     // The status response can be one of the following:
-    //	DEPOSITED - validator's deposit has been recognized by QRL's execution layer , not yet recognized by Ethereum.
-    //	PENDING - validator is in Ethereum's activation queue.
+    //	DEPOSITED - validator's deposit has been recognized by QRL's execution layer, but the validator is not yet active.
+    //	PENDING - validator is in QRL's activation queue.
     //	ACTIVE - validator is active.
     //	EXITING - validator has initiated an an exit request, or has dropped below the ejection balance and is being kicked out.
     //	EXITED - validator is no longer validating.
@@ -595,7 +595,7 @@ message Validator {
     // 2592 byte ML-DSA-87 public key used for the validator's activities.
     bytes public_key = 1 [(theqrl.qrl.ext.ssz_size) = "2592", (theqrl.qrl.ext.spec_name) = "pubkey"];
 
-    // 64 byte withdrawal execution address.
+    // 64 byte withdrawal credentials.
     bytes withdrawal_credentials = 2 [(theqrl.qrl.ext.ssz_size) = "64"];
 
     // The validators current effective balance in shor.
@@ -605,12 +605,12 @@ message Validator {
     bool slashed = 4;
 
     // Epoch when the validator became eligible for activation. This field may
-    // be zero if the validator was present in the Ethereum proof of stake genesis. This
+    // be zero if the validator was present in the QRL proof of stake genesis. This
     // field is FAR_FUTURE_EPOCH if the validator has not been activated.
     uint64 activation_eligibility_epoch = 5 [(theqrl.qrl.ext.cast_type) = "github.com/theQRL/qrysm/consensus-types/primitives.Epoch"];
 
     // Epoch when the validator was activated. This field may be zero if the
-    // validator was present in the Ethereum proof of stake genesis. This field is
+    // validator was present in the QRL proof of stake genesis. This field is
     // FAR_FUTURE_EPOCH if the validator has not been activated.
     uint64 activation_epoch = 6 [(theqrl.qrl.ext.cast_type) = "github.com/theQRL/qrysm/consensus-types/primitives.Epoch"];
 

@@ -20,11 +20,14 @@ import (
 
 var (
 	beacon  = flag.String("beacon", "127.0.0.1:4000", "gRPC address of the Qrysm beacon node")
-	genesis = flag.Uint64("genesis", 1606824023, "Genesis time. mainnet=1606824023, prater=1616508000")
+	genesis = flag.Uint64("genesis", 0, "QRL genesis time (required)")
 )
 
 func main() {
 	flag.Parse()
+	if *genesis == 0 {
+		panic("--genesis is required")
+	}
 	ctx := context.Background()
 
 	cc, err := grpc.DialContext(ctx, *beacon, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(math.MaxInt64)))

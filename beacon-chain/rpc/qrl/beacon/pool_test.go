@@ -9,6 +9,7 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/core/transition"
 	slashingsmock "github.com/theQRL/qrysm/beacon-chain/operations/slashings/mock"
 	p2pMock "github.com/theQRL/qrysm/beacon-chain/p2p/testing"
+	field_params "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
@@ -42,7 +43,7 @@ func TestListPoolAttesterSlashings(t *testing.T) {
 					Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
 				},
 			},
-			Signatures: [][]byte{bytesutil.PadTo([]byte("signature1"), 4627)},
+			Signatures: [][]byte{bytesutil.PadTo([]byte("signature1"), field_params.MLDSA87SignatureLength)},
 		},
 		Attestation_2: &qrysmpb.IndexedAttestation{
 			AttestingIndices: []uint64{2, 20},
@@ -59,7 +60,7 @@ func TestListPoolAttesterSlashings(t *testing.T) {
 					Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
 				},
 			},
-			Signatures: [][]byte{bytesutil.PadTo([]byte("signature2"), 4627)},
+			Signatures: [][]byte{bytesutil.PadTo([]byte("signature2"), field_params.MLDSA87SignatureLength)},
 		},
 	}
 	slashing2 := &qrysmpb.AttesterSlashing{
@@ -78,7 +79,7 @@ func TestListPoolAttesterSlashings(t *testing.T) {
 					Root:  bytesutil.PadTo([]byte("targetroot3"), 32),
 				},
 			},
-			Signatures: [][]byte{bytesutil.PadTo([]byte("signature3"), 4627)},
+			Signatures: [][]byte{bytesutil.PadTo([]byte("signature3"), field_params.MLDSA87SignatureLength)},
 		},
 		Attestation_2: &qrysmpb.IndexedAttestation{
 			AttestingIndices: []uint64{4, 40},
@@ -95,7 +96,7 @@ func TestListPoolAttesterSlashings(t *testing.T) {
 					Root:  bytesutil.PadTo([]byte("targetroot4"), 32),
 				},
 			},
-			Signatures: [][]byte{bytesutil.PadTo([]byte("signature4"), 4627)},
+			Signatures: [][]byte{bytesutil.PadTo([]byte("signature4"), field_params.MLDSA87SignatureLength)},
 		},
 	}
 
@@ -123,7 +124,7 @@ func TestListPoolProposerSlashings(t *testing.T) {
 				StateRoot:     bytesutil.PadTo([]byte("stateroot1"), 32),
 				BodyRoot:      bytesutil.PadTo([]byte("bodyroot1"), 32),
 			},
-			Signature: bytesutil.PadTo([]byte("signature1"), 96),
+			Signature: bytesutil.PadTo([]byte("signature1"), field_params.MLDSA87SignatureLength),
 		},
 		Header_2: &qrysmpb.SignedBeaconBlockHeader{
 			Header: &qrysmpb.BeaconBlockHeader{
@@ -133,7 +134,7 @@ func TestListPoolProposerSlashings(t *testing.T) {
 				StateRoot:     bytesutil.PadTo([]byte("stateroot2"), 32),
 				BodyRoot:      bytesutil.PadTo([]byte("bodyroot2"), 32),
 			},
-			Signature: bytesutil.PadTo([]byte("signature2"), 96),
+			Signature: bytesutil.PadTo([]byte("signature2"), field_params.MLDSA87SignatureLength),
 		},
 	}
 	slashing2 := &qrysmpb.ProposerSlashing{
@@ -145,7 +146,7 @@ func TestListPoolProposerSlashings(t *testing.T) {
 				StateRoot:     bytesutil.PadTo([]byte("stateroot3"), 32),
 				BodyRoot:      bytesutil.PadTo([]byte("bodyroot3"), 32),
 			},
-			Signature: bytesutil.PadTo([]byte("signature3"), 96),
+			Signature: bytesutil.PadTo([]byte("signature3"), field_params.MLDSA87SignatureLength),
 		},
 		Header_2: &qrysmpb.SignedBeaconBlockHeader{
 			Header: &qrysmpb.BeaconBlockHeader{
@@ -155,7 +156,7 @@ func TestListPoolProposerSlashings(t *testing.T) {
 				StateRoot:     bytesutil.PadTo([]byte("stateroot4"), 32),
 				BodyRoot:      bytesutil.PadTo([]byte("bodyroot4"), 32),
 			},
-			Signature: bytesutil.PadTo([]byte("signature4"), 96),
+			Signature: bytesutil.PadTo([]byte("signature4"), field_params.MLDSA87SignatureLength),
 		},
 	}
 
@@ -204,7 +205,7 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 					Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
 				},
 			},
-			Signatures: [][]byte{make([]byte, 4627)},
+			Signatures: [][]byte{make([]byte, field_params.MLDSA87SignatureLength)},
 		},
 		Attestation_2: &qrlpb.IndexedAttestation{
 			AttestingIndices: []uint64{0},
@@ -221,7 +222,7 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 					Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
 				},
 			},
-			Signatures: [][]byte{make([]byte, 4627)},
+			Signatures: [][]byte{make([]byte, field_params.MLDSA87SignatureLength)},
 		},
 	}
 
@@ -277,7 +278,7 @@ func TestSubmitAttesterSlashing_AcrossFork(t *testing.T) {
 					Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
 				},
 			},
-			Signatures: [][]byte{make([]byte, 96)},
+			Signatures: [][]byte{make([]byte, field_params.MLDSA87SignatureLength)},
 		},
 		Attestation_2: &qrlpb.IndexedAttestation{
 			AttestingIndices: []uint64{0},
@@ -294,7 +295,7 @@ func TestSubmitAttesterSlashing_AcrossFork(t *testing.T) {
 					Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
 				},
 			},
-			Signatures: [][]byte{make([]byte, 4627)},
+			Signatures: [][]byte{make([]byte, field_params.MLDSA87SignatureLength)},
 		},
 	}
 
@@ -352,7 +353,7 @@ func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
 				Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
 			},
 		},
-		Signatures: [][]byte{make([]byte, 96)},
+		Signatures: [][]byte{make([]byte, field_params.MLDSA87SignatureLength)},
 	}
 
 	slashing := &qrlpb.AttesterSlashing{
@@ -399,7 +400,7 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 				StateRoot:     bytesutil.PadTo([]byte("stateroot1"), 32),
 				BodyRoot:      bytesutil.PadTo([]byte("bodyroot1"), 32),
 			},
-			Signature: make([]byte, 96),
+			Signature: make([]byte, field_params.MLDSA87SignatureLength),
 		},
 		SignedHeader_2: &qrlpb.SignedBeaconBlockHeader{
 			Message: &qrlpb.BeaconBlockHeader{
@@ -409,7 +410,7 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 				StateRoot:     bytesutil.PadTo([]byte("stateroot2"), 32),
 				BodyRoot:      bytesutil.PadTo([]byte("bodyroot2"), 32),
 			},
-			Signature: make([]byte, 96),
+			Signature: make([]byte, field_params.MLDSA87SignatureLength),
 		},
 	}
 
@@ -464,7 +465,7 @@ func TestSubmitProposerSlashing_AcrossFork(t *testing.T) {
 				StateRoot:     bytesutil.PadTo([]byte("stateroot1"), 32),
 				BodyRoot:      bytesutil.PadTo([]byte("bodyroot1"), 32),
 			},
-			Signature: make([]byte, 96),
+			Signature: make([]byte, field_params.MLDSA87SignatureLength),
 		},
 		SignedHeader_2: &qrlpb.SignedBeaconBlockHeader{
 			Message: &qrlpb.BeaconBlockHeader{
@@ -474,7 +475,7 @@ func TestSubmitProposerSlashing_AcrossFork(t *testing.T) {
 				StateRoot:     bytesutil.PadTo([]byte("stateroot2"), 32),
 				BodyRoot:      bytesutil.PadTo([]byte("bodyroot2"), 32),
 			},
-			Signature: make([]byte, 96),
+			Signature: make([]byte, field_params.MLDSA87SignatureLength),
 		},
 	}
 
@@ -531,7 +532,7 @@ func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
 			StateRoot:     bytesutil.PadTo([]byte("stateroot1"), 32),
 			BodyRoot:      bytesutil.PadTo([]byte("bodyroot1"), 32),
 		},
-		Signature: make([]byte, 96),
+		Signature: make([]byte, field_params.MLDSA87SignatureLength),
 	}
 
 	slashing := &qrlpb.ProposerSlashing{

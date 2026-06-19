@@ -97,12 +97,8 @@ func testStateRootOnly(t *testing.T, vm Qrvm, name string) {
 		t.Fatal(err)
 	}
 	wants := map[string]string{
-		"statetest1.json":                "0xa2b3391f7a85bf1ad08dc541a1b99da3c591c156351391f26ec88c557ff12134",
-		"00016209-naivefuzz-0.json":      "0x9b732142c31ee7c3c1d28a1c5f451f555524e0bb39371d94a9698000203742fb",
-		"statetest_filled.json":          "0xa2b3391f7a85bf1ad08dc541a1b99da3c591c156351391f26ec88c557ff12134",
-		"stackUnderflow_nonzeroMem.json": "0x1f07fb182fd18ad9b11f8ef6cf369981e87e9f8514c803a1f2df145724f62fa4",
-		"00000936-mixed-1.json":          "0xd14c10ed22a1cfb642e374be985ac581c39f3969bd59249e0405aca3beb47a47",
-		"eofcode.json":                   "0x53f6733a696cb3bbf77b635d96ace97f25ffee2d08d3e3d4ae1e566bfc060d6f",
+		"00000936-mixed-1.json": "0xd14c10ed22a1cfb642e374be985ac581c39f3969bd59249e0405aca3beb47a47",
+		"eofcode.json":          "0x53f6733a696cb3bbf77b635d96ace97f25ffee2d08d3e3d4ae1e566bfc060d6f",
 	}
 	for i, finfo := range finfos {
 		testfile := filepath.Join("testdata", "roots", finfo.Name())

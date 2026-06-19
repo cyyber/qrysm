@@ -11,6 +11,7 @@ import (
 	dbTest "github.com/theQRL/qrysm/beacon-chain/db/testing"
 	"github.com/theQRL/qrysm/beacon-chain/rpc/testutil"
 	"github.com/theQRL/qrysm/beacon-chain/state"
+	field_params "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/encoding/bytesutil"
@@ -43,7 +44,7 @@ func Test_currentCommitteeIndicesFromState(t *testing.T) {
 		require.DeepEqual(t, wantedCommittee, committee.Pubkeys)
 	})
 	t.Run("validator in committee not found in state", func(t *testing.T) {
-		wantedCommittee[0] = bytesutil.PadTo([]byte("fakepubkey"), 48)
+		wantedCommittee[0] = bytesutil.PadTo([]byte("fakepubkey"), field_params.MLDSA87PubkeyLength)
 		require.NoError(t, st.SetCurrentSyncCommittee(&qrysmpb.SyncCommittee{
 			Pubkeys: wantedCommittee,
 		}))
@@ -72,7 +73,7 @@ func Test_nextCommitteeIndicesFromState(t *testing.T) {
 		require.DeepEqual(t, wantedCommittee, committee.Pubkeys)
 	})
 	t.Run("validator in committee not found in state", func(t *testing.T) {
-		wantedCommittee[0] = bytesutil.PadTo([]byte("fakepubkey"), 48)
+		wantedCommittee[0] = bytesutil.PadTo([]byte("fakepubkey"), field_params.MLDSA87PubkeyLength)
 		require.NoError(t, st.SetNextSyncCommittee(&qrysmpb.SyncCommittee{
 			Pubkeys: wantedCommittee,
 		}))
@@ -117,7 +118,7 @@ func Test_extractSyncSubcommittees(t *testing.T) {
 		}
 	})
 	t.Run("validator in subcommittee not found in state", func(t *testing.T) {
-		syncCommittee[0] = bytesutil.PadTo([]byte("fakepubkey"), 48)
+		syncCommittee[0] = bytesutil.PadTo([]byte("fakepubkey"), field_params.MLDSA87PubkeyLength)
 		require.NoError(t, st.SetCurrentSyncCommittee(&qrysmpb.SyncCommittee{
 			Pubkeys: syncCommittee,
 		}))
