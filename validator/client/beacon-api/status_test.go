@@ -15,10 +15,23 @@ import (
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/validator/client/beacon-api/mock"
+	test_helpers "github.com/theQRL/qrysm/validator/client/beacon-api/test-helpers"
+)
+
+var (
+	statusPubKey1 = test_helpers.FillEncodedPubkey(1)
+	statusPubKey2 = test_helpers.FillEncodedPubkey(2)
+	statusPubKey3 = test_helpers.FillEncodedPubkey(3)
+	statusPubKey4 = test_helpers.FillEncodedPubkey(4)
+	statusPubKey5 = test_helpers.FillEncodedPubkey(5)
+	statusPubKey6 = test_helpers.FillEncodedPubkey(6)
+	statusPubKey7 = test_helpers.FillEncodedPubkey(7)
+	statusPubKey8 = test_helpers.FillEncodedPubkey(8)
+	statusPubKey9 = test_helpers.FillEncodedPubkey(9)
 )
 
 func TestValidatorStatus_Nominal(t *testing.T) {
-	const stringValidatorPubKey = "0x8000a6c975761b488bdb0dfba4ed37c0d97d6e6b968562ef5c84aa9a5dfb92d8e309195004e97709077723739bf04463"
+	stringValidatorPubKey := statusPubKey2
 	validatorPubKey, err := hexutil.Decode(stringValidatorPubKey)
 	require.NoError(t, err)
 
@@ -100,8 +113,8 @@ func TestValidatorStatus_Error(t *testing.T) {
 
 func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 	stringValidatorsPubKey := []string{
-		"0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13", // existing
-		"0x8000a6c975761b488bdb0dfba4ed37c0d97d6e6b968562ef5c84aa9a5dfb92d8e309195004e97709077723739bf04463", // existing
+		statusPubKey1, // existing
+		statusPubKey2, // existing
 	}
 
 	ctx := context.Background()
@@ -130,7 +143,7 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 					Index:  "11111",
 					Status: "active_ongoing",
 					Validator: &beacon.Validator{
-						Pubkey:          "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13",
+						Pubkey:          statusPubKey1,
 						ActivationEpoch: "12",
 					},
 				},
@@ -138,7 +151,7 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 					Index:  "22222",
 					Status: "active_ongoing",
 					Validator: &beacon.Validator{
-						Pubkey:          "0x8000a6c975761b488bdb0dfba4ed37c0d97d6e6b968562ef5c84aa9a5dfb92d8e309195004e97709077723739bf04463",
+						Pubkey:          statusPubKey2,
 						ActivationEpoch: "34",
 					},
 				},
@@ -202,12 +215,12 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 
 	ctx := context.Background()
 	stringValidatorsPubKey := []string{
-		"0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13", // existing
-		"0x8000a6c975761b488bdb0dfba4ed37c0d97d6e6b968562ef5c84aa9a5dfb92d8e309195004e97709077723739bf04463", // existing
-		"0x80000e851c0f53c3246ff726d7ff7766661ca5e12a07c45c114d208d54f0f8233d4380b2e9aff759d69795d1df905526", // NOT existing
-		"0x8000ab56b051f9d8f31c687528c6e91c9b98e4c3a241e752f9ccfbea7c5a7fbbd272bdf2c0a7e52ce7e0b57693df364c", // existing
-		"0x8000b3e51de7e2e319b23a42d468dc8e63cd61daa5c4609cf2d800026d92706d1240414e155057bdc35e0574bba3ad80", // NOT existing
-		"0x800010c20716ef4264a6d93b3873a008ece58fb9312ac2cc3b0ccc40aedb050f2038281e6a92242a35476af9903c7919", // existing
+		statusPubKey1, // existing
+		statusPubKey2, // existing
+		statusPubKey3, // NOT existing
+		statusPubKey4, // existing
+		statusPubKey5, // NOT existing
+		statusPubKey6, // existing
 	}
 
 	validatorsPubKey := make([][]byte, len(stringValidatorsPubKey))
@@ -223,7 +236,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		33333, // existing
 	}
 
-	extraStringValidatorKey := "0x80003eb1e78ffdea6c878026b7074f84aaa16536c8e1960a652e817c848e7ccb051087f837b7d2bb6773cd9705601ede"
+	extraStringValidatorKey := statusPubKey7
 
 	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
 
@@ -239,7 +252,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 					Index:  "11111",
 					Status: "active_ongoing",
 					Validator: &beacon.Validator{
-						Pubkey:          "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13",
+						Pubkey:          statusPubKey1,
 						ActivationEpoch: "12",
 					},
 				},
@@ -247,7 +260,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 					Index:  "22222",
 					Status: "active_exiting",
 					Validator: &beacon.Validator{
-						Pubkey:          "0x800010c20716ef4264a6d93b3873a008ece58fb9312ac2cc3b0ccc40aedb050f2038281e6a92242a35476af9903c7919",
+						Pubkey:          statusPubKey6,
 						ActivationEpoch: "34",
 					},
 				},
@@ -263,7 +276,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 					Index:  "40000",
 					Status: "pending_queued",
 					Validator: &beacon.Validator{
-						Pubkey:          "0x8000a6c975761b488bdb0dfba4ed37c0d97d6e6b968562ef5c84aa9a5dfb92d8e309195004e97709077723739bf04463",
+						Pubkey:          statusPubKey2,
 						ActivationEpoch: fmt.Sprintf("%d", params.BeaconConfig().FarFutureEpoch),
 					},
 				},
@@ -271,7 +284,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 					Index:  "50000",
 					Status: "pending_queued",
 					Validator: &beacon.Validator{
-						Pubkey:          "0x8000ab56b051f9d8f31c687528c6e91c9b98e4c3a241e752f9ccfbea7c5a7fbbd272bdf2c0a7e52ce7e0b57693df364c",
+						Pubkey:          statusPubKey4,
 						ActivationEpoch: fmt.Sprintf("%d", params.BeaconConfig().FarFutureEpoch),
 					},
 				},
@@ -292,7 +305,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 					Index:  "35000",
 					Status: "active_ongoing",
 					Validator: &beacon.Validator{
-						Pubkey:          "0x8000ab56b051f9d8f31c687528c6e91c9b98e4c3a241e752f9ccfbea7c5a7fbbd272bdf2c0a7e52ce7e0b57693df364d",
+						Pubkey:          statusPubKey8,
 						ActivationEpoch: "56",
 					},
 				},
@@ -300,7 +313,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 					Index:  "39000",
 					Status: "active_ongoing",
 					Validator: &beacon.Validator{
-						Pubkey:          "0x8000ab56b051f9d8f31c687528c6e91c9b98e4c3a241e752f9ccfbea7c5a7fbbd272bdf2c0a7e52ce7e0b57693df364e",
+						Pubkey:          statusPubKey9,
 						ActivationEpoch: "56",
 					},
 				},
@@ -310,13 +323,13 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 	).Times(1)
 
 	wantedStringValidatorsPubkey := []string{
-		"0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13", // existing
-		"0x800010c20716ef4264a6d93b3873a008ece58fb9312ac2cc3b0ccc40aedb050f2038281e6a92242a35476af9903c7919", // existing,
+		statusPubKey1,           // existing
+		statusPubKey6,           // existing,
 		extraStringValidatorKey, // existing,
-		"0x8000a6c975761b488bdb0dfba4ed37c0d97d6e6b968562ef5c84aa9a5dfb92d8e309195004e97709077723739bf04463", // existing,
-		"0x8000ab56b051f9d8f31c687528c6e91c9b98e4c3a241e752f9ccfbea7c5a7fbbd272bdf2c0a7e52ce7e0b57693df364c", // existing
-		"0x80000e851c0f53c3246ff726d7ff7766661ca5e12a07c45c114d208d54f0f8233d4380b2e9aff759d69795d1df905526", // NOT existing
-		"0x8000b3e51de7e2e319b23a42d468dc8e63cd61daa5c4609cf2d800026d92706d1240414e155057bdc35e0574bba3ad80", // NOT existing
+		statusPubKey2,           // existing,
+		statusPubKey4,           // existing
+		statusPubKey3,           // NOT existing
+		statusPubKey5,           // NOT existing
 	}
 
 	wantedValidatorsPubKey := make([][]byte, len(wantedStringValidatorsPubkey))
@@ -383,7 +396,7 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	const stringValidatorPubKey = "0x8000a6c975761b488bdb0dfba4ed37c0d97d6e6b968562ef5c84aa9a5dfb92d8e309195004e97709077723739bf04463"
+	stringValidatorPubKey := statusPubKey2
 	validatorPubKey, err := hexutil.Decode(stringValidatorPubKey)
 	require.NoError(t, err)
 
@@ -402,7 +415,7 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 					Index:  "40000",
 					Status: "pending_queued",
 					Validator: &beacon.Validator{
-						Pubkey:          "0x8000a6c975761b488bdb0dfba4ed37c0d97d6e6b968562ef5c84aa9a5dfb92d8e309195004e97709077723739bf04463",
+						Pubkey:          stringValidatorPubKey,
 						ActivationEpoch: fmt.Sprintf("%d", params.BeaconConfig().FarFutureEpoch),
 					},
 				},
@@ -455,7 +468,7 @@ type getStateValidatorsInterface struct {
 }
 
 func TestValidatorStatusResponse_InvalidData(t *testing.T) {
-	stringPubKey := "0x8000a6c975761b488bdb0dfba4ed37c0d97d6e6b968562ef5c84aa9a5dfb92d8e309195004e97709077723739bf04463"
+	stringPubKey := statusPubKey2
 	pubKey, err := hexutil.Decode(stringPubKey)
 	require.NoError(t, err)
 

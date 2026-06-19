@@ -2034,11 +2034,13 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 }
 
 func getPubkeyFromString(t *testing.T, stringPubkey string) [field_params.MLDSA87PubkeyLength]byte {
-	pubkeyTemp, err := hexutil.Decode(stringPubkey)
+	pubkeyPattern, err := hexutil.Decode(stringPubkey)
 	require.NoError(t, err)
 
 	var pubkey [field_params.MLDSA87PubkeyLength]byte
-	copy(pubkey[:], pubkeyTemp)
+	for i := range pubkey {
+		pubkey[i] = pubkeyPattern[i%len(pubkeyPattern)]
+	}
 
 	return pubkey
 }

@@ -14,21 +14,20 @@ import (
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/validator/client/beacon-api/mock"
+	test_helpers "github.com/theQRL/qrysm/validator/client/beacon-api/test-helpers"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestRegistration_Valid(t *testing.T) {
 	const feeRecipient1 = "Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-	const pubKey1 = "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13"
-	const signature1 = "0xb459ef852bd4e0cb96e6723d67cacc8215406dd9ba663f8874a083167ebf428b28b746431bdbc1820a25289377b2610881e52b3a05c3548c5e99c08c8a36342573be5962d7510c03dcba8ddfb8ae419e59d222ddcf31cc512e704ef2cc3cf8"
-
 	const feeRecipient2 = "Qfedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
-	const pubKey2 = "0x800015473bdc3a7f45ef8eb8abc598bc20021e55ad6e6ad1d745aaef9730dd2c28ec08bf42df18451de94dd4a6d24ec5"
-	const signature2 = "0xc459ef852bd4e0cb96e6723d67cacc8215406dd9ba663f8874a083167ebf428b28b746431bdbc1820a25289377b2610881e52b3a05c3548c5e99c08c8a36342573be5962d7510c03dcba8ddfb8ae419e59d222ddcf31cc512e704ef2cc3cf8"
-
 	const feeRecipient3 = "Q00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
-	const pubKey3 = "0x80006dbd87090ce8d611ffb8d2c700901d7a07a73607e18c6dc5ff39e44dae317816387b61fa9008de3cbe07583c0358"
-	const signature3 = "0xd459ef852bd4e0cb96e6723d67cacc8215406dd9ba663f8874a083167ebf428b28b746431bdbc1820a25289377b2610881e52b3a05c3548c5e99c08c8a36342573be5962d7510c03dcba8ddfb8ae419e59d222ddcf31cc512e704ef2cc3cf8"
+	pubKey1 := test_helpers.FillEncodedPubkey(1)
+	signature1 := test_helpers.FillEncodedSignature(11)
+	pubKey2 := test_helpers.FillEncodedPubkey(2)
+	signature2 := test_helpers.FillEncodedSignature(12)
+	pubKey3 := test_helpers.FillEncodedPubkey(3)
+	signature3 := test_helpers.FillEncodedSignature(13)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

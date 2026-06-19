@@ -876,7 +876,7 @@ func TestValidateSyncContributionAndProof(t *testing.T) {
 	defaultTopic := p2p.SyncContributionAndProofSubnetTopicFormat
 	defaultTopic = fmt.Sprintf(defaultTopic, []byte{0xAB, 0x00, 0xCC, 0x9E})
 	defaultTopic = defaultTopic + "/" + encoder.ProtocolSuffixSSZSnappy
-	var emptySig [96]byte
+	var emptySig [field_params.MLDSA87SignatureLength]byte
 	pid := peer.ID("random")
 	msg := &qrysmpb.SignedContributionAndProof{
 		Message: &qrysmpb.ContributionAndProof{

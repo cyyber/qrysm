@@ -20,12 +20,13 @@ import (
 	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/time/slots"
 	"github.com/theQRL/qrysm/validator/client/beacon-api/mock"
+	test_helpers "github.com/theQRL/qrysm/validator/client/beacon-api/test-helpers"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestSubmitSyncMessage_Valid(t *testing.T) {
 	const beaconBlockRoot = "0x719d4f66a5f25c35d93718821aacb342194391034b11cf0a5822cc249178a274"
-	const signature = "0xb459ef852bd4e0cb96e6723d67cacc8215406dd9ba663f8874a083167ebf428b28b746431bdbc1820a25289377b2610881e52b3a05c35c5e99c08c8a36342573be5962d7510c03dcba8ddfb8ae419e59d222ddcf31cc512e704ef2cc3cf8"
+	signature := test_helpers.FillEncodedSignature(1)
 
 	decodedBeaconBlockRoot, err := hexutil.Decode(beaconBlockRoot)
 	require.NoError(t, err)
@@ -260,12 +261,12 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 
 func TestGetSyncSubCommitteeIndex(t *testing.T) {
 	const (
-		pubkeyStr          = "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13"
 		syncDutiesEndpoint = "/qrl/v1/validator/duties/sync"
 		validatorsEndpoint = "/qrl/v1/beacon/states/head/validators"
 		validatorIndex     = "55293"
 		slot               = primitives.Slot(123)
 	)
+	pubkeyStr := test_helpers.FillEncodedPubkey(1)
 
 	expectedResponse := &qrysmpb.SyncSubcommitteeIndexResponse{
 		Indices: []primitives.CommitteeIndex{123, 456},
@@ -273,7 +274,7 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 
 	syncDuties := []*validator.SyncCommitteeDuty{
 		{
-			Pubkey:         hexutil.Encode([]byte{1}),
+			Pubkey:         pubkeyStr,
 			ValidatorIndex: validatorIndex,
 			ValidatorSyncCommitteeIndices: []string{
 				"123",
@@ -329,7 +330,7 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 							Index:  validatorIndex,
 							Status: "active_ongoing",
 							Validator: &beacon.Validator{
-								Pubkey: stringPubKey,
+								Pubkey: pubkeyStr,
 							},
 						},
 					},

@@ -15,6 +15,7 @@ import (
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/validator/client/beacon-api/mock"
+	test_helpers "github.com/theQRL/qrysm/validator/client/beacon-api/test-helpers"
 )
 
 func TestComputeWaitElements_LastRecvTimeZero(t *testing.T) {
@@ -54,20 +55,20 @@ func TestActivation_Nominal(t *testing.T) {
 	defer ctrl.Finish()
 
 	stringPubKeys := []string{
-		"0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13", // active_ongoing
-		"0x80000e851c0f53c3246ff726d7ff7766661ca5e12a07c45c114d208d54f0f8233d4380b2e9aff759d69795d1df905526", // active_exiting
-		"0x424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242", // does not exist
-		"0x800015473bdc3a7f45ef8eb8abc598bc20021e55ad6e6ad1d745aaef9730dd2c28ec08bf42df18451de94dd4a6d24ec5", // exited_slashed
+		test_helpers.FillEncodedPubkey(1), // active_ongoing
+		test_helpers.FillEncodedPubkey(2), // active_exiting
+		test_helpers.FillEncodedPubkey(3), // does not exist
+		test_helpers.FillEncodedPubkey(4), // exited_slashed
 	}
 
 	pubKeys := make([][]byte, len(stringPubKeys))
 
 	url := strings.Join([]string{
 		"/qrl/v1/beacon/states/head/validators?",
-		"id=0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13&",
-		"id=0x80000e851c0f53c3246ff726d7ff7766661ca5e12a07c45c114d208d54f0f8233d4380b2e9aff759d69795d1df905526&",
-		"id=0x424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242&",
-		"id=0x800015473bdc3a7f45ef8eb8abc598bc20021e55ad6e6ad1d745aaef9730dd2c28ec08bf42df18451de94dd4a6d24ec5",
+		"id=" + stringPubKeys[0] + "&",
+		"id=" + stringPubKeys[1] + "&",
+		"id=" + stringPubKeys[2] + "&",
+		"id=" + stringPubKeys[3],
 	}, "")
 
 	for i, stringPubKey := range stringPubKeys {

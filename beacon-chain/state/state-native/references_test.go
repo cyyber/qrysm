@@ -177,7 +177,7 @@ func TestValidatorReferences_RemainsConsistent_Zond(t *testing.T) {
 
 	// Ensure reference is properly accounted for.
 	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
-		assert.NotEqual(t, bytesutil.ToBytes48([]byte{'V'}), val.PublicKey())
+		assert.NotEqual(t, bytesutil.ToBytes2592([]byte{'V'}), val.PublicKey())
 		return nil
 	}))
 }

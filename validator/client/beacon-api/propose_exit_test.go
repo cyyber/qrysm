@@ -14,12 +14,13 @@ import (
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/validator/client/beacon-api/mock"
+	test_helpers "github.com/theQRL/qrysm/validator/client/beacon-api/test-helpers"
 )
 
 const proposeExitTestEndpoint = "/qrl/v1/beacon/pool/voluntary_exits"
 
 func TestProposeExit_Valid(t *testing.T) {
-	const signature = "0xd0a030a1d6b4f8217062ccc98088fbd908797f107aaa825f2366f090445fa79a6417789aa1d232c4f9b1e56671165bde25eb5586f94fc5677df593b99369684e8f413b1bfbd3fa6f20615244f9381895c71d4f7136c528092a3d03294a98be2d"
+	signature := test_helpers.FillEncodedSignature(1)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

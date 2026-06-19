@@ -14,9 +14,10 @@ import (
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/validator/client/beacon-api/mock"
+	test_helpers "github.com/theQRL/qrysm/validator/client/beacon-api/test-helpers"
 )
 
-const stringPubKey = "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13"
+var stringPubKey = test_helpers.FillEncodedPubkey(1)
 
 func getPubKeyAndURL(t *testing.T) ([]byte, string) {
 	baseUrl := "/qrl/v1/beacon/states/head/validators"
@@ -114,7 +115,7 @@ func TestIndex_UnexistingValidator(t *testing.T) {
 		},
 	)
 
-	wanted := "could not find validator index for public key `0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13`"
+	wanted := fmt.Sprintf("could not find validator index for public key `%s`", stringPubKey)
 	assert.ErrorContains(t, wanted, err)
 }
 
