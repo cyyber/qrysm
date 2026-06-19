@@ -10,7 +10,7 @@ Usage:
 bazel run //tools/unencrypted-keys-gen -- --num-keys 64 --output-json /path/to/output.json
 ```
 
-Which will create 64 BLS private keys each for validator signing and withdrawals. 
+Which will create 64 ML-DSA-87 private keys each for validator signing and withdrawals.
 These will then be output to an `output.json` file. Both arguments are required. 
 The file can then be used to start the Qrysm validator with the command:
 

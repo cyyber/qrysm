@@ -73,7 +73,7 @@ func randCall2200(addresses []common.Address, depth int) []byte {
 	// 5% return, 5% revert
 	p := program.NewProgram()
 	for {
-		r := rand.Intn(101)
+		r := rand.Intn(100)
 		switch {
 		case r < 10:
 			p.Sstore(rand.Intn(5), rand.Intn(3))
@@ -103,9 +103,6 @@ func randCall2200(addresses []common.Address, depth int) []byte {
 			runtimeCode := randCall2200(addresses, depth+1)
 			ctor.ReturnData(runtimeCode)
 			p.CreateAndCall(ctor.Bytecode(), r%2 == 0, randCallType())
-		case r < 95:
-			p.Push(addrGen())
-			// p.Op(ops.SELFDESTRUCT)
 		default:
 			p.Push(32) //len
 			p.Push(0)  //offset

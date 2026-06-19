@@ -27,42 +27,11 @@ import (
 	"github.com/theQRL/go-qrl/core"
 	"github.com/theQRL/go-qrl/core/rawdb"
 	"github.com/theQRL/go-qrl/core/state"
-	"github.com/theQRL/go-qrl/core/vm"
 	"github.com/theQRL/go-qrl/core/vm/runtime"
 	"github.com/theQRL/go-qrl/params"
-	common2 "github.com/theQRL/qrysm/pkg/goqrvmlab/common"
 	"github.com/theQRL/qrysm/pkg/goqrvmlab/ops"
 	"github.com/theQRL/qrysm/pkg/goqrvmlab/program"
 )
-
-type dumbTracer struct {
-	common2.BasicTracer
-	counter uint64
-}
-
-func (d *dumbTracer) CaptureStart(env *vm.QRVM, from common.Address, to common.Address, create bool, input []byte, gas uint64, value *big.Int) {
-	fmt.Printf("captureStart\n")
-	fmt.Printf("	from: %v\n", from.Hex())
-	fmt.Printf("	to: %v\n", to.Hex())
-}
-
-func (d *dumbTracer) CaptureEnd(output []byte, gasUsed uint64, err error) {
-	fmt.Printf("\nCaptureEnd\n")
-	fmt.Printf("Counter: %d\n", d.counter)
-}
-
-func (d *dumbTracer) CaptureState(pc uint64, op vm.OpCode, gas, cost uint64, scope *vm.ScopeContext, rData []byte, depth int, err error) {
-	if op == vm.CALL {
-		if depth == 1 {
-			fmt.Println("")
-		} else {
-			d.counter++
-		}
-		if depth < 2 {
-			fmt.Printf("(%d: %d)", depth, gas)
-		}
-	}
-}
 
 func main() {
 
@@ -135,12 +104,6 @@ func runit() error {
 		}
 	}
 	statedb.CreateAccount(sender)
-	var vmConf vm.Config
-	if false {
-		vmConf = vm.Config{
-			Tracer: &dumbTracer{},
-		}
-	}
 	runtimeConfig := runtime.Config{
 		Origin:      sender,
 		State:       statedb,
@@ -149,7 +112,6 @@ func runit() error {
 		ChainConfig: &params.ChainConfig{
 			ChainID: big.NewInt(1),
 		},
-		QRVMConfig: vmConf,
 	}
 	// Diagnose it
 	t0 := time.Now()

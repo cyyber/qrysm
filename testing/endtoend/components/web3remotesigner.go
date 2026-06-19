@@ -20,7 +20,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/theQRL/go-qrl/common/hexutil"
 	"github.com/theQRL/qrysm/config/params"
-	"github.com/theQRL/qrysm/crypto/bls"
+	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
 	"github.com/theQRL/qrysm/io/file"
 	"github.com/theQRL/qrysm/runtime/interop"
 	e2e "github.com/theQRL/qrysm/testing/endtoend/params"
@@ -32,11 +32,11 @@ const Web3RemoteSignerPort = 9000
 
 var _ e2etypes.ComponentRunner = (*Web3RemoteSigner)(nil)
 
-// rawKeyFile used for consensys's web3signer config files.
+// rawKeyFile used for web3signer-compatible config files.
 // See: https://docs.web3signer.consensys.net/en/latest/Reference/Key-Configuration-Files/#raw-unencrypted-files
 type rawKeyFile struct {
 	Type       string `yaml:"type"`       // always "file-raw" for this test.
-	KeyType    string `yaml:"keyType"`    // always "BLS" for this test.
+	KeyType    string `yaml:"keyType"`    // always "ML-DSA-87" for this test.
 	PrivateKey string `yaml:"privateKey"` // hex encoded private key with 0x prefix.
 }
 
@@ -169,7 +169,7 @@ func (w *Web3RemoteSigner) wait(ctx context.Context) {
 }
 
 // PublicKeys queries the web3signer and returns the response keys.
-func (w *Web3RemoteSigner) PublicKeys(ctx context.Context) ([]bls.PublicKey, error) {
+func (w *Web3RemoteSigner) PublicKeys(ctx context.Context) ([]ml_dsa_87.PublicKey, error) {
 	w.wait(ctx)
 
 	client := &http.Client{}
@@ -198,7 +198,7 @@ func (w *Web3RemoteSigner) PublicKeys(ctx context.Context) ([]bls.PublicKey, err
 		return nil, errors.New("no keys returned")
 	}
 
-	pks := make([]bls.PublicKey, 0, len(keys))
+	pks := make([]ml_dsa_87.PublicKey, 0, len(keys))
 	for _, key := range keys {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -207,7 +207,7 @@ func (w *Web3RemoteSigner) PublicKeys(ctx context.Context) ([]bls.PublicKey, err
 		if err != nil {
 			return nil, err
 		}
-		pk, err := bls.PublicKeyFromBytes(raw)
+		pk, err := ml_dsa_87.PublicKeyFromBytes(raw)
 		if err != nil {
 			return nil, err
 		}
@@ -234,7 +234,7 @@ func writeKeystoreKeys(ctx context.Context, keystorePath string, numKeys uint64)
 		}
 		rkf := &rawKeyFile{
 			Type:       "file-raw",
-			KeyType:    "BLS",
+			KeyType:    "ML-DSA-87",
 			PrivateKey: hexutil.Encode(pk.Marshal()),
 		}
 		b, err := yaml.Marshal(rkf)

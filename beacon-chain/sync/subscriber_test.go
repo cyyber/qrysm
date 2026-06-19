@@ -673,9 +673,9 @@ func TestSubscribeWithSyncSubnets_DynamicOK(t *testing.T) {
 	cancel()
 }
 
-// NOTE(rgeraldes24): tests are not valid at the moment
-/*
 func TestSubscribeWithSyncSubnets_StaticSwitchFork(t *testing.T) {
+	// NOTE(rgeraldes24): tests are not valid at the moment
+	t.Skip()
 	p := p2ptest.NewTestP2P(t)
 	params.SetupTestConfigCleanup(t)
 	params.BeaconConfig().InitializeForkSchedule()
@@ -712,6 +712,8 @@ func TestSubscribeWithSyncSubnets_StaticSwitchFork(t *testing.T) {
 }
 
 func TestSubscribeWithSyncSubnets_DynamicSwitchFork(t *testing.T) {
+	// NOTE(rgeraldes24): tests are not valid at the moment
+	t.Skip()
 	params.SetupTestConfigCleanup(t)
 	p := p2ptest.NewTestP2P(t)
 	params.BeaconConfig().InitializeForkSchedule()
@@ -759,7 +761,6 @@ func TestSubscribeWithSyncSubnets_DynamicSwitchFork(t *testing.T) {
 
 	cancel()
 }
-*/
 
 func TestIsDigestValid(t *testing.T) {
 	genRoot := [32]byte{'A'}

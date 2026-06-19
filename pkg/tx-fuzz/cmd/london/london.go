@@ -1,40 +1,9 @@
 package main
 
 import (
-	"bytes"
-
-	"github.com/theQRL/go-qrl/common"
-	"github.com/theQRL/go-qrl/core/vm"
 	"github.com/theQRL/qrysm/pkg/goqrvmlab/ops"
 	"github.com/theQRL/qrysm/pkg/goqrvmlab/program"
 )
-
-func Selfdestructor() []byte {
-	selfdestructTo := append([]byte{
-		byte(vm.PUSH1),
-		0,
-		byte(vm.CALLDATALOAD),
-		byte(vm.PUSH64),
-	}, bytes.Repeat([]byte{0xFF}, common.AddressLength)...)
-	selfdestructTo = append(selfdestructTo,
-		byte(vm.AND),
-		//byte(vm.SELFDESTRUCT), SELFDESTRUCT bytecode has been removed from go-qrl vm
-	)
-
-	initcode := program.NewProgram()
-	initcode.Mstore(selfdestructTo, 0)
-	initcode.Return(0, uint32(len(selfdestructTo)))
-
-	program := program.NewProgram()
-	Create(program, selfdestructTo, false, true)
-	program.Op(ops.POP)
-	Create(program, selfdestructTo, true, false)
-	program.Op(ops.POP)
-	Create(program, initcode.Bytecode(), true, false)
-	//program.CreateAndCall(initcode.Bytecode(), true, ops.STATICCALL)
-	//program.CreateAndCall(initcode.Bytecode(), true, ops.DELEGATECALL)
-	return program.Bytecode()
-}
 
 func EfByte() []byte {
 	inner := []byte{

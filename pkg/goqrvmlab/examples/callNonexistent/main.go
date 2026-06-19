@@ -71,33 +71,8 @@ func staticCallAttack() []byte {
 	return a.Bytecode()
 }
 
-func extCodeSizeAttack() []byte {
-	// Causes 14205 EXTCODESIZEs
-	//       63          17686763 ns/op
-
-	a := program.NewProgram()
-	dest := a.Jumpdest()
-	reps := 800
-	for i := 0; i < reps; i++ {
-		a.Op(ops.GAS)
-		a.Op(ops.EXTCODESIZE)
-		a.Op(ops.POP)
-	}
-	a.Jump(dest)
-	return a.Bytecode()
-}
-
 func runit() error {
-	/*
-		if opcode == "FA":
-		code = "5b%s600056" % (("60008080805a5a%s50"%opcode) * code_repitions)  # JUMPDEST (PUSH 0 DUP1 DUP1 DUP1 GAS GAS STATICCALL POP) * 8'000 PUSH1 0x0 JUMP
-		else:
-		code = "5b%s600056" % (("5a%s50"%opcode) * code_repitions)  # JUMPDEST (GAS BALANCE/EXTCODESIZE/EXTCODEHASH POP) * 8'000 PUSH1 0x0 JUMP
-	*/
 	code := staticCallAttack()
-	if false {
-		code = extCodeSizeAttack()
-	}
 
 	aAddr := mustAddress("Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567000000000000000000000000000000000000ff0a")
 	alloc := make(core.GenesisAlloc)
@@ -107,15 +82,6 @@ func runit() error {
 		Balance: big.NewInt(0xffffffff),
 	}
 	var err error
-	//-------------
-
-	//outp, err := json.MarshalIndent(alloc, "", " ")
-	//if err != nil {
-	//	fmt.Printf("error : %v", err)
-	//	os.Exit(1)
-	//}
-	//fmt.Printf("output \n%v\n", string(outp))
-	//----------
 	var (
 		statedb, _ = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
 		sender     = mustAddress("Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567000000000000000000000000000000000000feed")
@@ -153,11 +119,8 @@ func runit() error {
 
 		}
 	})
-	//t0 := time.Now()
-	//t1 := time.Since(t0)
 	fmt.Print(res.String())
 	fmt.Println()
-	//fmt.Printf("Time elapsed: %v\n", t1)
 	return err
 }
 
