@@ -35,13 +35,23 @@ var basicStrategies = []Strategy{
 
 type opcodeGenerator struct{}
 
+func basicOp(env Environment) (ops.OpCode, bool) {
+	forkDef := ops.LookupFork(fork)
+	if forkDef == nil {
+		return 0, false
+	}
+	for {
+		op := forkDef.RandomOp(env.f.Byte())
+		// Different clients may use different block hash providers in statetests.
+		if op != ops.BLOCKHASH {
+			return op, true
+		}
+	}
+}
+
 func (*opcodeGenerator) Execute(env Environment) {
 	// Just add a single opcode
-	op := ops.OpCode(env.f.Byte())
-	// Nethermind currently uses a different blockhash provider in the statetests,
-	// so ignore the blockhash operator to reduce false positives.
-	// see: https://gist.github.com/MariusVanDerWijden/97fe9eb1aac074f7ccf6aef169aaadaa
-	if op != ops.BLOCKHASH {
+	if op, ok := basicOp(env); ok {
 		env.p.Op(op)
 	}
 }

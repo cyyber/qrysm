@@ -440,7 +440,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 					FeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
 					GasLimit:     uint64(0),
 					Timestamp:    uint64(0),
-					Pubkey:       make([]byte, field_params.MLDSA87SignatureLength),
+					Pubkey:       make([]byte, field_params.MLDSA87PubkeyLength),
 				},
 			},
 			SigningSlot: 0,
@@ -600,9 +600,9 @@ func MockValidatorRegistrationSignRequest() *v1.ValidatorRegistrationSignRequest
 		SigningRoot: make([]byte, fieldparams.RootLength),
 		ValidatorRegistration: &v1.ValidatorRegistration{
 			FeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
-			GasLimit:     fmt.Sprint(0),
-			Timestamp:    fmt.Sprint(0),
-			Pubkey:       make([]byte, field_params.MLDSA87SignatureLength),
+			GasLimit:  fmt.Sprint(0),
+			Timestamp: fmt.Sprint(0),
+			Pubkey:    make([]byte, field_params.MLDSA87PubkeyLength),
 		},
 	}
 }

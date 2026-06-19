@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const exclusionMessage = "Excluded by @prysm//tools/nogo_config tool"
+const exclusionMessage = "Excluded by @qrysm//tools/nogo_config tool"
 
 var (
 	defaultExclusions = []string{

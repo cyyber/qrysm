@@ -55,6 +55,10 @@ func RandStorageOps() *program.Program {
 	}
 }
 
+func randomZondOp(rnd byte) ops.OpCode {
+	return ops.LookupFork("Zond").RandomOp(rnd)
+}
+
 func RandCall2200(addresses []common.Address) []byte {
 	return randCall2200(addresses, 0)
 }
@@ -86,12 +90,10 @@ func randCall2200(addresses []common.Address, depth int) []byte {
 			b := make([]byte, 10)
 			_, _ = crand.Read(b)
 			for i := range b {
-				if op := ops.OpCode(b[i]); ops.IsDefined(op) {
-					p.Op(op)
-				}
+				p.Op(randomZondOp(b[i]))
 			}
 		case r < 60: // 10% chance of some random opcode
-			p.Op(ops.OpCode(rand.Uint32()))
+			p.Op(randomZondOp(byte(rand.Uint32())))
 		case r < 80:
 			// zero value call with no data
 			p2 := RandCall(nil, addrGen, nil, nil, nil)

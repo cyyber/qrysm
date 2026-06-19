@@ -1,11 +1,11 @@
 ## Qcli (Qrysm CLI)
 
-This is a utility to help users perform Ethereum consensus specific commands.
+This is a utility to help users perform QRL consensus specific commands.
 
 ### Usage
 
 *Name:*  
-   **qcli** - A command line utility to run Ethereum consensus specific commands
+   **qcli** - A command line utility to run QRL consensus specific commands
 
 *Usage:*  
    qcli [global options] command [command options] [arguments...]
@@ -42,4 +42,3 @@ To use qcli manual state transition:
 ```
 bazel run //tools/qcli:qcli -- state-transition --block-path /path/to/block.ssz --pre-state-path /path/to/state.ssz
 ```
-

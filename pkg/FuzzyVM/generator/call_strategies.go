@@ -30,6 +30,16 @@ var callStrategies = []Strategy{
 	new(callPrecompileGenerator),
 }
 
+var createCallOps = []ops.OpCode{
+	ops.CALL,
+	ops.DELEGATECALL,
+	ops.STATICCALL,
+}
+
+func createCallOp(env Environment) ops.OpCode {
+	return createCallOps[int(env.f.Byte())%len(createCallOps)]
+}
+
 type createCallRNGGenerator struct{}
 
 func (*createCallRNGGenerator) Execute(env Environment) {
@@ -37,7 +47,7 @@ func (*createCallRNGGenerator) Execute(env Environment) {
 	var (
 		code      = env.f.ByteSlice256()
 		isCreate2 = env.f.Bool()
-		callOp    = ops.OpCode(env.f.Byte())
+		callOp    = createCallOp(env)
 	)
 	env.p.CreateAndCall(code, isCreate2, callOp)
 }
@@ -61,7 +71,7 @@ func (*createCallGenerator) Execute(env Environment) {
 		newFiller = filler.NewFiller(seed)
 		_, code   = GenerateProgram(newFiller)
 		isCreate2 = env.f.Bool()
-		callOp    = ops.OpCode(env.f.Byte())
+		callOp    = createCallOp(env)
 	)
 	env.p.CreateAndCall(code, isCreate2, callOp)
 	// Decreasing recursion level generates to heavy test cases,
