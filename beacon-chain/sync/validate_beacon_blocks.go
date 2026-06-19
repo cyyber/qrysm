@@ -34,8 +34,8 @@ var (
 	ErrSlashingSignatureFailure = errors.New("proposer slashing signature verification failed")
 )
 
-// validateBeaconBlockPubSub checks that the incoming block has a valid BLS signature.
-// Blocks that have already been seen are ignored. If the BLS signature is any valid signature,
+// validateBeaconBlockPubSub checks that the incoming block has a valid ML-DSA-87 signature.
+// Blocks that have already been seen are ignored. If the signature is valid,
 // this method rebroadcasts the message.
 func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
 	receivedTime := qrysmTime.Now()

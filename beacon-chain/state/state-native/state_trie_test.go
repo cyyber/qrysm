@@ -204,7 +204,7 @@ func TestBeaconState_ValidatorMutation_Zond(t *testing.T) {
 	_ = testState.Copy()
 
 	require.NoError(t, testState.UpdateValidatorAtIndex(15, &qrysmpb.Validator{
-		PublicKey:                  make([]byte, 48),
+		PublicKey:                  make([]byte, fieldparams.MLDSA87PubkeyLength),
 		WithdrawalCredentials:      make([]byte, fieldparams.WithdrawalCredentialsLength),
 		EffectiveBalance:           1111,
 		Slashed:                    false,
@@ -228,7 +228,7 @@ func TestBeaconState_ValidatorMutation_Zond(t *testing.T) {
 	assert.Equal(t, rt, rt2)
 
 	require.NoError(t, newState1.UpdateValidatorAtIndex(150, &qrysmpb.Validator{
-		PublicKey:                  make([]byte, 48),
+		PublicKey:                  make([]byte, fieldparams.MLDSA87PubkeyLength),
 		WithdrawalCredentials:      make([]byte, fieldparams.WithdrawalCredentialsLength),
 		EffectiveBalance:           2111,
 		Slashed:                    false,

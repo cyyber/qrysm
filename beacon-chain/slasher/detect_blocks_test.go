@@ -137,7 +137,7 @@ func Test_processQueuedBlocks_DetectsDoubleProposals_AcrossBatches(t *testing.T)
 		privKeys[i] = privKey
 		validators[i] = &qrysmpb.Validator{
 			PublicKey:             privKey.PublicKey().Marshal(),
-			WithdrawalCredentials: make([]byte, 32),
+			WithdrawalCredentials: make([]byte, field_params.WithdrawalCredentialsLength),
 		}
 	}
 	err = beaconState.SetValidators(validators)

@@ -17,29 +17,41 @@ import (
 	"github.com/theQRL/qrysm/testing/require"
 )
 
+func syncCommitteeTestBlockRoots(seed byte) [][]byte {
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	for i := range blockRoots {
+		blockRoots[i] = make([]byte, field_params.RootLength)
+	}
+	blockRoots[0][0] = seed
+	return blockRoots
+}
+
 func TestIsCurrentEpochSyncCommittee_UsingCache(t *testing.T) {
 	ClearCache()
 	defer ClearCache()
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &qrysmpb.SyncCommittee{}
 	for i := range validators {
-		k := make([]byte, 48)
+		k := make([]byte, field_params.MLDSA87PubkeyLength)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &qrysmpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, field_params.MLDSA87PubkeyLength))
 	}
 
 	state, err := state_native.InitializeFromProtoZond(&qrysmpb.BeaconStateZond{
 		Validators: validators,
+		Slot:       1,
+		BlockRoots: syncCommitteeTestBlockRoots(1),
 	})
 	require.NoError(t, err)
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	r := [32]byte{'a'}
-	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(r, state))
+	root, err := syncPeriodBoundaryRoot(state)
+	require.NoError(t, err)
+	require.NoError(t, syncCommitteeCache.UpdatePositionsInCommittee(root, state))
 
 	ok, err := IsCurrentPeriodSyncCommittee(state, 0)
 	require.NoError(t, err)
@@ -52,16 +64,18 @@ func TestIsCurrentEpochSyncCommittee_UsingCommittee(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &qrysmpb.SyncCommittee{}
 	for i := range validators {
-		k := make([]byte, 48)
+		k := make([]byte, field_params.MLDSA87PubkeyLength)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &qrysmpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, field_params.MLDSA87PubkeyLength))
 	}
 
 	state, err := state_native.InitializeFromProtoZond(&qrysmpb.BeaconStateZond{
 		Validators: validators,
+		Slot:       1,
+		BlockRoots: syncCommitteeTestBlockRoots(2),
 	})
 	require.NoError(t, err)
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
@@ -78,16 +92,18 @@ func TestIsCurrentEpochSyncCommittee_DoesNotExist(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &qrysmpb.SyncCommittee{}
 	for i := range validators {
-		k := make([]byte, 48)
+		k := make([]byte, field_params.MLDSA87PubkeyLength)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &qrysmpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, field_params.MLDSA87PubkeyLength))
 	}
 
 	state, err := state_native.InitializeFromProtoZond(&qrysmpb.BeaconStateZond{
 		Validators: validators,
+		Slot:       1,
+		BlockRoots: syncCommitteeTestBlockRoots(3),
 	})
 	require.NoError(t, err)
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
@@ -104,23 +120,26 @@ func TestIsNextEpochSyncCommittee_UsingCache(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &qrysmpb.SyncCommittee{}
 	for i := range validators {
-		k := make([]byte, 48)
+		k := make([]byte, field_params.MLDSA87PubkeyLength)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &qrysmpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, field_params.MLDSA87PubkeyLength))
 	}
 
 	state, err := state_native.InitializeFromProtoZond(&qrysmpb.BeaconStateZond{
 		Validators: validators,
+		Slot:       1,
+		BlockRoots: syncCommitteeTestBlockRoots(4),
 	})
 	require.NoError(t, err)
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	r := [32]byte{'a'}
-	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(r, state))
+	root, err := syncPeriodBoundaryRoot(state)
+	require.NoError(t, err)
+	require.NoError(t, syncCommitteeCache.UpdatePositionsInCommittee(root, state))
 
 	ok, err := IsNextPeriodSyncCommittee(state, 0)
 	require.NoError(t, err)
@@ -131,16 +150,18 @@ func TestIsNextEpochSyncCommittee_UsingCommittee(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &qrysmpb.SyncCommittee{}
 	for i := range validators {
-		k := make([]byte, 48)
+		k := make([]byte, field_params.MLDSA87PubkeyLength)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &qrysmpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, field_params.MLDSA87PubkeyLength))
 	}
 
 	state, err := state_native.InitializeFromProtoZond(&qrysmpb.BeaconStateZond{
 		Validators: validators,
+		Slot:       1,
+		BlockRoots: syncCommitteeTestBlockRoots(5),
 	})
 	require.NoError(t, err)
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
@@ -155,16 +176,18 @@ func TestIsNextEpochSyncCommittee_DoesNotExist(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &qrysmpb.SyncCommittee{}
 	for i := range validators {
-		k := make([]byte, 48)
+		k := make([]byte, field_params.MLDSA87PubkeyLength)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &qrysmpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, field_params.MLDSA87PubkeyLength))
 	}
 
 	state, err := state_native.InitializeFromProtoZond(&qrysmpb.BeaconStateZond{
 		Validators: validators,
+		Slot:       1,
+		BlockRoots: syncCommitteeTestBlockRoots(6),
 	})
 	require.NoError(t, err)
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
@@ -181,23 +204,26 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &qrysmpb.SyncCommittee{}
 	for i := range validators {
-		k := make([]byte, 48)
+		k := make([]byte, field_params.MLDSA87PubkeyLength)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &qrysmpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, field_params.MLDSA87PubkeyLength))
 	}
 
 	state, err := state_native.InitializeFromProtoZond(&qrysmpb.BeaconStateZond{
 		Validators: validators,
+		Slot:       1,
+		BlockRoots: syncCommitteeTestBlockRoots(7),
 	})
 	require.NoError(t, err)
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	r := [32]byte{'a'}
-	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(r, state))
+	root, err := syncPeriodBoundaryRoot(state)
+	require.NoError(t, err)
+	require.NoError(t, syncCommitteeCache.UpdatePositionsInCommittee(root, state))
 
 	index, err := CurrentPeriodSyncSubcommitteeIndices(state, 0)
 	require.NoError(t, err)
@@ -210,16 +236,18 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &qrysmpb.SyncCommittee{}
 	for i := range validators {
-		k := make([]byte, 48)
+		k := make([]byte, field_params.MLDSA87PubkeyLength)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &qrysmpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, field_params.MLDSA87PubkeyLength))
 	}
 
 	state, err := state_native.InitializeFromProtoZond(&qrysmpb.BeaconStateZond{
 		Validators: validators,
+		Slot:       1,
+		BlockRoots: syncCommitteeTestBlockRoots(8),
 	})
 	require.NoError(t, err)
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
@@ -249,16 +277,18 @@ func TestCurrentEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &qrysmpb.SyncCommittee{}
 	for i := range validators {
-		k := make([]byte, 48)
+		k := make([]byte, field_params.MLDSA87PubkeyLength)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &qrysmpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, field_params.MLDSA87PubkeyLength))
 	}
 
 	state, err := state_native.InitializeFromProtoZond(&qrysmpb.BeaconStateZond{
 		Validators: validators,
+		Slot:       1,
+		BlockRoots: syncCommitteeTestBlockRoots(9),
 	})
 	require.NoError(t, err)
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
@@ -275,23 +305,26 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCache(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &qrysmpb.SyncCommittee{}
 	for i := range validators {
-		k := make([]byte, 48)
+		k := make([]byte, field_params.MLDSA87PubkeyLength)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &qrysmpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, field_params.MLDSA87PubkeyLength))
 	}
 
 	state, err := state_native.InitializeFromProtoZond(&qrysmpb.BeaconStateZond{
 		Validators: validators,
+		Slot:       1,
+		BlockRoots: syncCommitteeTestBlockRoots(10),
 	})
 	require.NoError(t, err)
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
-	r := [32]byte{'a'}
-	require.NoError(t, err, syncCommitteeCache.UpdatePositionsInCommittee(r, state))
+	root, err := syncPeriodBoundaryRoot(state)
+	require.NoError(t, err)
+	require.NoError(t, syncCommitteeCache.UpdatePositionsInCommittee(root, state))
 
 	index, err := NextPeriodSyncSubcommitteeIndices(state, 0)
 	require.NoError(t, err)
@@ -302,16 +335,18 @@ func TestNextEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &qrysmpb.SyncCommittee{}
 	for i := range validators {
-		k := make([]byte, 48)
+		k := make([]byte, field_params.MLDSA87PubkeyLength)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &qrysmpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, field_params.MLDSA87PubkeyLength))
 	}
 
 	state, err := state_native.InitializeFromProtoZond(&qrysmpb.BeaconStateZond{
 		Validators: validators,
+		Slot:       1,
+		BlockRoots: syncCommitteeTestBlockRoots(11),
 	})
 	require.NoError(t, err)
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
@@ -328,16 +363,18 @@ func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &qrysmpb.SyncCommittee{}
 	for i := range validators {
-		k := make([]byte, 48)
+		k := make([]byte, field_params.MLDSA87PubkeyLength)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &qrysmpb.Validator{
 			PublicKey: k,
 		}
-		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, field_params.MLDSA87PubkeyLength))
 	}
 
 	state, err := state_native.InitializeFromProtoZond(&qrysmpb.BeaconStateZond{
 		Validators: validators,
+		Slot:       1,
+		BlockRoots: syncCommitteeTestBlockRoots(12),
 	})
 	require.NoError(t, err)
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))

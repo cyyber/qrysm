@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -73,7 +74,7 @@ func getValidatorHappyPathTestServer(t *testing.T) *httptest.Server {
 }
 
 func TestGetProposerSettings(t *testing.T) {
-	file := "./testdata/settings.json"
+	file := filepath.Join(t.TempDir(), "settings.json")
 	baseurl := "127.0.0.1:3500"
 	l, err := net.Listen("tcp", baseurl)
 	require.NoError(t, err)

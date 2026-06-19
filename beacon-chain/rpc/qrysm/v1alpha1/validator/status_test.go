@@ -247,7 +247,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 
 	depData := &qrysmpb.Deposit_Data{
 		PublicKey:             pubKey,
-		Signature:             bytesutil.PadTo([]byte("hi"), 96),
+		Signature:             bytesutil.PadTo([]byte("hi"), fieldparams.MLDSA87SignatureLength),
 		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 64),
 	}
 
@@ -310,7 +310,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	require.NoError(t, err)
 	depData := &qrysmpb.Deposit_Data{
 		PublicKey:             pubKey,
-		Signature:             bytesutil.PadTo([]byte("hi"), 96),
+		Signature:             bytesutil.PadTo([]byte("hi"), fieldparams.MLDSA87SignatureLength),
 		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 64),
 	}
 
@@ -369,7 +369,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	require.NoError(t, err)
 	depData := &qrysmpb.Deposit_Data{
 		PublicKey:             pubKey,
-		Signature:             bytesutil.PadTo([]byte("hi"), 96),
+		Signature:             bytesutil.PadTo([]byte("hi"), fieldparams.MLDSA87SignatureLength),
 		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 64),
 	}
 
@@ -427,7 +427,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	require.NoError(t, err)
 	depData := &qrysmpb.Deposit_Data{
 		PublicKey:             pubKey,
-		Signature:             bytesutil.PadTo([]byte("hi"), 96),
+		Signature:             bytesutil.PadTo([]byte("hi"), fieldparams.MLDSA87SignatureLength),
 		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 64),
 	}
 
@@ -662,7 +662,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	for i := range 6 {
 		depData := &qrysmpb.Deposit_Data{
 			PublicKey:             pubKey(uint64(i)),
-			Signature:             bytesutil.PadTo([]byte("hi"), 96),
+			Signature:             bytesutil.PadTo([]byte("hi"), fieldparams.MLDSA87SignatureLength),
 			WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 64),
 		}
 

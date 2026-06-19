@@ -322,9 +322,9 @@ func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 			ExecutionBlockHeight: 9,
 			Deposit: &qrysmpb.Deposit{
 				Data: &qrysmpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("pk0"), 48),
+					PublicKey:             bytesutil.PadTo([]byte("pk0"), field_params.MLDSA87PubkeyLength),
 					WithdrawalCredentials: make([]byte, field_params.WithdrawalCredentialsLength),
-					Signature:             make([]byte, 96),
+					Signature:             make([]byte, field_params.MLDSA87SignatureLength),
 				},
 			},
 		},
@@ -332,9 +332,9 @@ func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 			ExecutionBlockHeight: 10,
 			Deposit: &qrysmpb.Deposit{
 				Data: &qrysmpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("pk1"), 48),
+					PublicKey:             bytesutil.PadTo([]byte("pk1"), field_params.MLDSA87PubkeyLength),
 					WithdrawalCredentials: make([]byte, field_params.WithdrawalCredentialsLength),
-					Signature:             make([]byte, 96),
+					Signature:             make([]byte, field_params.MLDSA87SignatureLength),
 				},
 			},
 		},
@@ -342,9 +342,9 @@ func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 			ExecutionBlockHeight: 11,
 			Deposit: &qrysmpb.Deposit{
 				Data: &qrysmpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("pk1"), 48),
+					PublicKey:             bytesutil.PadTo([]byte("pk1"), field_params.MLDSA87PubkeyLength),
 					WithdrawalCredentials: make([]byte, field_params.WithdrawalCredentialsLength),
-					Signature:             make([]byte, 96),
+					Signature:             make([]byte, field_params.MLDSA87SignatureLength),
 				},
 			},
 		},
@@ -352,16 +352,16 @@ func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 			ExecutionBlockHeight: 12,
 			Deposit: &qrysmpb.Deposit{
 				Data: &qrysmpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte("pk2"), 48),
+					PublicKey:             bytesutil.PadTo([]byte("pk2"), field_params.MLDSA87PubkeyLength),
 					WithdrawalCredentials: make([]byte, field_params.WithdrawalCredentialsLength),
-					Signature:             make([]byte, 96),
+					Signature:             make([]byte, field_params.MLDSA87SignatureLength),
 				},
 			},
 		},
 	}
 	dc.InsertDepositContainers(context.Background(), ctrs)
 
-	pk1 := bytesutil.PadTo([]byte("pk1"), 48)
+	pk1 := bytesutil.PadTo([]byte("pk1"), field_params.MLDSA87PubkeyLength)
 	dep, blkNum := dc.DepositByPubkey(context.Background(), pk1)
 
 	if dep == nil || !bytes.Equal(dep.Data.PublicKey, pk1) {
@@ -857,25 +857,25 @@ func TestPruneProofs_Ok(t *testing.T) {
 		{
 			blkNum: 0,
 			deposit: &qrysmpb.Deposit{Proof: makeDepositProof(),
-				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk0"), 48)}},
+				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk0"), field_params.MLDSA87PubkeyLength)}},
 			index: 0,
 		},
 		{
 			blkNum: 0,
 			deposit: &qrysmpb.Deposit{Proof: makeDepositProof(),
-				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk1"), 48)}},
+				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk1"), field_params.MLDSA87PubkeyLength)}},
 			index: 1,
 		},
 		{
 			blkNum: 0,
 			deposit: &qrysmpb.Deposit{Proof: makeDepositProof(),
-				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk2"), 48)}},
+				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk2"), field_params.MLDSA87PubkeyLength)}},
 			index: 2,
 		},
 		{
 			blkNum: 0,
 			deposit: &qrysmpb.Deposit{Proof: makeDepositProof(),
-				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk3"), 48)}},
+				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk3"), field_params.MLDSA87PubkeyLength)}},
 			index: 3,
 		},
 	}
@@ -904,23 +904,23 @@ func TestPruneProofs_SomeAlreadyPruned(t *testing.T) {
 		{
 			blkNum: 0,
 			deposit: &qrysmpb.Deposit{Proof: nil, Data: &qrysmpb.Deposit_Data{
-				PublicKey: bytesutil.PadTo([]byte("pk0"), 48)}},
+				PublicKey: bytesutil.PadTo([]byte("pk0"), field_params.MLDSA87PubkeyLength)}},
 			index: 0,
 		},
 		{
 			blkNum: 0,
 			deposit: &qrysmpb.Deposit{Proof: nil, Data: &qrysmpb.Deposit_Data{
-				PublicKey: bytesutil.PadTo([]byte("pk1"), 48)}}, index: 1,
+				PublicKey: bytesutil.PadTo([]byte("pk1"), field_params.MLDSA87PubkeyLength)}}, index: 1,
 		},
 		{
 			blkNum:  0,
-			deposit: &qrysmpb.Deposit{Proof: makeDepositProof(), Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk2"), 48)}},
+			deposit: &qrysmpb.Deposit{Proof: makeDepositProof(), Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk2"), field_params.MLDSA87PubkeyLength)}},
 			index:   2,
 		},
 		{
 			blkNum: 0,
 			deposit: &qrysmpb.Deposit{Proof: makeDepositProof(),
-				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk3"), 48)}},
+				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk3"), field_params.MLDSA87PubkeyLength)}},
 			index: 3,
 		},
 	}
@@ -946,25 +946,25 @@ func TestPruneProofs_PruneAllWhenDepositIndexTooBig(t *testing.T) {
 		{
 			blkNum: 0,
 			deposit: &qrysmpb.Deposit{Proof: makeDepositProof(),
-				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk0"), 48)}},
+				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk0"), field_params.MLDSA87PubkeyLength)}},
 			index: 0,
 		},
 		{
 			blkNum: 0,
 			deposit: &qrysmpb.Deposit{Proof: makeDepositProof(),
-				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk1"), 48)}},
+				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk1"), field_params.MLDSA87PubkeyLength)}},
 			index: 1,
 		},
 		{
 			blkNum: 0,
 			deposit: &qrysmpb.Deposit{Proof: makeDepositProof(),
-				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk2"), 48)}},
+				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk2"), field_params.MLDSA87PubkeyLength)}},
 			index: 2,
 		},
 		{
 			blkNum: 0,
 			deposit: &qrysmpb.Deposit{Proof: makeDepositProof(),
-				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk3"), 48)}},
+				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk3"), field_params.MLDSA87PubkeyLength)}},
 			index: 3,
 		},
 	}
@@ -993,25 +993,25 @@ func TestPruneProofs_CorrectlyHandleLastIndex(t *testing.T) {
 		{
 			blkNum: 0,
 			deposit: &qrysmpb.Deposit{Proof: makeDepositProof(),
-				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk0"), 48)}},
+				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk0"), field_params.MLDSA87PubkeyLength)}},
 			index: 0,
 		},
 		{
 			blkNum: 0,
 			deposit: &qrysmpb.Deposit{Proof: makeDepositProof(),
-				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk1"), 48)}},
+				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk1"), field_params.MLDSA87PubkeyLength)}},
 			index: 1,
 		},
 		{
 			blkNum: 0,
 			deposit: &qrysmpb.Deposit{Proof: makeDepositProof(),
-				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk2"), 48)}},
+				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk2"), field_params.MLDSA87PubkeyLength)}},
 			index: 2,
 		},
 		{
 			blkNum: 0,
 			deposit: &qrysmpb.Deposit{Proof: makeDepositProof(),
-				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk3"), 48)}},
+				Data: &qrysmpb.Deposit_Data{PublicKey: bytesutil.PadTo([]byte("pk3"), field_params.MLDSA87PubkeyLength)}},
 			index: 3,
 		},
 	}
@@ -1032,7 +1032,7 @@ func TestDepositMap_WorksCorrectly(t *testing.T) {
 	dc, err := New()
 	require.NoError(t, err)
 
-	pk0 := bytesutil.PadTo([]byte("pk0"), 48)
+	pk0 := bytesutil.PadTo([]byte("pk0"), field_params.MLDSA87PubkeyLength)
 	dep, _ := dc.DepositByPubkey(context.Background(), pk0)
 	var nilDep *qrysmpb.Deposit
 	assert.DeepEqual(t, nilDep, dep)
@@ -1053,7 +1053,7 @@ func TestDepositMap_WorksCorrectly(t *testing.T) {
 	assert.Equal(t, uint64(1000), dep.Data.Amount)
 
 	// Make sure another key doesn't work.
-	pk1 := bytesutil.PadTo([]byte("pk1"), 48)
+	pk1 := bytesutil.PadTo([]byte("pk1"), field_params.MLDSA87PubkeyLength)
 	dep, _ = dc.DepositByPubkey(context.Background(), pk1)
 	assert.DeepEqual(t, nilDep, dep)
 }

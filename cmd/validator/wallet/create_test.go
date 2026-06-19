@@ -208,25 +208,27 @@ func TestInputKeymanagerKind(t *testing.T) {
 		name    string
 		args    string
 		want    keymanager.Kind
-		wantErr bool
+		wantErr string
 	}{
 		{
-			name:    "local returns local kind",
-			args:    "local",
-			want:    keymanager.Local,
-			wantErr: false,
+			name: "local returns local kind",
+			args: "local",
+			want: keymanager.Local,
 		},
 		{
-			name:    "direct returns local kind",
-			args:    "direct",
-			want:    keymanager.Local,
-			wantErr: false,
+			name: "direct returns local kind",
+			args: "direct",
+			want: keymanager.Local,
 		},
 		{
-			name:    "imported returns local kind",
-			args:    "imported",
-			want:    keymanager.Local,
-			wantErr: false,
+			name: "imported returns local kind",
+			args: "imported",
+			want: keymanager.Local,
+		},
+		{
+			name:    "web3signer reports unsupported",
+			args:    "web3signer",
+			wantErr: "web3signer keymanager is not supported for QRL yet",
 		},
 		/*
 			{
@@ -245,6 +247,10 @@ func TestInputKeymanagerKind(t *testing.T) {
 			assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, tt.args))
 			cliCtx := cli.NewContext(&app, set, nil)
 			got, err := inputKeymanagerKind(cliCtx)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, tt.wantErr, err)
+				return
+			}
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want.String(), got.String())
 		})

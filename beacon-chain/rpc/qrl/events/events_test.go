@@ -130,7 +130,7 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 				Epoch:          1,
 				ValidatorIndex: 1,
 			},
-			Signature: make([]byte, 96),
+			Signature: make([]byte, fieldparams.MLDSA87SignatureLength),
 		}
 		wantedExit := migration.V1Alpha1ExitToV1(wantedExitV1alpha1)
 		genericResponse, err := anypb.New(wantedExit)

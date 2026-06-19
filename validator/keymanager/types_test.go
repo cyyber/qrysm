@@ -34,3 +34,8 @@ func TestKeystoreContainsPath(t *testing.T) {
 	require.NoError(t, err, "Unexpected error marshalling keystore")
 	assert.Equal(t, true, strings.Contains(string(encoded), "path"))
 }
+
+func TestParseKind_Web3SignerUnsupported(t *testing.T) {
+	_, err := keymanager.ParseKind("web3signer")
+	require.ErrorIs(t, err, keymanager.ErrWeb3SignerUnsupported)
+}

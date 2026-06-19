@@ -241,7 +241,7 @@ func TestGetAltairDuties_UnknownPubkey(t *testing.T) {
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}
 
-	unknownPubkey := bytesutil.PadTo([]byte{'u'}, 48)
+	unknownPubkey := bytesutil.PadTo([]byte{'u'}, field_params.MLDSA87PubkeyLength)
 	req := &qrysmpb.DutiesRequest{
 		PublicKeys: [][]byte{unknownPubkey},
 	}

@@ -54,7 +54,9 @@ submit a list of data or a single JSON object.
 
 ### Examples
 
-POST https://beaconcha.in/api/v1/stats/$API_KEY/$MACHINE_NAME
+Configure the reporting endpoint with the client-stats updater target used by your deployment.
+
+POST https://<client-stats-endpoint>/api/v1/stats/$API_KEY/$MACHINE_NAME
 
 **Single object payload**
 
@@ -65,7 +67,7 @@ POST https://beaconcha.in/api/v1/stats/$API_KEY/$MACHINE_NAME
    "process": "validator",
    "cpu_process_seconds_total": 1234567,
    "memory_process_bytes": 654321,
-   "client_name": "lighthouse",
+   "client_name": "qrysm",
    "client_version": "1.1.2",
    "client_build": 12,
    "sync_consensus_fallback_configured": false,
@@ -85,7 +87,7 @@ POST https://beaconcha.in/api/v1/stats/$API_KEY/$MACHINE_NAME
       "process":"beaconnode",
       "cpu_process_seconds_total":6925,
       "memory_process_bytes":1175138304,
-      "client_name":"lighthouse",
+      "client_name":"qrysm",
       "client_version":"1.1.3",
       "client_build":42,
       "sync_consensus_fallback_configured":false,

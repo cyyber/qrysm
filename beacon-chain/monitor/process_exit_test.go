@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/consensus-types/blocks"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
@@ -96,7 +97,7 @@ func TestProcessExitP2PTrackedIndices(t *testing.T) {
 			ValidatorIndex: 1,
 			Epoch:          1,
 		},
-		Signature: make([]byte, 96),
+		Signature: make([]byte, fieldparams.MLDSA87SignatureLength),
 	}
 	s.processExit(exit)
 	require.LogsContain(t, hook, "\"Voluntary exit was processed\" ValidatorIndex=1")

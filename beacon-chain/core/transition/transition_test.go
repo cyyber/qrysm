@@ -11,6 +11,7 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/core/time"
 	"github.com/theQRL/qrysm/beacon-chain/core/transition"
 	state_native "github.com/theQRL/qrysm/beacon-chain/state/state-native"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	consensusblocks "github.com/theQRL/qrysm/consensus-types/blocks"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
@@ -117,14 +118,14 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 					ProposerIndex: 3,
 					Slot:          1,
 				},
-				Signature: bytesutil.PadTo([]byte("A"), 96),
+				Signature: bytesutil.PadTo([]byte("A"), fieldparams.MLDSA87SignatureLength),
 			}),
 			Header_2: util.HydrateSignedBeaconHeader(&qrysmpb.SignedBeaconBlockHeader{
 				Header: &qrysmpb.BeaconBlockHeader{
 					ProposerIndex: 3,
 					Slot:          1,
 				},
-				Signature: bytesutil.PadTo([]byte("B"), 96),
+				Signature: bytesutil.PadTo([]byte("B"), fieldparams.MLDSA87SignatureLength),
 			}),
 		},
 	}

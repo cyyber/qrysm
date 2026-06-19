@@ -2,6 +2,7 @@ package keymanager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -81,6 +82,12 @@ type AccountLister interface {
 	ListKeymanagerAccounts(ctx context.Context, cfg ListKeymanagerAccountConfig) error
 }
 
+// ErrWeb3SignerUnsupported is returned when users try to enable the disabled
+// Web3Signer keymanager before Qrysm has a QRL-native remote signer flow.
+var ErrWeb3SignerUnsupported = errors.New(
+	"web3signer keymanager is not supported for QRL yet; a future ML-DSA-87-compatible remote signer is required",
+)
+
 // Keystore json file representation as a Go struct.
 type Keystore struct {
 	Crypto      map[string]any `json:"crypto"`
@@ -133,8 +140,8 @@ func ParseKind(k string) (Kind, error) {
 	// 	return Derived, nil
 	case "direct", "imported", "local":
 		return Local, nil
-	// case "web3signer":
-	// 	return Web3Signer, nil
+	case "web3signer":
+		return 0, ErrWeb3SignerUnsupported
 	default:
 		return 0, fmt.Errorf("%s is not an allowed keymanager", k)
 	}

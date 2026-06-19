@@ -32,7 +32,6 @@ go_library(
 go_test(
     name = "validator_test",
     srcs = ["proposer_settings_test.go"],
-    data = glob(["testdata/**"]),
     embed = [":validator"],
     deps = [
         "//testing/assert",

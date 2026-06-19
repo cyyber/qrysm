@@ -32,7 +32,7 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
-			PublicKey:             make([]byte, 32),
+			PublicKey:             make([]byte, field_params.MLDSA87PubkeyLength),
 			WithdrawalCredentials: make([]byte, field_params.WithdrawalCredentialsLength),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			Slashed:               true,
@@ -109,7 +109,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
-			PublicKey:             make([]byte, 32),
+			PublicKey:             make([]byte, field_params.MLDSA87PubkeyLength),
 			WithdrawalCredentials: make([]byte, field_params.WithdrawalCredentialsLength),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			Slashed:               true,
@@ -153,7 +153,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
-			PublicKey:             make([]byte, 48),
+			PublicKey:             make([]byte, field_params.MLDSA87PubkeyLength),
 			WithdrawalCredentials: make([]byte, field_params.WithdrawalCredentialsLength),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			Slashed:               true,
@@ -178,7 +178,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	block := util.NewBeaconBlockZond()
 	block.Block.Slot = 10
 	block.Block.ProposerIndex = pID
-	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
+	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, field_params.MLDSA87SignatureLength)
 	block.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, 32)
 	block.Signature = blockSig
 
@@ -222,7 +222,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	block := util.NewBeaconBlockZond()
 	block.Block.Slot = 10
 	block.Block.ProposerIndex = pID
-	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, 96)
+	block.Block.Body.RandaoReveal = bytesutil.PadTo([]byte{'A', 'B', 'C'}, field_params.MLDSA87SignatureLength)
 	block.Block.ParentRoot = parentRoot[:]
 	block.Signature = blockSig
 
@@ -238,7 +238,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
-			PublicKey:             make([]byte, 32),
+			PublicKey:             make([]byte, field_params.MLDSA87PubkeyLength),
 			WithdrawalCredentials: make([]byte, field_params.WithdrawalCredentialsLength),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			Slashed:               true,
@@ -299,7 +299,7 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
-			PublicKey:             make([]byte, 32),
+			PublicKey:             make([]byte, field_params.MLDSA87PubkeyLength),
 			WithdrawalCredentials: make([]byte, field_params.WithdrawalCredentialsLength),
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 			Slashed:               true,
