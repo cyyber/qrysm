@@ -1425,67 +1425,6 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 	require.Equal(t, true, aggregator)
 }
 
-/*
-func TestValidator_WaitForKeymanagerInitialization_web3Signer(t *testing.T) {
-	ctx := context.Background()
-	db := dbTest.SetupDB(t, [][field_params.MLDSA87PubkeyLength]byte{})
-	root := make([]byte, 32)
-	copy(root[2:], "a")
-	err := db.SaveGenesisValidatorsRoot(ctx, root)
-	require.NoError(t, err)
-	w := wallet.NewWalletForWeb3Signer()
-	decodedKey, err := hexutil.Decode("0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820")
-	require.NoError(t, err)
-	keys := [][field_params.MLDSA87PubkeyLength]byte{
-		bytesutil.ToBytes2592(decodedKey),
-	}
-	v := validator{
-		db:     db,
-		wallet: w,
-		Web3SignerConfig: &remoteweb3signer.SetupConfig{
-			BaseEndpoint:       "http://localhost:8545",
-			ProvidedPublicKeys: keys,
-		},
-	}
-	err = v.WaitForKeymanagerInitialization(context.Background())
-	require.NoError(t, err)
-	km, err := v.Keymanager()
-	require.NoError(t, err)
-	require.NotNil(t, km)
-}
-*/
-
-/*
-func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
-	ctx := context.Background()
-	db := dbTest.SetupDB(t, [][field_params.MLDSA87PubkeyLength]byte{})
-	root := make([]byte, 32)
-	copy(root[2:], "a")
-	err := db.SaveGenesisValidatorsRoot(ctx, root)
-	require.NoError(t, err)
-	walletChan := make(chan *wallet.Wallet, 1)
-	v := validator{
-		db:                       db,
-		walletInitializedFeed:    &event.Feed{},
-		walletInitializedChannel: walletChan,
-	}
-	wait := make(chan struct{})
-	go func() {
-		defer close(wait)
-		err = v.WaitForKeymanagerInitialization(ctx)
-		require.NoError(t, err)
-		km, err := v.Keymanager()
-		require.NoError(t, err)
-		require.NotNil(t, km)
-	}()
-
-	walletChan <- wallet.New(&wallet.Config{
-		KeymanagerKind: keymanager.Local,
-	})
-	<-wait
-}
-*/
-
 func TestValidator_WaitForKeymanagerInitialization_Interop(t *testing.T) {
 	ctx := context.Background()
 	db := dbTest.SetupDB(t, [][field_params.MLDSA87PubkeyLength]byte{})

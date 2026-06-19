@@ -72,8 +72,7 @@ type ValidatorService struct {
 	db                    db.Database
 	grpcHeaders           []string
 	graffiti              []byte
-	// Web3SignerConfig      *remoteweb3signer.SetupConfig
-	proposerSettings *validatorserviceconfig.ProposerSettings
+	proposerSettings      *validatorserviceconfig.ProposerSettings
 }
 
 // Config for the validator service.
@@ -94,10 +93,9 @@ type Config struct {
 	GrpcHeadersFlag            string
 	GraffitiFlag               string
 	Endpoint                   string
-	// Web3SignerConfig           *remoteweb3signer.SetupConfig
-	ProposerSettings  *validatorserviceconfig.ProposerSettings
-	BeaconApiEndpoint string
-	BeaconApiTimeout  time.Duration
+	ProposerSettings           *validatorserviceconfig.ProposerSettings
+	BeaconApiEndpoint          string
+	BeaconApiTimeout           time.Duration
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -123,8 +121,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		walletInitializedFeed: cfg.WalletInitializedFeed,
 		interopKeysConfig:     cfg.InteropKeysConfig,
 		graffitiStruct:        cfg.GraffitiStruct,
-		// Web3SignerConfig:  cfg.Web3SignerConfig,
-		proposerSettings: cfg.ProposerSettings,
+		proposerSettings:      cfg.ProposerSettings,
 	}
 
 	dialOpts := ConstructDialOptions(
@@ -221,9 +218,8 @@ func (v *ValidatorService) Start() {
 		graffitiStruct:                 v.graffitiStruct,
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
-		// Web3SignerConfig:               v.Web3SignerConfig,
-		proposerSettings:         v.proposerSettings,
-		walletInitializedChannel: make(chan *wallet.Wallet, 1),
+		proposerSettings:               v.proposerSettings,
+		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
 	}
 	if tracker, ok := v.conn.GetGrpcClientConn().(grpcHealthTracker); ok {
 		valStruct.grpcHealthTracker = tracker

@@ -3,8 +3,8 @@
 # datadir: Location of blockchain data
 datadir: /var/lib/qrysm/beacon-chain
 
-# http-web3provider: Execution API endpoint, eg. http://localhost:8545 for a local gqrl service on the default port
-http-web3provider: http://localhost:8545
+# execution-endpoint: Execution API endpoint, eg. http://localhost:8545 for a local gqrl service on the default port
+execution-endpoint: http://localhost:8545
 
 # Optional tuning parameters
 

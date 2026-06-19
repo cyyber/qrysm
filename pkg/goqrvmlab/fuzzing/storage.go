@@ -106,8 +106,8 @@ func randCall2200(addresses []common.Address, depth int) []byte {
 			ctor.ReturnData(runtimeCode)
 			p.CreateAndCall(ctor.Bytecode(), r%2 == 0, randCallType())
 		default:
-			p.Push(32) //len
-			p.Push(0)  //offset
+			p.Push(common.StorageValue64Length) //len
+			p.Push(0)                           //offset
 			if r%2 == 0 {
 				p.Op(ops.RETURN)
 			} else {

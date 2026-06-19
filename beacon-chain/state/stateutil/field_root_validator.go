@@ -26,7 +26,7 @@ const (
 )
 
 // ValidatorRegistryRoot computes the HashTreeRoot Merkleization of
-// a list of validator structs according to the Ethereum
+// a list of validator structs according to the QRL
 // Simple Serialize specification.
 func ValidatorRegistryRoot(vals []*qrysmpb.Validator) ([32]byte, error) {
 	return validatorRegistryRoot(vals)

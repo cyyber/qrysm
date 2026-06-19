@@ -107,8 +107,6 @@ var Commands = []*cli.Command{
 					flags.AccountPasswordFileFlag,
 					flags.VoluntaryExitPublicKeysFlag,
 					flags.BeaconRPCProviderFlag,
-					// flags.Web3SignerURLFlag,
-					// flags.Web3SignerPublicValidatorKeysFlag,
 					flags.InteropNumValidators,
 					flags.InteropStartIndex,
 					cmd.GrpcMaxCallRecvMsgSizeFlag,

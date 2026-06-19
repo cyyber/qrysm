@@ -28,7 +28,7 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, validatorCount)
 
 	for i := range validators {
-		k := make([]byte, 48)
+		k := make([]byte, fieldparams.MLDSA87PubkeyLength)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &qrysmpb.Validator{
 			PublicKey:             k,

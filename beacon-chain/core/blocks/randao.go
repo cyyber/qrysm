@@ -23,7 +23,7 @@ import (
 //	 # Verify RANDAO reveal
 //	 proposer = state.validators[get_beacon_proposer_index(state)]
 //	 signing_root = compute_signing_root(epoch, get_domain(state, DOMAIN_RANDAO))
-//	 assert bls.Verify(proposer.pubkey, signing_root, body.randao_reveal)
+//	 assert ml_dsa_87.Verify(proposer.pubkey, signing_root, body.randao_reveal)
 //	 # Mix in RANDAO reveal
 //	 mix = xor(get_randao_mix(state, epoch), hash(body.randao_reveal))
 //	 state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = mix

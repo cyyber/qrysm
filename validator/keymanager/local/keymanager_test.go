@@ -171,7 +171,7 @@ func TestLocalKeymanager_Sign_NoPublicKeyInCache(t *testing.T) {
 
 func TestCreatePrintoutOfKeys(t *testing.T) {
 	mk := func(b byte) []byte {
-		k := make([]byte, 48)
+		k := make([]byte, field_params.MLDSA87PubkeyLength)
 		for i := range k {
 			k[i] = b
 		}

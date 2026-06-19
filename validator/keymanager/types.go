@@ -61,16 +61,6 @@ type KeyStoreExtractor interface {
 	ExtractKeystores(ctx context.Context, publicKeys []ml_dsa_87.PublicKey, password string) ([]*Keystore, error)
 }
 
-// PublicKeyAdder allows adding public keys to the keymanager.
-// type PublicKeyAdder interface {
-// 	AddPublicKeys(ctx context.Context, publicKeys [][field_params.MLDSA87PubkeyLength]byte) ([]*qrlpbservice.ImportedRemoteKeysStatus, error)
-// }
-
-// PublicKeyDeleter allows deleting public keys set in keymanager.
-// type PublicKeyDeleter interface {
-// 	DeletePublicKeys(ctx context.Context, publicKeys [][field_params.MLDSA87PubkeyLength]byte) ([]*qrlpbservice.DeletedRemoteKeysStatus, error)
-// }
-
 type ListKeymanagerAccountConfig struct {
 	ShowDepositData          bool
 	ShowPrivateKeys          bool
@@ -107,8 +97,6 @@ const (
 	Local Kind = iota
 	// Derived keymanager using a hierarchical-deterministic algorithm.
 	// Derived
-	// Web3Signer keymanager capable of signing data using a remote signer called Web3Signer.
-	// Web3Signer
 )
 
 // IncorrectPasswordErrMsg defines a common error string representing an EIP-2335
@@ -126,8 +114,6 @@ func (k Kind) String() string {
 		// multiple directories will cause the isValid function to fail in wallet.go
 		// and may result in using a unintended wallet.
 		return "direct"
-	// case Web3Signer:
-	// 	return "web3signer"
 	default:
 		return fmt.Sprintf("%d", int(k))
 	}

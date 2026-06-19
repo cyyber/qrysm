@@ -40,7 +40,7 @@ func TestFuzzverifyDepositDataSigningRoot_10000(_ *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	var ba []byte
 	var pubkey [field_params.MLDSA87PubkeyLength]byte
-	var sig [96]byte
+	var sig [field_params.MLDSA87SignatureLength]byte
 	var domain [4]byte
 	var p []byte
 	var s []byte

@@ -135,7 +135,7 @@ func VerifyAttestationSignatures(ctx context.Context, beaconState state.ReadOnly
 //	  pubkeys = [state.validators[i].pubkey for i in indices]
 //	  domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
 //	  signing_root = compute_signing_root(indexed_attestation.data, domain)
-//	  return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
+//	  return ml_dsa_87.VerifyMultipleSignatures(indexed_attestation.signatures, signing_root, pubkeys)
 func VerifyIndexedAttestation(ctx context.Context, beaconState state.ReadOnlyBeaconState, indexedAtt *qrysmpb.IndexedAttestation) error {
 	ctx, span := trace.StartSpan(ctx, "core.VerifyIndexedAttestation")
 	defer span.End()

@@ -1,7 +1,5 @@
 package main
 
-// TODO(now.youtrack.cloud/issue/TQ-7)
-/*
 import (
 	"bufio"
 	"context"
@@ -56,9 +54,9 @@ func main() {
 				&cli.StringFlag{
 					Name: "data-type",
 					Usage: "ssz file data type: " +
-						"block|" +
-						"blinded_block|" +
-						"signed_block|" +
+						"block_zond|" +
+						"blinded_block_zond|" +
+						"signed_block_zond|" +
 						"attestation|" +
 						"block_header|" +
 						"deposit|" +
@@ -74,12 +72,12 @@ func main() {
 			Action: func(c *cli.Context) error {
 				var data fssz.Unmarshaler
 				switch sszType {
-				case "block":
-					data = &qrysmpb.BeaconBlock{}
-				case "signed_block":
-					data = &qrysmpb.SignedBeaconBlock{}
-				case "blinded_block":
-					data = &qrysmpb.BlindedBeaconBlockBellatrix{}
+				case "block_zond":
+					data = &qrysmpb.BeaconBlockZond{}
+				case "signed_block_zond":
+					data = &qrysmpb.SignedBeaconBlockZond{}
+				case "blinded_block_zond":
+					data = &qrysmpb.BlindedBeaconBlockZond{}
 				case "attestation":
 					data = &qrysmpb.Attestation{}
 				case "block_header":
@@ -174,7 +172,7 @@ func main() {
 					}
 					blockPath = text
 				}
-				block := &qrysmpb.SignedBeaconBlock{}
+				block := &qrysmpb.SignedBeaconBlockZond{}
 				if err := dataFetcher(blockPath, block); err != nil {
 					log.Fatal(err)
 				}
@@ -195,11 +193,11 @@ func main() {
 					}
 					preStatePath = text
 				}
-				preState := &qrysmpb.BeaconState{}
+				preState := &qrysmpb.BeaconStateZond{}
 				if err := dataFetcher(preStatePath, preState); err != nil {
 					log.Fatal(err)
 				}
-				stateObj, err := state_native.InitializeFromProtoPhase0(preState)
+				stateObj, err := state_native.InitializeFromProtoZond(preState)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -231,7 +229,7 @@ func main() {
 
 				// Diff the state if a post state is provided.
 				if expectedPostStatePath != "" {
-					expectedState := &qrysmpb.BeaconState{}
+					expectedState := &qrysmpb.BeaconStateZond{}
 					if err := dataFetcher(expectedPostStatePath, expectedState); err != nil {
 						log.Fatal(err)
 					}
@@ -293,7 +291,7 @@ func benchmarkHash(sszPath string, sszType string) {
 		runtime.ReadMemStats(stat)
 		root, err := stateTrieState.HashTreeRoot(context.Background())
 		if err != nil {
-			log.Fatal("couldn't hash")
+			log.Fatal("Could not hash")
 		}
 		newStat := &runtime.MemStats{}
 		runtime.ReadMemStats(newStat)
@@ -304,4 +302,3 @@ func benchmarkHash(sszPath string, sszType string) {
 		log.Fatal("Invalid type")
 	}
 }
-*/

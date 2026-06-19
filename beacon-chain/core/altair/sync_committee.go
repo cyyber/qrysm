@@ -56,7 +56,7 @@ func ValidateNilSyncContribution(s *qrysmpb.SignedContributionAndProof) error {
 //	"""
 //	indices = get_next_sync_committee_indices(state)
 //	pubkeys = [state.validators[index].pubkey for index in indices]
-//	aggregate_pubkey = bls.AggregatePKs(pubkeys)
+//	aggregate_pubkey = ml_dsa_87.AggregatePKs(pubkeys)
 //	return SyncCommittee(pubkeys=pubkeys, aggregate_pubkey=aggregate_pubkey)
 func NextSyncCommittee(ctx context.Context, s state.BeaconState) (*qrysmpb.SyncCommittee, error) {
 	indices, err := NextSyncCommitteeIndices(ctx, s)
@@ -143,7 +143,7 @@ func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconState) ([]primi
 
 // SyncSubCommitteePubkeys returns the pubkeys participating in a sync subcommittee.
 //
-// def get_sync_subcommittee_pubkeys(state: BeaconState, subcommittee_index: uint64) -> Sequence[BLSPubkey]:
+// def get_sync_subcommittee_pubkeys(state: BeaconState, subcommittee_index: uint64) -> Sequence[MLDSA87Pubkey]:
 //
 //	# Committees assigned to `slot` sign for `slot - 1`
 //	# This creates the exceptional logic below when transitioning between sync committee periods
@@ -172,7 +172,7 @@ func SyncSubCommitteePubkeys(syncCommittee *qrysmpb.SyncCommittee, subComIdx pri
 // IsSyncCommitteeAggregator checks whether the provided signature is for a valid
 // aggregator.
 //
-// def is_sync_committee_aggregator(signature: BLSSignature) -> bool:
+// def is_sync_committee_aggregator(signature: MLDSA87Signature) -> bool:
 //
 //	modulo = max(1, SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT // TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE)
 //	return bytes_to_uint64(hash(signature)[0:8]) % modulo == 0

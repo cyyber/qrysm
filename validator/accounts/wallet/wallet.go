@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	// KeymanagerConfigFileName for the keymanager used by the wallet: imported, derived, remote, or web3signer.
+	// KeymanagerConfigFileName for the keymanager used by the wallet.
 	KeymanagerConfigFileName = "keymanageropts.json"
 	// NewWalletPasswordPromptText for wallet creation.
 	NewWalletPasswordPromptText = "New wallet password"
@@ -48,7 +48,6 @@ var (
 	KeymanagerKindSelections = map[keymanager.Kind]string{
 		keymanager.Local: "Imported Wallet (Recommended)",
 		// keymanager.Derived:    "HD Wallet",
-		// keymanager.Web3Signer: "Consensys Web3Signer (Advanced)",
 	}
 	// ValidateExistingPass checks that an input cannot be empty.
 	ValidateExistingPass = func(input string) error {
@@ -242,19 +241,6 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 	})
 }
 
-/*
-// NewWalletForWeb3Signer returns a new wallet for web3 signer which is temporary and not stored locally.
-func NewWalletForWeb3Signer() *Wallet {
-	// wallet is just a temporary wallet for web3 signer used to call initialize keymanager.
-	return &Wallet{
-		walletDir:      "",
-		accountsPath:   "",
-		keymanagerKind: keymanager.Web3Signer,
-		walletPassword: "",
-	}
-}
-*/
-
 // OpenWallet instantiates a wallet from a specified path. It checks the
 // type of keymanager associated with the wallet by reading files in the wallet
 // path, if applicable. If a wallet does not exist, returns an appropriate error.
@@ -336,20 +322,6 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 			})
 			if err != nil {
 				return nil, errors.Wrap(err, "could not initialize derived keymanager")
-			}
-		case keymanager.Web3Signer:
-			config := cfg.Web3SignerConfig
-			if config == nil {
-				return nil, errors.New("web3signer config is nil")
-			}
-			// TODO(9883): future work needs to address how initialize keymanager is called for web3signer.
-			// an error may be thrown for genesis validators root for some InitializeKeymanager calls.
-			if !bytesutil.IsValidRoot(config.GenesisValidatorsRoot) {
-				return nil, errors.New("web3signer requires a genesis validators root value")
-			}
-			km, err = remoteweb3signer.NewKeymanager(ctx, config)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not initialize web3signer keymanager")
 			}
 	*/
 	default:

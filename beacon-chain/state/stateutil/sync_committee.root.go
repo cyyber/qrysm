@@ -9,7 +9,7 @@ import (
 )
 
 // SyncCommitteeRoot computes the HashTreeRoot Merkleization of a committee root.
-// a SyncCommitteeRoot struct according to the eth2
+// a SyncCommitteeRoot struct according to the QRL
 // Simple Serialize specification.
 func SyncCommitteeRoot(committee *qrysmpb.SyncCommittee) ([32]byte, error) {
 	var fieldRoots [][32]byte
@@ -17,7 +17,7 @@ func SyncCommitteeRoot(committee *qrysmpb.SyncCommittee) ([32]byte, error) {
 		return [32]byte{}, nil
 	}
 
-	// Field 1:  Vector[BLSPubkey, SYNC_COMMITTEE_SIZE]
+	// Field 1: Vector[MLDSA87Pubkey, SYNC_COMMITTEE_SIZE]
 	pubKeyRoots := make([][32]byte, 0)
 	for _, pubkey := range committee.Pubkeys {
 		r, err := merkleizePubkey(pubkey)

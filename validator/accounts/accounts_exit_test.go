@@ -18,16 +18,6 @@ import (
 	"github.com/theQRL/qrysm/testing/require"
 )
 
-// TODO(now.youtrack.cloud/issue/TQ-1): remove test below when ready
-/*
-func TestDisplayExitInfo(t *testing.T) {
-	logHook := test.NewGlobal()
-	key := []byte("0x123456")
-	displayExitInfo([][]byte{key}, []string{string(key)})
-	assert.LogsContain(t, logHook, "https://beaconcha.in/validator/3078313233343536")
-}
-*/
-
 func TestDisplayExitInfo(t *testing.T) {
 	logHook := test.NewGlobal()
 	key := []byte("0x123456")

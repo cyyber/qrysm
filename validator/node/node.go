@@ -187,27 +187,6 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	var err error
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
 	if !cliCtx.IsSet(flags.InteropNumValidators.Name) {
-		// Custom Check For Web3Signer
-		/*
-			if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
-				c.wallet = wallet.NewWalletForWeb3Signer()
-			} else {
-				w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-					return nil, wallet.ErrNoWalletFound
-				})
-				if err != nil {
-					return errors.Wrap(err, "could not open wallet")
-				}
-				c.wallet = w
-				// TODO(#9883) - Remove this when we have a better way to handle this.
-				log.WithFields(logrus.Fields{
-					"wallet":          w.AccountsDir(),
-					"keymanager-kind": w.KeymanagerKind().String(),
-				}).Info("Opened validator wallet")
-				dataDir = c.wallet.AccountsDir()
-			}
-		*/
-
 		w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 			return nil, wallet.ErrNoWalletFound
 		})
@@ -357,10 +336,9 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		Wallet:                     c.wallet,
 		WalletInitializedFeed:      c.walletInitialized,
 		GraffitiStruct:             gStruct,
-		// Web3SignerConfig:           wsc,
-		ProposerSettings:  bpc,
-		BeaconApiTimeout:  time.Second * 30,
-		BeaconApiEndpoint: c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
+		ProposerSettings:           bpc,
+		BeaconApiTimeout:           time.Second * 30,
+		BeaconApiEndpoint:          c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")
