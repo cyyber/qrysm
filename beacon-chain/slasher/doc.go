@@ -12,8 +12,7 @@
 // offering an optimal solution.
 //
 // Attesting histories are kept for each validator in two separate arrays known
-// as min and max spans, which are explained in our design document:
-// https://hackmd.io/@prysmaticlabs/slasher.
+// as min and max spans.
 //
 // A regular pair of min and max spans for a validator look as follows
 // with length = H where H is the amount of epochs worth of history

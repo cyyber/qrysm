@@ -35,7 +35,7 @@ import (
 //	      fork=fork,
 //	      execution_data=ExecutionData(block_hash=execution_block_hash, deposit_count=uint64(len(deposits))),
 //	      latest_block_header=BeaconBlockHeader(body_root=hash_tree_root(BeaconBlockBody())),
-//	      randao_mixes=[execution_block_hash] * EPOCHS_PER_HISTORICAL_VECTOR,  # Seed RANDAO with Eth1 entropy
+//	      randao_mixes=[execution_block_hash] * EPOCHS_PER_HISTORICAL_VECTOR,  # Seed RANDAO with execution-layer entropy
 //	  )
 //
 //	  # Process deposits

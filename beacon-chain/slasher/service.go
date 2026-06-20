@@ -1,7 +1,6 @@
 // Package slasher implements slashing detection for qrl, able to catch slashable attestations
 // and proposals that it receives via two event feeds, respectively. Any found slashings
-// are then submitted to the beacon node's slashing operations pool. See the design document
-// here https://hackmd.io/@prysmaticlabs/slasher.
+// are then submitted to the beacon node's slashing operations pool.
 package slasher
 
 import (

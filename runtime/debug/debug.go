@@ -1,4 +1,4 @@
-// Package debug defines useful profiling utils that came originally with go-ethereum.
+// Package debug defines useful profiling utilities.
 // Copyright 2016 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //

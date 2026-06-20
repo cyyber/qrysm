@@ -12,8 +12,8 @@ import (
 )
 
 // Uint64Root computes the HashTreeRoot Merkleization of
-// a simple uint64 value according to the Ethereum
-// Simple Serialize specification.
+// a simple uint64 value according to the Simple Serialize specification
+// used by QRL consensus.
 func Uint64Root(val uint64) [32]byte {
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, val)
@@ -22,8 +22,8 @@ func Uint64Root(val uint64) [32]byte {
 }
 
 // ForkRoot computes the HashTreeRoot Merkleization of
-// a Fork struct value according to the Ethereum
-// Simple Serialize specification.
+// a Fork struct value according to the Simple Serialize specification
+// used by QRL consensus.
 func ForkRoot(fork *qrysmpb.Fork) ([32]byte, error) {
 	fieldRoots := make([][32]byte, 3)
 	if fork != nil {
@@ -37,8 +37,8 @@ func ForkRoot(fork *qrysmpb.Fork) ([32]byte, error) {
 }
 
 // CheckpointRoot computes the HashTreeRoot Merkleization of
-// a InitWithReset struct value according to the Ethereum
-// Simple Serialize specification.
+// a Checkpoint struct value according to the Simple Serialize specification
+// used by QRL consensus.
 func CheckpointRoot(checkpoint *qrysmpb.Checkpoint) ([32]byte, error) {
 	fieldRoots := make([][32]byte, 2)
 	if checkpoint != nil {
@@ -51,8 +51,8 @@ func CheckpointRoot(checkpoint *qrysmpb.Checkpoint) ([32]byte, error) {
 }
 
 // ByteArrayRootWithLimit computes the HashTreeRoot Merkleization of
-// a list of [32]byte roots according to the Ethereum Simple Serialize
-// specification.
+// a list of [32]byte roots according to the Simple Serialize specification
+// used by QRL consensus.
 func ByteArrayRootWithLimit(roots [][]byte, limit uint64) ([32]byte, error) {
 	newRoots := make([][32]byte, len(roots))
 	for i, r := range roots {
@@ -74,8 +74,8 @@ func ByteArrayRootWithLimit(roots [][]byte, limit uint64) ([32]byte, error) {
 }
 
 // SlashingsRoot computes the HashTreeRoot Merkleization of
-// a list of uint64 slashing values according to the Ethereum
-// Simple Serialize specification.
+// a list of uint64 slashing values according to the Simple Serialize specification
+// used by QRL consensus.
 func SlashingsRoot(slashings []uint64) ([32]byte, error) {
 	slashingMarshaling := make([][]byte, fieldparams.SlashingsLength)
 	for i := 0; i < len(slashings) && i < len(slashingMarshaling); i++ {

@@ -29,7 +29,7 @@ import (
 //	previous_slot = max(state.slot, Slot(1)) - Slot(1)
 //	domain = get_domain(state, DOMAIN_SYNC_COMMITTEE, compute_epoch_at_slot(previous_slot))
 //	signing_root = compute_signing_root(get_block_root_at_slot(state, previous_slot), domain)
-//	assert eth2_fast_aggregate_verify(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signature)
+//	assert verify_sync_committee_signatures(participant_pubkeys, signing_root, sync_aggregate.sync_committee_signatures)
 //
 //	# Compute participant and proposer rewards
 //	total_active_increments = get_total_active_balance(state) // EFFECTIVE_BALANCE_INCREMENT

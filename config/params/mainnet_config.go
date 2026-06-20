@@ -103,8 +103,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	RandomSubnetsPerValidator:         1 << 0,
 	EpochsPerRandomSubnetSubscription: 1 << 8,
 
-	// While eth1 mainnet block times are closer to 13s, we must conform with other clients in
-	// order to vote on the correct execution blocks.
+	// Configure the expected execution-layer block time so validators vote on the
+	// correct execution blocks.
 	//
 	// Additional context: https://github.com/ethereum/consensus-specs/issues/2132
 	// Bug prompting this change: https://github.com/prysmaticlabs/prysm/issues/7856

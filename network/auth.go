@@ -13,7 +13,7 @@ const DefaultRPCHTTPTimeout = time.Second * 30
 
 // This creates a custom HTTP transport which we can attach to our HTTP client
 // in order to inject JWT auth strings into our HTTP request headers. Authentication
-// is required when interacting with an Ethereum engine API server via HTTP, and JWT
+// is required when interacting with an execution engine API server via HTTP, and JWT
 // is chosen as the scheme of choice.
 // For more details on the requirements of authentication when using the engine API, see
 // the specification here: https://github.com/ethereum/execution-apis/blob/main/src/engine/authentication.md

@@ -19,7 +19,7 @@ GENESIS_DELAY: 10 # Override for e2e tests
 # ---------------------------------------------------------------
 # [customized] Faster for testing purposes
 SECONDS_PER_SLOT: 10 # Override for e2e tests
-# 14 (estimate from Eth1 mainnet)
+# Faster execution-layer block timing for e2e tests
 SECONDS_PER_EXECUTION_BLOCK: 2 # Override for e2e tests
 # [customized] faster time for withdrawals
 MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 1
@@ -75,4 +75,3 @@ CONFIG_NAME: "end-to-end"
 SLOTS_PER_EPOCH: 6
 EPOCHS_PER_EXECUTION_VOTING_PERIOD: 2
 MAX_SEED_LOOKAHEAD: 1
-

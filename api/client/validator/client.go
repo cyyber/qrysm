@@ -30,7 +30,7 @@ func NewClient(host string, opts ...client.ClientOpt) (*Client, error) {
 	return &Client{c}, nil
 }
 
-// GetValidatorPubKeys gets the current list of web3signer or the local validator public keys in hex format.
+// GetValidatorPubKeys gets the current list of local validator public keys in hex format.
 func (c *Client) GetValidatorPubKeys(ctx context.Context) ([]string, error) {
 	jsonlocal, err := c.GetLocalValidatorKeys(ctx)
 	if err != nil {
@@ -44,7 +44,7 @@ func (c *Client) GetValidatorPubKeys(ctx context.Context) ([]string, error) {
 		}
 	*/
 	if len(jsonlocal.Keystores) == 0 /*&& len(jsonremote.Keystores) == 0*/ {
-		return nil, errors.New("there are no local keys or remote keys on the validator")
+		return nil, errors.New("there are no local keys on the validator")
 	}
 
 	hexKeys := make(map[string]bool)
