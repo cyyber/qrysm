@@ -134,7 +134,10 @@ go_test(
     ],
     embed = [":p2p"],
     flaky = True,
-    tags = ["requires-network"],
+    tags = [
+        "exclusive",
+        "requires-network",
+    ],
     deps = [
         "//beacon-chain/blockchain/testing",
         "//beacon-chain/cache",
