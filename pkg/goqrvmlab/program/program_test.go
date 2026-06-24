@@ -25,10 +25,7 @@ import (
 )
 
 func TestPush(t *testing.T) {
-	address0, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
-	if err != nil {
-		panic(err)
-	}
+	address0 := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
 
 	tests := []struct {
 		input    any
@@ -55,10 +52,7 @@ func TestPush(t *testing.T) {
 	}
 }
 func TestCall(t *testing.T) {
-	address1, err := common.NewAddressFromString("Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001337")
-	if err != nil {
-		panic(err)
-	}
+	address1 := common.MustParseAddress("Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001337")
 	{ // Nil gas
 		p := NewProgram()
 		p.Call(nil, address1, big.NewInt(1), 1, 2, 3, 4)

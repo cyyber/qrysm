@@ -45,8 +45,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
-	to, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
-	require.NoError(t, err)
+	to := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
 	tx := gqrlTypes.NewTx(&gqrlTypes.DynamicFeeTx{
 		Nonce:     0,
 		To:        &to,
@@ -58,8 +57,9 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	})
 	txs := []*gqrlTypes.Transaction{tx}
 	encodedBinaryTxs := make([][]byte, 1)
-	encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+	encodedBinaryTx, err := txs[0].MarshalBinary()
 	require.NoError(t, err)
+	encodedBinaryTxs[0] = encodedBinaryTx
 	blockHash := bytesutil.ToBytes32([]byte("foo"))
 	payload := &enginev1.ExecutionPayloadZond{
 		ParentHash:    parent,
@@ -141,8 +141,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks_ReconstructsPayload(t *testi
 	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
-	to, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
-	require.NoError(t, err)
+	to := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
 	tx := gqrlTypes.NewTx(&gqrlTypes.DynamicFeeTx{
 		Nonce:     0,
 		To:        &to,
@@ -154,8 +153,9 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks_ReconstructsPayload(t *testi
 	})
 	txs := []*gqrlTypes.Transaction{tx}
 	encodedBinaryTxs := make([][]byte, 1)
-	encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+	encodedBinaryTx, err := txs[0].MarshalBinary()
 	require.NoError(t, err)
+	encodedBinaryTxs[0] = encodedBinaryTx
 	blockHash := bytesutil.ToBytes32([]byte("foo"))
 	payload := &enginev1.ExecutionPayloadZond{
 		ParentHash:    parent,

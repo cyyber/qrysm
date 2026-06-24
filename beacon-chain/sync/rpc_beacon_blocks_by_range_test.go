@@ -55,8 +55,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
-	to, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
-	require.NoError(t, err)
+	to := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
 	tx := gqrltypes.NewTx(&gqrltypes.DynamicFeeTx{
 		Nonce:     0,
 		To:        &to,
@@ -68,8 +67,9 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	})
 	txs := []*gqrltypes.Transaction{tx}
 	encodedBinaryTxs := make([][]byte, 1)
-	encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+	encodedBinaryTx, err := txs[0].MarshalBinary()
 	require.NoError(t, err)
+	encodedBinaryTxs[0] = encodedBinaryTx
 	blockHash := bytesutil.ToBytes32([]byte("foo"))
 	payload := &enginev1.ExecutionPayloadZond{
 		ParentHash:    parent,
@@ -169,8 +169,7 @@ func TestRPCBeaconBlocksByRange_ReturnCorrectNumberBack(t *testing.T) {
 	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
-	to, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
-	require.NoError(t, err)
+	to := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
 	tx := gqrltypes.NewTx(&gqrltypes.DynamicFeeTx{
 		Nonce:     0,
 		To:        &to,
@@ -182,8 +181,9 @@ func TestRPCBeaconBlocksByRange_ReturnCorrectNumberBack(t *testing.T) {
 	})
 	txs := []*gqrltypes.Transaction{tx}
 	encodedBinaryTxs := make([][]byte, 1)
-	encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+	encodedBinaryTx, err := txs[0].MarshalBinary()
 	require.NoError(t, err)
+	encodedBinaryTxs[0] = encodedBinaryTx
 	blockHash := bytesutil.ToBytes32([]byte("foo"))
 	payload := &enginev1.ExecutionPayloadZond{
 		ParentHash:    parent,
@@ -289,8 +289,7 @@ func TestRPCBeaconBlocksByRange_ReconstructsPayloads(t *testing.T) {
 	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
-	to, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
-	require.NoError(t, err)
+	to := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
 	tx := gqrltypes.NewTx(&gqrltypes.DynamicFeeTx{
 		Nonce:     0,
 		To:        &to,
@@ -302,8 +301,9 @@ func TestRPCBeaconBlocksByRange_ReconstructsPayloads(t *testing.T) {
 	})
 	txs := []*gqrltypes.Transaction{tx}
 	encodedBinaryTxs := make([][]byte, 1)
-	encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+	encodedBinaryTx, err := txs[0].MarshalBinary()
 	require.NoError(t, err)
+	encodedBinaryTxs[0] = encodedBinaryTx
 	blockHash := bytesutil.ToBytes32([]byte("foo"))
 	payload := &enginev1.ExecutionPayloadZond{
 		ParentHash:    parent,
@@ -540,8 +540,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
-	to, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
-	require.NoError(t, err)
+	to := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
 	tx := gqrltypes.NewTx(&gqrltypes.DynamicFeeTx{
 		Nonce:     0,
 		To:        &to,
@@ -553,8 +552,9 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 	})
 	txs := []*gqrltypes.Transaction{tx}
 	encodedBinaryTxs := make([][]byte, 1)
-	encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+	encodedBinaryTx, err := txs[0].MarshalBinary()
 	require.NoError(t, err)
+	encodedBinaryTxs[0] = encodedBinaryTx
 	blockHash := bytesutil.ToBytes32([]byte("foo"))
 	payload := &enginev1.ExecutionPayloadZond{
 		ParentHash:    parent,
@@ -660,8 +660,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
-	to, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
-	require.NoError(t, err)
+	to := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
 	tx := gqrltypes.NewTx(&gqrltypes.DynamicFeeTx{
 		Nonce:     0,
 		To:        &to,
@@ -673,8 +672,9 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 	})
 	txs := []*gqrltypes.Transaction{tx}
 	encodedBinaryTxs := make([][]byte, 1)
-	encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+	encodedBinaryTx, err := txs[0].MarshalBinary()
 	require.NoError(t, err)
+	encodedBinaryTxs[0] = encodedBinaryTx
 	blockHash := bytesutil.ToBytes32([]byte("foo"))
 	payload := &enginev1.ExecutionPayloadZond{
 		ParentHash:    parent,
@@ -767,8 +767,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
-	to, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
-	require.NoError(t, err)
+	to := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
 	tx := gqrltypes.NewTx(&gqrltypes.DynamicFeeTx{
 		Nonce:     0,
 		To:        &to,
@@ -780,8 +779,9 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 	})
 	txs := []*gqrltypes.Transaction{tx}
 	encodedBinaryTxs := make([][]byte, 1)
-	encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+	encodedBinaryTx, err := txs[0].MarshalBinary()
 	require.NoError(t, err)
+	encodedBinaryTxs[0] = encodedBinaryTx
 	blockHash := bytesutil.ToBytes32([]byte("foo"))
 	payload := &enginev1.ExecutionPayloadZond{
 		ParentHash:    parent,
@@ -1100,8 +1100,7 @@ func TestRPCBeaconBlocksByRange_EnforceResponseInvariants(t *testing.T) {
 	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
-	to, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
-	require.NoError(t, err)
+	to := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
 	tx := gqrltypes.NewTx(&gqrltypes.DynamicFeeTx{
 		Nonce:     0,
 		To:        &to,
@@ -1113,8 +1112,9 @@ func TestRPCBeaconBlocksByRange_EnforceResponseInvariants(t *testing.T) {
 	})
 	txs := []*gqrltypes.Transaction{tx}
 	encodedBinaryTxs := make([][]byte, 1)
-	encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+	encodedBinaryTx, err := txs[0].MarshalBinary()
 	require.NoError(t, err)
+	encodedBinaryTxs[0] = encodedBinaryTx
 	blockHash := bytesutil.ToBytes32([]byte("foo"))
 	payload := &enginev1.ExecutionPayloadZond{
 		ParentHash:    parent,
@@ -1230,8 +1230,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
-	to, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
-	require.NoError(t, err)
+	to := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
 	tx := gqrltypes.NewTx(&gqrltypes.DynamicFeeTx{
 		Nonce:     0,
 		To:        &to,
@@ -1243,8 +1242,9 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 	})
 	txs := []*gqrltypes.Transaction{tx}
 	encodedBinaryTxs := make([][]byte, 1)
-	encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+	encodedBinaryTx, err := txs[0].MarshalBinary()
 	require.NoError(t, err)
+	encodedBinaryTxs[0] = encodedBinaryTx
 	blockHash := bytesutil.ToBytes32([]byte("foo"))
 	payload := &enginev1.ExecutionPayloadZond{
 		ParentHash:    parent,

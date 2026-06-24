@@ -24,8 +24,7 @@ import (
 )
 
 func address(addr string) common.Address {
-	a, _ := common.NewAddressFromString(addr)
-	return a
+	return common.MustParseAddress(addr)
 }
 
 func fillSstore(gst *GstMaker, fork string) {

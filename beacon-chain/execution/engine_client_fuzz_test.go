@@ -129,8 +129,7 @@ func FuzzExecutionPayload(f *testing.F) {
 func FuzzExecutionBlock(f *testing.F) {
 	f.Skip("Is skipped until false positive rate can be resolved.")
 	logsBloom := [256]byte{'j', 'u', 'n', 'k'}
-	addr, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
-	assert.NoError(f, err)
+	addr := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
 	innerData := &types.DynamicFeeTx{
 		ChainID:   big.NewInt(math.MaxInt),
 		Nonce:     math.MaxUint64,

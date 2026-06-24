@@ -432,8 +432,7 @@ func TestReconstructFullBlock(t *testing.T) {
 
 		jsonPayload := make(map[string]any)
 
-		to, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
-		require.NoError(t, err)
+		to := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
 		tx := gqrltypes.NewTx(&gqrltypes.DynamicFeeTx{
 			Nonce: 0,
 			To:    &to,
@@ -442,8 +441,9 @@ func TestReconstructFullBlock(t *testing.T) {
 		})
 		txs := []*gqrltypes.Transaction{tx}
 		encodedBinaryTxs := make([][]byte, 1)
-		encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+		encodedBinaryTx, err := txs[0].MarshalBinary()
 		require.NoError(t, err)
+		encodedBinaryTxs[0] = encodedBinaryTx
 		payload.Transactions = encodedBinaryTxs
 		payload.Withdrawals = make([]*enginev1.Withdrawal, 0)
 		jsonPayload["transactions"] = txs
@@ -528,8 +528,7 @@ func TestReconstructFullBlockBatch(t *testing.T) {
 
 		jsonPayload := make(map[string]any)
 
-		to, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
-		require.NoError(t, err)
+		to := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
 		tx := gqrltypes.NewTx(&gqrltypes.DynamicFeeTx{
 			Nonce: 0,
 			To:    &to,
@@ -538,8 +537,9 @@ func TestReconstructFullBlockBatch(t *testing.T) {
 		})
 		txs := []*gqrltypes.Transaction{tx}
 		encodedBinaryTxs := make([][]byte, 1)
-		encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+		encodedBinaryTx, err := txs[0].MarshalBinary()
 		require.NoError(t, err)
+		encodedBinaryTxs[0] = encodedBinaryTx
 		payload.Transactions = encodedBinaryTxs
 		jsonPayload["transactions"] = txs
 		num := big.NewInt(1)

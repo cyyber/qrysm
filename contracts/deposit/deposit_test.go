@@ -25,8 +25,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 	k1, err := ml_dsa_87.SecretKeyFromSeed(seed[:])
 	require.NoError(t, err)
 
-	withdrawalAddr, err := common.NewAddressFromString("Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000001234567890123456789012345678901234567890")
-	require.NoError(t, err)
+	withdrawalAddr := common.MustParseAddress("Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000001234567890123456789012345678901234567890")
 
 	result, _, err := deposit.DepositInput(k1, withdrawalAddr, 0, nil)
 	require.NoError(t, err)
