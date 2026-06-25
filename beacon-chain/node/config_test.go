@@ -67,7 +67,7 @@ func TestConfigureSlotsPerArchivedPoint(t *testing.T) {
 	assert.Equal(t, primitives.Slot(100), params.BeaconConfig().SlotsPerArchivedPoint)
 }
 
-func TestConfigureProofOfWork(t *testing.T) {
+func TestConfigureExecutionConfig(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 
 	app := cli.App{}
