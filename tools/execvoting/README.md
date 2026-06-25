@@ -7,12 +7,12 @@ Flags:
   -beacon string
         gRPC address of the Qrysm beacon node (default "127.0.0.1:4000")
   -genesis uint
-        Genesis time. mainnet=1606824023, prater=1616508000 (default 1606824023)
+        QRL genesis time (required)
 ```
 
 Usage:
 ```
-bazel run //tools/execvoting -- -beacon=127.0.0.1:4000 -genesis=1606824023
+bazel run //tools/execvoting -- -beacon=127.0.0.1:4000 -genesis=<qrl-genesis-time>
 ```
 
 Example response

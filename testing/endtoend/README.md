@@ -5,5 +5,4 @@ It also performs a test on a syncing node, and supports feature flags to allow e
 
 ## How it works
 
-// TODO(now.youtrack.cloud/issue/TQ-1)
-Please see our docs page, https://docs.prylabs.network/docs/devtools/end-to-end, to read more about the feature.
+Run the Bazel E2E targets in this package for scenario-specific Qrysm coverage.
