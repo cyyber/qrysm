@@ -8,11 +8,11 @@ import (
 )
 
 type DepositData struct {
-	PubKey                string `json:"pubkey"`
-	Amount                uint64 `json:"amount"`
-	WithdrawalCredentials string `json:"withdrawal_credentials"`
-	DepositDataRoot       string `json:"deposit_data_root"`
-	Signature             string `json:"signature"`
+	PubKey              string `json:"pubkey"`
+	Amount              uint64 `json:"amount"`
+	WithdrawalRecipient string `json:"withdrawal_recipient"`
+	DepositDataRoot     string `json:"deposit_data_root"`
+	Signature           string `json:"signature"`
 
 	MessageRoot string `json:"message_root"`
 	ForkVersion string `json:"fork_version"`
@@ -33,9 +33,9 @@ func NewDepositData(c *Credential) (*DepositData, error) {
 	}
 
 	depositMessage := &qrysmpb.DepositMessage{
-		PublicKey:             depositKey.PublicKey().Marshal(),
-		WithdrawalCredentials: depositData.WithdrawalCredentials,
-		Amount:                c.amount,
+		PublicKey:           depositKey.PublicKey().Marshal(),
+		WithdrawalRecipient: depositData.WithdrawalRecipient,
+		Amount:              c.amount,
 	}
 
 	messageRoot, err := depositMessage.HashTreeRoot()
@@ -44,15 +44,15 @@ func NewDepositData(c *Credential) (*DepositData, error) {
 	}
 
 	d := &DepositData{
-		PubKey:                misc.EncodeHex(depositMessage.PublicKey),
-		WithdrawalCredentials: misc.EncodeHex(depositMessage.WithdrawalCredentials),
-		Amount:                c.amount,
-		Signature:             misc.EncodeHex(depositData.Signature),
-		MessageRoot:           misc.EncodeHex(messageRoot[:]),
-		DepositDataRoot:       misc.EncodeHex(dataRoot[:]),
-		ForkVersion:           misc.EncodeHex(c.chainSetting.GenesisForkVersion),
-		NetworkName:           c.chainSetting.Name,
-		CLIVersion:            "", // TODO: (cyyber) get CLI Version
+		PubKey:              misc.EncodeHex(depositMessage.PublicKey),
+		WithdrawalRecipient: misc.EncodeHex(depositMessage.WithdrawalRecipient),
+		Amount:              c.amount,
+		Signature:           misc.EncodeHex(depositData.Signature),
+		MessageRoot:         misc.EncodeHex(messageRoot[:]),
+		DepositDataRoot:     misc.EncodeHex(dataRoot[:]),
+		ForkVersion:         misc.EncodeHex(c.chainSetting.GenesisForkVersion),
+		NetworkName:         c.chainSetting.Name,
+		CLIVersion:          "", // TODO: (cyyber) get CLI Version
 	}
 	return d, nil
 }

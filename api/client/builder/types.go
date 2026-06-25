@@ -514,15 +514,15 @@ type DepositData struct {
 // MarshalJSON returns a JSON byte array representation of DepositData.
 func (d *DepositData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		PublicKey             hexutil.Bytes `json:"pubkey"`
-		WithdrawalCredentials hexutil.Bytes `json:"withdrawal_credentials"`
-		Amount                string        `json:"amount"`
-		Signature             hexutil.Bytes `json:"signature"`
+		PublicKey           hexutil.Bytes `json:"pubkey"`
+		WithdrawalRecipient hexutil.Bytes `json:"withdrawal_recipient"`
+		Amount              string        `json:"amount"`
+		Signature           hexutil.Bytes `json:"signature"`
 	}{
-		PublicKey:             d.PublicKey,
-		WithdrawalCredentials: d.WithdrawalCredentials,
-		Amount:                fmt.Sprintf("%d", d.Amount),
-		Signature:             d.Signature,
+		PublicKey:           d.PublicKey,
+		WithdrawalRecipient: d.WithdrawalRecipient,
+		Amount:              fmt.Sprintf("%d", d.Amount),
+		Signature:           d.Signature,
 	})
 }
 

@@ -35,9 +35,9 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 	sig, err := ml_dsa_87.SignatureFromBytes(result.Signature)
 	require.NoError(t, err)
 	testData := &qrysmpb.DepositMessage{
-		PublicKey:             result.PublicKey,
-		WithdrawalCredentials: result.WithdrawalCredentials,
-		Amount:                result.Amount,
+		PublicKey:           result.PublicKey,
+		WithdrawalRecipient: result.WithdrawalRecipient,
+		Amount:              result.Amount,
 	}
 	sr, err := testData.HashTreeRoot()
 	require.NoError(t, err)
@@ -83,7 +83,7 @@ func TestVerifyDepositSignature_InvalidSig(t *testing.T) {
 	}
 }
 
-func TestWithdrawalCredentialsAddress(t *testing.T) {
+func TestWithdrawalRecipientAddress(t *testing.T) {
 	type tc struct {
 		name    string
 		addrHex string
@@ -108,7 +108,7 @@ func TestWithdrawalCredentialsAddress(t *testing.T) {
 			tc.wantHex = "0x" + strings.TrimPrefix(strings.ToLower(tc.addrHex), "q")
 			addr, err := common.NewAddressFromString(tc.addrHex)
 			require.NoError(t, err)
-			got := deposit.WithdrawalCredentialsAddress(addr)
+			got := deposit.WithdrawalRecipientAddress(addr)
 			gotHex := "0x" + hex.EncodeToString(got)
 			require.Equal(t, tc.wantHex, gotHex)
 		})

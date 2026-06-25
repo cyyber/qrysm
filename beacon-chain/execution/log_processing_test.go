@@ -55,7 +55,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 
 	testAcc.TxOpts.Value = mock.Amount40000Quanta()
 	testAcc.TxOpts.GasLimit = 1000000
-	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, depositRoots[0])
+	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalRecipient, data.Signature, depositRoots[0])
 	require.NoError(t, err, "Could not deposit to deposit contract")
 
 	testAcc.Backend.Commit()
@@ -128,10 +128,10 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	testAcc.TxOpts.Value = mock.Amount40000Quanta()
 	testAcc.TxOpts.GasLimit = 1000000
 
-	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, depositRoots[0])
+	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalRecipient, data.Signature, depositRoots[0])
 	require.NoError(t, err, "Could not deposit to deposit contract")
 
-	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, depositRoots[0])
+	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalRecipient, data.Signature, depositRoots[0])
 	require.NoError(t, err, "Could not deposit to deposit contract")
 
 	testAcc.Backend.Commit()
@@ -184,7 +184,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 
 	testAcc.TxOpts.Value = mock.Amount40000Quanta()
 	testAcc.TxOpts.GasLimit = 1000000
-	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalCredentials, data.Signature, depositRoots[0])
+	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalRecipient, data.Signature, depositRoots[0])
 	require.NoError(t, err, "Could not deposit to deposit contract")
 	testAcc.Backend.Commit()
 
@@ -197,11 +197,11 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	logz, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	require.NoError(t, err, "Unable to retrieve logs")
 
-	loggedPubkey, withCreds, _, loggedSig, index, err := contracts.UnpackDepositLogData(logz[0].Data)
+	loggedPubkey, loggedRecipient, _, loggedSig, index, err := contracts.UnpackDepositLogData(logz[0].Data)
 	require.NoError(t, err, "Unable to unpack logs")
 
 	require.Equal(t, uint64(0), binary.LittleEndian.Uint64(index), "Retrieved merkle tree index is incorrect")
 	require.DeepEqual(t, data.PublicKey, loggedPubkey, "Pubkey is not the same as the data that was put in")
 	require.DeepEqual(t, data.Signature, loggedSig, "Proof of Possession is not the same as the data that was put in")
-	require.DeepEqual(t, data.WithdrawalCredentials, withCreds, "Withdrawal Credentials is not the same as the data that was put in")
+	require.DeepEqual(t, data.WithdrawalRecipient, loggedRecipient, "Withdrawal recipient is not the same as the data that was put in")
 }

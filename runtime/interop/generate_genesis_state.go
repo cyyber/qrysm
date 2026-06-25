@@ -114,9 +114,9 @@ func createDepositData(privKey ml_dsa_87.MLDSA87Key, pubKey ml_dsa_87.PublicKey)
 	}
 
 	depositMessage := &qrysmpb.DepositMessage{
-		PublicKey:             pubKey.Marshal(),
-		WithdrawalCredentials: deposit.WithdrawalCredentialsAddress(withdrawalAddr),
-		Amount:                params.BeaconConfig().MaxEffectiveBalance,
+		PublicKey:           pubKey.Marshal(),
+		WithdrawalRecipient: deposit.WithdrawalRecipientAddress(withdrawalAddr),
+		Amount:              params.BeaconConfig().MaxEffectiveBalance,
 	}
 
 	sr, err := depositMessage.HashTreeRoot()
@@ -132,10 +132,10 @@ func createDepositData(privKey ml_dsa_87.MLDSA87Key, pubKey ml_dsa_87.PublicKey)
 		return nil, err
 	}
 	di := &qrysmpb.Deposit_Data{
-		PublicKey:             depositMessage.PublicKey,
-		WithdrawalCredentials: depositMessage.WithdrawalCredentials,
-		Amount:                depositMessage.Amount,
-		Signature:             privKey.Sign(root[:]).Marshal(),
+		PublicKey:           depositMessage.PublicKey,
+		WithdrawalRecipient: depositMessage.WithdrawalRecipient,
+		Amount:              depositMessage.Amount,
+		Signature:           privKey.Sign(root[:]).Marshal(),
 	}
 	return di, nil
 }

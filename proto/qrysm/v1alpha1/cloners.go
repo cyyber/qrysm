@@ -217,10 +217,10 @@ func CopyDepositData(depData *Deposit_Data) *Deposit_Data {
 		return nil
 	}
 	return &Deposit_Data{
-		PublicKey:             bytesutil.SafeCopyBytes(depData.PublicKey),
-		WithdrawalCredentials: bytesutil.SafeCopyBytes(depData.WithdrawalCredentials),
-		Amount:                depData.Amount,
-		Signature:             bytesutil.SafeCopyBytes(depData.Signature),
+		PublicKey:           bytesutil.SafeCopyBytes(depData.PublicKey),
+		WithdrawalRecipient: bytesutil.SafeCopyBytes(depData.WithdrawalRecipient),
+		Amount:              depData.Amount,
+		Signature:           bytesutil.SafeCopyBytes(depData.Signature),
 	}
 }
 
@@ -254,11 +254,11 @@ func CopySignedVoluntaryExit(exit *SignedVoluntaryExit) *SignedVoluntaryExit {
 func CopyValidator(val *Validator) *Validator {
 	pubKey := make([]byte, len(val.PublicKey))
 	copy(pubKey, val.PublicKey)
-	withdrawalCreds := make([]byte, len(val.WithdrawalCredentials))
-	copy(withdrawalCreds, val.WithdrawalCredentials)
+	withdrawalRecipient := make([]byte, len(val.WithdrawalRecipient))
+	copy(withdrawalRecipient, val.WithdrawalRecipient)
 	return &Validator{
 		PublicKey:                  pubKey,
-		WithdrawalCredentials:      withdrawalCreds,
+		WithdrawalRecipient:        withdrawalRecipient,
 		EffectiveBalance:           val.EffectiveBalance,
 		Slashed:                    val.Slashed,
 		ActivationEligibilityEpoch: val.ActivationEligibilityEpoch,

@@ -70,11 +70,11 @@ func (v readOnlyValidator) PublicKey() [field_params.MLDSA87PubkeyLength]byte {
 	return pubkey
 }
 
-// WithdrawalCredentials returns the withdrawal credentials of the
+// WithdrawalRecipient returns the withdrawal recipient of the
 // read only validator.
-func (v readOnlyValidator) WithdrawalCredentials() []byte {
-	creds := make([]byte, len(v.validator.WithdrawalCredentials))
-	copy(creds, v.validator.WithdrawalCredentials)
+func (v readOnlyValidator) WithdrawalRecipient() []byte {
+	creds := make([]byte, len(v.validator.WithdrawalRecipient))
+	copy(creds, v.validator.WithdrawalRecipient)
 	return creds
 }
 

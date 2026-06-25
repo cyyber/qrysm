@@ -392,7 +392,7 @@ func getFields() fields {
 	b2592 := make([]byte, 2592)
 	b256 := make([]byte, 256)
 	var root [32]byte
-	var creds [field_params.WithdrawalCredentialsLength]byte
+	var creds [field_params.WithdrawalRecipientLength]byte
 	var sig [field_params.MLDSA87SignatureLength]byte
 	b64[0], b64[5], b64[10] = 'q', 'u', 'x'
 	b2592[0], b2592[5], b2592[10] = 'b', 'a', 'r'
@@ -408,10 +408,10 @@ func getFields() fields {
 			deposits[i].Proof[j] = root[:]
 		}
 		deposits[i].Data = &qrysmpb.Deposit_Data{
-			PublicKey:             b2592,
-			WithdrawalCredentials: creds[:],
-			Amount:                128,
-			Signature:             sig[:],
+			PublicKey:           b2592,
+			WithdrawalRecipient: creds[:],
+			Amount:              128,
+			Signature:           sig[:],
 		}
 	}
 	atts := make([]*qrysmpb.Attestation, 128)

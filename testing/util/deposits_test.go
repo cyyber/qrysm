@@ -15,8 +15,8 @@ func assertDepositShape(t *testing.T, deposit *qrysmpb.Deposit, depositDataRoot 
 	if len(deposit.Data.PublicKey) != fieldparams.MLDSA87PubkeyLength {
 		t.Fatalf("incorrect public key length, wanted %d but received %d", fieldparams.MLDSA87PubkeyLength, len(deposit.Data.PublicKey))
 	}
-	if len(deposit.Data.WithdrawalCredentials) != fieldparams.WithdrawalCredentialsLength {
-		t.Fatalf("incorrect withdrawal credentials length, wanted %d but received %d", fieldparams.WithdrawalCredentialsLength, len(deposit.Data.WithdrawalCredentials))
+	if len(deposit.Data.WithdrawalRecipient) != fieldparams.WithdrawalRecipientLength {
+		t.Fatalf("incorrect withdrawal recipient length, wanted %d but received %d", fieldparams.WithdrawalRecipientLength, len(deposit.Data.WithdrawalRecipient))
 	}
 	if len(deposit.Data.Signature) != fieldparams.MLDSA87SignatureLength {
 		t.Fatalf("incorrect signature length, wanted %d but received %d", fieldparams.MLDSA87SignatureLength, len(deposit.Data.Signature))
@@ -66,8 +66,8 @@ func TestDepositsWithBalance_MatchesDeterministic(t *testing.T) {
 		if deposits[i].Data.Amount != determDeposits[i].Data.Amount {
 			t.Errorf("Expected deposit amount %d to match", i)
 		}
-		if !bytes.Equal(deposits[i].Data.WithdrawalCredentials, determDeposits[i].Data.WithdrawalCredentials) {
-			t.Errorf("Expected deposit withdrawal credentials %d to match", i)
+		if !bytes.Equal(deposits[i].Data.WithdrawalRecipient, determDeposits[i].Data.WithdrawalRecipient) {
+			t.Errorf("Expected deposit withdrawal recipient %d to match", i)
 		}
 		depositDataRoot, err := deposits[i].Data.HashTreeRoot()
 		require.NoError(t, err)
@@ -108,8 +108,8 @@ func TestDepositsWithBalance_MatchesDeterministic_Cached(t *testing.T) {
 		if deposits[i].Data.Amount != determDeposits[i].Data.Amount {
 			t.Errorf("Expected deposit amount %d to match", i)
 		}
-		if !bytes.Equal(deposits[i].Data.WithdrawalCredentials, determDeposits[i].Data.WithdrawalCredentials) {
-			t.Errorf("Expected deposit withdrawal credentials %d to match", i)
+		if !bytes.Equal(deposits[i].Data.WithdrawalRecipient, determDeposits[i].Data.WithdrawalRecipient) {
+			t.Errorf("Expected deposit withdrawal recipient %d to match", i)
 		}
 		depositDataRoot, err := deposits[i].Data.HashTreeRoot()
 		require.NoError(t, err)

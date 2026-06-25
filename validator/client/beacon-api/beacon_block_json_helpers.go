@@ -56,10 +56,10 @@ func jsonifyDeposits(deposits []*qrysmpb.Deposit) []*apimiddleware.DepositJson {
 
 		jsonDeposit := &apimiddleware.DepositJson{
 			Data: &apimiddleware.Deposit_DataJson{
-				Amount:                uint64ToString(deposit.Data.Amount),
-				PublicKey:             hexutil.Encode(deposit.Data.PublicKey),
-				Signature:             hexutil.Encode(deposit.Data.Signature),
-				WithdrawalCredentials: hexutil.Encode(deposit.Data.WithdrawalCredentials),
+				Amount:              uint64ToString(deposit.Data.Amount),
+				PublicKey:           hexutil.Encode(deposit.Data.PublicKey),
+				Signature:           hexutil.Encode(deposit.Data.Signature),
+				WithdrawalRecipient: hexutil.Encode(deposit.Data.WithdrawalRecipient),
 			},
 			Proof: proofs,
 		}

@@ -40,10 +40,10 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		Slot: 4000,
 		Validators: []*qrysmpb.Validator{
 			{
-				ActivationEpoch:       0,
-				ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-				PublicKey:             pubKey1,
-				WithdrawalCredentials: make([]byte, 64),
+				ActivationEpoch:     0,
+				ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
+				PublicKey:           pubKey1,
+				WithdrawalRecipient: make([]byte, 64),
 			},
 		},
 	}
@@ -51,9 +51,9 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	depData := &qrysmpb.Deposit_Data{
-		PublicKey:             pubKey1,
-		WithdrawalCredentials: bytesutil.PadTo([]byte("hey"), 64),
-		Signature:             make([]byte, field_params.MLDSA87SignatureLength),
+		PublicKey:           pubKey1,
+		WithdrawalRecipient: bytesutil.PadTo([]byte("hey"), 64),
+		Signature:           make([]byte, field_params.MLDSA87SignatureLength),
 	}
 	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 	require.NoError(t, err)

@@ -236,9 +236,9 @@ func (c beaconApiBeaconChainClient) ListValidators(ctx context.Context, in *qrys
 			return nil, errors.Wrapf(err, "failed to decode validator pubkey `%s`", stateValidator.Validator.Pubkey)
 		}
 
-		withdrawalCredentials, err := hexutil.Decode(stateValidator.Validator.WithdrawalCredentials)
+		withdrawalRecipient, err := hexutil.Decode(stateValidator.Validator.WithdrawalRecipient)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to decode validator withdrawal credentials `%s`", stateValidator.Validator.WithdrawalCredentials)
+			return nil, errors.Wrapf(err, "failed to decode validator withdrawal recipient `%s`", stateValidator.Validator.WithdrawalRecipient)
 		}
 
 		effectiveBalance, err := strconv.ParseUint(stateValidator.Validator.EffectiveBalance, 10, 64)
@@ -275,7 +275,7 @@ func (c beaconApiBeaconChainClient) ListValidators(ctx context.Context, in *qrys
 			Index: primitives.ValidatorIndex(validatorIndex),
 			Validator: &qrysmpb.Validator{
 				PublicKey:                  pubkey,
-				WithdrawalCredentials:      withdrawalCredentials,
+				WithdrawalRecipient:        withdrawalRecipient,
 				EffectiveBalance:           effectiveBalance,
 				Slashed:                    stateValidator.Validator.Slashed,
 				ActivationEligibilityEpoch: primitives.Epoch(activationEligibilityEpoch),

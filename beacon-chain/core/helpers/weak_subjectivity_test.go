@@ -269,10 +269,10 @@ func genState(t *testing.T, valCount, avgBalance uint64) state.BeaconState {
 	balances := make([]uint64, len(validators))
 	for i := range valCount {
 		validators[i] = &qrysmpb.Validator{
-			PublicKey:             make([]byte, field_params.MLDSA87PubkeyLength),
-			WithdrawalCredentials: make([]byte, field_params.WithdrawalCredentialsLength),
-			EffectiveBalance:      avgBalance * 1e12,
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			PublicKey:           make([]byte, field_params.MLDSA87PubkeyLength),
+			WithdrawalRecipient: make([]byte, field_params.WithdrawalRecipientLength),
+			EffectiveBalance:    avgBalance * 1e12,
+			ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
 		}
 		balances[i] = validators[i].EffectiveBalance
 	}

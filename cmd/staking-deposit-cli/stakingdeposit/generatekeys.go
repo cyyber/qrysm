@@ -92,7 +92,7 @@ func validateDeposit(depositData *DepositData, credential *Credential) bool {
 	}
 	pubKey := misc.DecodeHex(depositData.PubKey)
 
-	withdrawalCredentials := misc.DecodeHex(depositData.WithdrawalCredentials)
+	withdrawalRecipient := misc.DecodeHex(depositData.WithdrawalRecipient)
 
 	signature := misc.DecodeHex(depositData.Signature)
 
@@ -103,14 +103,14 @@ func validateDeposit(depositData *DepositData, credential *Credential) bool {
 		return false
 	}
 
-	if len(withdrawalCredentials) != field_params.WithdrawalCredentialsLength {
-		panic(fmt.Errorf("invalid withdrawal credentials length %d, want %d",
-			len(withdrawalCredentials), field_params.WithdrawalCredentialsLength))
+	if len(withdrawalRecipient) != field_params.WithdrawalRecipientLength {
+		panic(fmt.Errorf("invalid withdrawal recipient length %d, want %d",
+			len(withdrawalRecipient), field_params.WithdrawalRecipientLength))
 	}
 
-	if !reflect.DeepEqual(withdrawalCredentials, credential.withdrawalAddress.Bytes()) {
-		panic(fmt.Errorf("withdrawalCredentials %x mismatch with credential.QRLWithdrawalAddress %x",
-			withdrawalCredentials, credential.withdrawalAddress.Bytes()))
+	if !reflect.DeepEqual(withdrawalRecipient, credential.withdrawalAddress.Bytes()) {
+		panic(fmt.Errorf("withdrawalRecipient %x mismatch with credential.QRLWithdrawalAddress %x",
+			withdrawalRecipient, credential.withdrawalAddress.Bytes()))
 	}
 
 	if len(signature) != field_params.MLDSA87SignatureLength {
@@ -122,9 +122,9 @@ func validateDeposit(depositData *DepositData, credential *Credential) bool {
 	}
 
 	depositMessage := &qrysmpb.DepositMessage{
-		PublicKey:             depositKey.PublicKey().Marshal(),
-		WithdrawalCredentials: withdrawalCredentials,
-		Amount:                depositData.Amount,
+		PublicKey:           depositKey.PublicKey().Marshal(),
+		WithdrawalRecipient: withdrawalRecipient,
+		Amount:              depositData.Amount,
 	}
 	root, err := depositMessage.HashTreeRoot()
 	if err != nil {

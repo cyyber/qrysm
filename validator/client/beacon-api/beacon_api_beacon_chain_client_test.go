@@ -222,7 +222,7 @@ func TestListValidators(t *testing.T) {
 						Index: "1",
 						Validator: &beacon.Validator{
 							Pubkey:                     hexutil.Encode([]byte{3}),
-							WithdrawalCredentials:      hexutil.Encode([]byte{4}),
+							WithdrawalRecipient:        hexutil.Encode([]byte{4}),
 							EffectiveBalance:           "5",
 							Slashed:                    true,
 							ActivationEligibilityEpoch: "6",
@@ -259,13 +259,13 @@ func TestListValidators(t *testing.T) {
 				expectedError: "failed to decode validator pubkey `foo`",
 			},
 			{
-				name: "invalid withdrawal credentials",
+				name: "invalid withdrawal recipient",
 				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
-					validatorsResponse.Data[0].Validator.WithdrawalCredentials = "bar"
+					validatorsResponse.Data[0].Validator.WithdrawalRecipient = "bar"
 					return validatorsResponse
 				},
-				expectedError: "failed to decode validator withdrawal credentials `bar`",
+				expectedError: "failed to decode validator withdrawal recipient `bar`",
 			},
 			{
 				name: "invalid effective balance",
@@ -352,7 +352,7 @@ func TestListValidators(t *testing.T) {
 						Index: "1",
 						Validator: &beacon.Validator{
 							Pubkey:                     hexutil.Encode([]byte{2}),
-							WithdrawalCredentials:      hexutil.Encode([]byte{3}),
+							WithdrawalRecipient:        hexutil.Encode([]byte{3}),
 							EffectiveBalance:           "4",
 							Slashed:                    true,
 							ActivationEligibilityEpoch: "5",
@@ -365,7 +365,7 @@ func TestListValidators(t *testing.T) {
 						Index: "9",
 						Validator: &beacon.Validator{
 							Pubkey:                     hexutil.Encode([]byte{10}),
-							WithdrawalCredentials:      hexutil.Encode([]byte{11}),
+							WithdrawalRecipient:        hexutil.Encode([]byte{11}),
 							EffectiveBalance:           "12",
 							Slashed:                    false,
 							ActivationEligibilityEpoch: "13",
@@ -413,7 +413,7 @@ func TestListValidators(t *testing.T) {
 							Index: 1,
 							Validator: &qrysmpb.Validator{
 								PublicKey:                  []byte{2},
-								WithdrawalCredentials:      []byte{3},
+								WithdrawalRecipient:        []byte{3},
 								EffectiveBalance:           4,
 								Slashed:                    true,
 								ActivationEligibilityEpoch: 5,
@@ -448,7 +448,7 @@ func TestListValidators(t *testing.T) {
 								Index: 1,
 								Validator: &qrysmpb.Validator{
 									PublicKey:                  []byte{2},
-									WithdrawalCredentials:      []byte{3},
+									WithdrawalRecipient:        []byte{3},
 									EffectiveBalance:           4,
 									Slashed:                    true,
 									ActivationEligibilityEpoch: 5,
@@ -476,7 +476,7 @@ func TestListValidators(t *testing.T) {
 								Index: 1,
 								Validator: &qrysmpb.Validator{
 									PublicKey:                  []byte{2},
-									WithdrawalCredentials:      []byte{3},
+									WithdrawalRecipient:        []byte{3},
 									EffectiveBalance:           4,
 									Slashed:                    true,
 									ActivationEligibilityEpoch: 5,
@@ -489,7 +489,7 @@ func TestListValidators(t *testing.T) {
 								Index: 9,
 								Validator: &qrysmpb.Validator{
 									PublicKey:                  []byte{10},
-									WithdrawalCredentials:      []byte{11},
+									WithdrawalRecipient:        []byte{11},
 									EffectiveBalance:           12,
 									Slashed:                    false,
 									ActivationEligibilityEpoch: 13,
@@ -517,7 +517,7 @@ func TestListValidators(t *testing.T) {
 								Index: 9,
 								Validator: &qrysmpb.Validator{
 									PublicKey:                  []byte{10},
-									WithdrawalCredentials:      []byte{11},
+									WithdrawalRecipient:        []byte{11},
 									EffectiveBalance:           12,
 									Slashed:                    false,
 									ActivationEligibilityEpoch: 13,

@@ -315,9 +315,9 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 			ExecutionBlockHeight: 2,
 			Deposit: &qrysmpb.Deposit{
 				Data: &qrysmpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte{0}, 2592),
-					WithdrawalCredentials: make([]byte, 64),
-					Signature:             make([]byte, 4627),
+					PublicKey:           bytesutil.PadTo([]byte{0}, 2592),
+					WithdrawalRecipient: make([]byte, 64),
+					Signature:           make([]byte, 4627),
 				},
 			},
 		},
@@ -326,9 +326,9 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 			ExecutionBlockHeight: 4,
 			Deposit: &qrysmpb.Deposit{
 				Data: &qrysmpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte{1}, 2592),
-					WithdrawalCredentials: make([]byte, 64),
-					Signature:             make([]byte, 4627),
+					PublicKey:           bytesutil.PadTo([]byte{1}, 2592),
+					WithdrawalRecipient: make([]byte, 64),
+					Signature:           make([]byte, 4627),
 				},
 			},
 		},
@@ -337,9 +337,9 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 			ExecutionBlockHeight: 6,
 			Deposit: &qrysmpb.Deposit{
 				Data: &qrysmpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte{2}, 2592),
-					WithdrawalCredentials: make([]byte, 64),
-					Signature:             make([]byte, 4627),
+					PublicKey:           bytesutil.PadTo([]byte{2}, 2592),
+					WithdrawalRecipient: make([]byte, 64),
+					Signature:           make([]byte, 4627),
 				},
 			},
 		},
