@@ -307,11 +307,8 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 }
 
 func TestGetDuties_MultipleKeys_OK(t *testing.T) {
-	helpers.ClearCache()
-	defer helpers.ClearCache()
-
 	genesis := util.NewBeaconBlockZond()
-	depChainStart := uint64(64)
+	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 
 	deposits, _, err := util.DeterministicDepositsAndKeys(depChainStart)
 	require.NoError(t, err)
@@ -319,8 +316,6 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	require.NoError(t, err)
 	bs, err := transition.GenesisBeaconStateZond(context.Background(), deposits, 0, executionData, &enginev1.ExecutionPayloadZond{})
 	require.NoError(t, err, "Could not setup genesis bs")
-	lookAheadEpoch := params.BeaconConfig().EpochsPerHistoricalVector - params.BeaconConfig().MinSeedLookahead - 1
-	require.NoError(t, bs.UpdateRandaoMixesAtIndex(uint64(lookAheadEpoch%params.BeaconConfig().EpochsPerHistoricalVector), [32]byte{}))
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
@@ -331,9 +326,8 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 		indices[i] = uint64(i)
 	}
 
-	currentSlot := primitives.Slot(0)
 	chain := &mockChain.ChainService{
-		State: bs, Root: genesisRoot[:], Genesis: time.Now(), Slot: &currentSlot,
+		State: bs, Root: genesisRoot[:], Genesis: time.Now(),
 	}
 	vs := &Server{
 		HeadFetcher:            chain,
@@ -352,12 +346,8 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	res, err := vs.GetDuties(context.Background(), req)
 	require.NoError(t, err, "Could not call epoch committee assignment")
 	assert.Equal(t, 2, len(res.CurrentEpochDuties))
-	const (
-		expectedFirstAttesterSlot  = primitives.Slot(3)
-		expectedSecondAttesterSlot = primitives.Slot(6)
-	)
-	assert.Equal(t, expectedFirstAttesterSlot, res.CurrentEpochDuties[0].AttesterSlot)
-	assert.Equal(t, expectedSecondAttesterSlot, res.CurrentEpochDuties[1].AttesterSlot)
+	assert.Equal(t, primitives.Slot(3), res.CurrentEpochDuties[0].AttesterSlot)
+	assert.Equal(t, primitives.Slot(4), res.CurrentEpochDuties[1].AttesterSlot)
 }
 
 func TestGetDuties_SyncNotReady(t *testing.T) {
