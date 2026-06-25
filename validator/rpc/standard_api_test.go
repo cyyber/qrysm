@@ -50,7 +50,7 @@ import (
 
 const (
 	strongPass               = "29384283xasjasd32%%&*@*#*"
-	standardAPIFeeRecipient0 = "Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	standardAPIFeeRecipient0 = "Q0123456789ABcDEf0123456789abcDEF0123456789aBcdEF0123456789AbcDEf0123456789ABCDEF0123456789aBCDef0123456789ABCdeF0123456789ABCDEF"
 	standardAPIFeeRecipient1 = "Qfedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
 	standardAPIFeeRecipient2 = "Q00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
 )
@@ -1080,7 +1080,7 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 			_, err = s.SetFeeRecipientByPubkey(ctx, &qrlpbservice.SetFeeRecipientByPubkeyRequest{Pubkey: byteval, Qrladdress: qrlAddr.Bytes()})
 			require.NoError(t, err)
 
-			assert.Equal(t, qrlAddr.Hex(), s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes2592(byteval)].FeeRecipientConfig.FeeRecipient.Hex())
+			assert.Equal(t, tt.want.valQRLAddress, s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes2592(byteval)].FeeRecipientConfig.FeeRecipient.Hex())
 		})
 	}
 }
