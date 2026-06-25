@@ -23,6 +23,8 @@ go_test(
     srcs = ["genesis_test.go"],
     deps = [
         ":genesis",
+        "//config/fieldparams",
         "//config/params",
+        "//testing/require",
     ],
 )

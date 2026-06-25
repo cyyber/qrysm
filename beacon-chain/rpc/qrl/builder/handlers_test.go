@@ -13,6 +13,7 @@ import (
 	mock "github.com/theQRL/qrysm/beacon-chain/blockchain/testing"
 	"github.com/theQRL/qrysm/beacon-chain/rpc/testutil"
 	"github.com/theQRL/qrysm/beacon-chain/state"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
@@ -119,7 +120,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 			require.NoError(t, err)
 			val := &qrysmpb.Validator{
 				PublicKey:             mlDSA87Key.PublicKey().Marshal(),
-				WithdrawalCredentials: make([]byte, 64),
+				WithdrawalCredentials: make([]byte, fieldparams.WithdrawalCredentialsLength),
 				ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
 				WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 				EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
@@ -174,21 +175,21 @@ func TestExpectedWithdrawals(t *testing.T) {
 		expectedWithdrawal1 := &ExpectedWithdrawal{
 			Index:          strconv.FormatUint(0, 10),
 			ValidatorIndex: strconv.FormatUint(5, 10),
-			Address:        hexutil.Encode(validators[5].WithdrawalCredentials[:]),
+			Address:        hexutil.EncodeQ(validators[5].WithdrawalCredentials),
 			// Decreased due to epoch processing when state advanced forward
 			Amount: strconv.FormatUint(39995900344532, 10),
 		}
 		expectedWithdrawal2 := &ExpectedWithdrawal{
 			Index:          strconv.FormatUint(1, 10),
 			ValidatorIndex: strconv.FormatUint(14, 10),
-			Address:        hexutil.Encode(validators[14].WithdrawalCredentials[:]),
+			Address:        hexutil.EncodeQ(validators[14].WithdrawalCredentials),
 			// MaxEffectiveBalance + MinDepositAmount + decrease after epoch processing
 			Amount: strconv.FormatUint(39996900344532, 10),
 		}
 		expectedWithdrawal3 := &ExpectedWithdrawal{
 			Index:          strconv.FormatUint(2, 10),
 			ValidatorIndex: strconv.FormatUint(15, 10),
-			Address:        hexutil.Encode(validators[15].WithdrawalCredentials[:]),
+			Address:        hexutil.EncodeQ(validators[15].WithdrawalCredentials),
 			// Decreased due to epoch processing when state advanced forward
 			Amount: strconv.FormatUint(900344532, 10),
 		}

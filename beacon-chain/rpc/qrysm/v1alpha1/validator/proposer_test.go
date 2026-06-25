@@ -58,6 +58,11 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+const (
+	proposerTestDefaultFeeRecipient = "Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	proposerTestFeeRecipient        = "Qfedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
+)
+
 func TestServer_GetBeaconBlock_Zond(t *testing.T) {
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
@@ -309,7 +314,6 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 		StateGen:              stategen.New(db, doublylinkedtree.New()),
 	}
 	req := util.NewBeaconBlockZond()
-	req.Block.ProposerIndex = 35
 	req.Block.ParentRoot = parentRoot[:]
 	req.Block.Slot = 1
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
@@ -317,6 +321,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(ctx, beaconState)
 	require.NoError(t, err)
+	req.Block.ProposerIndex = proposerIdx
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 	req.Block.Body.RandaoReveal = randaoReveal
 	currentEpoch := coretime.CurrentEpoch(beaconState)
@@ -1325,7 +1330,7 @@ func TestProposer_ExecutionData_MajorityVote(t *testing.T) {
 			Data: &qrysmpb.Deposit_Data{
 				PublicKey:             bytesutil.PadTo([]byte("a"), field_params.MLDSA87PubkeyLength),
 				Signature:             make([]byte, field_params.MLDSA87SignatureLength),
-				WithdrawalCredentials: make([]byte, 64),
+				WithdrawalCredentials: make([]byte, field_params.WithdrawalCredentialsLength),
 			}},
 	}
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
@@ -2116,15 +2121,15 @@ func TestProposer_GetSyncAggregate_OK(t *testing.T) {
 
 	aggregate, err := proposerServer.getSyncAggregate(context.Background(), 1, bytesutil.ToBytes32(conts[0].BlockRoot), nil)
 	require.NoError(t, err)
-	require.DeepEqual(t, bitfield.Bitvector128{0xf}, aggregate.SyncCommitteeBits)
+	require.DeepEqual(t, bitfield.Bitvector16{0xf}, aggregate.SyncCommitteeBits)
 
 	aggregate, err = proposerServer.getSyncAggregate(context.Background(), 2, bytesutil.ToBytes32(conts[0].BlockRoot), nil)
 	require.NoError(t, err)
-	require.DeepEqual(t, bitfield.Bitvector128{0xaa}, aggregate.SyncCommitteeBits)
+	require.DeepEqual(t, bitfield.Bitvector16{0xaa}, aggregate.SyncCommitteeBits)
 
 	aggregate, err = proposerServer.getSyncAggregate(context.Background(), 3, bytesutil.ToBytes32(conts[0].BlockRoot), nil)
 	require.NoError(t, err)
-	require.DeepEqual(t, bitfield.NewBitvector128(), aggregate.SyncCommitteeBits)
+	require.DeepEqual(t, bitfield.NewBitvector16(), aggregate.SyncCommitteeBits)
 }
 
 func TestProposer_PrepareBeaconProposer(t *testing.T) {
@@ -2307,7 +2312,7 @@ func TestProposer_GetFeeRecipientByPubKey(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, params.BeaconConfig().DefaultFeeRecipient.Hex(), hexutil.EncodeQ(resp.FeeRecipient))
-	defaultFeeRecipient := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000046Fb65722E7b2455012BFEBf6177F1D2e9728D9")
+	defaultFeeRecipient := common.MustParseAddress(proposerTestDefaultFeeRecipient)
 	params.BeaconConfig().DefaultFeeRecipient = defaultFeeRecipient
 	resp, err = proposerServer.GetFeeRecipientByPubKey(ctx, &qrysmpb.FeeRecipientByPubKeyRequest{
 		PublicKey: beaconState.Validators()[0].PublicKey,
@@ -2319,7 +2324,7 @@ func TestProposer_GetFeeRecipientByPubKey(t *testing.T) {
 		PublicKey: beaconState.Validators()[0].PublicKey,
 	})
 	require.NoError(t, err)
-	feeRecipient := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055Fb65722E7b2455012BFEBf6177F1D2e9728D8")
+	feeRecipient := common.MustParseAddress(proposerTestFeeRecipient)
 	err = proposerServer.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{index.Index}, []common.Address{feeRecipient})
 	require.NoError(t, err)
 	resp, err = proposerServer.GetFeeRecipientByPubKey(ctx, &qrysmpb.FeeRecipientByPubKeyRequest{

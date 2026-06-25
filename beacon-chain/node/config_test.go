@@ -19,6 +19,12 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	configTestSuggestedFeeRecipient0 = "Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	configTestSuggestedFeeRecipient1 = "Qfedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
+	configTestDepositContractAddress = "Q42424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242"
+)
+
 func TestConfigureHistoricalSlasher(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	hook := logTest.NewGlobal()
@@ -71,14 +77,14 @@ func TestConfigureProofOfWork(t *testing.T) {
 	set.String(flags.DepositContractFlag.Name, "", "")
 	require.NoError(t, set.Set(flags.ChainID.Name, strconv.Itoa(100)))
 	require.NoError(t, set.Set(flags.NetworkID.Name, strconv.Itoa(200)))
-	require.NoError(t, set.Set(flags.DepositContractFlag.Name, "deposit-contract"))
+	require.NoError(t, set.Set(flags.DepositContractFlag.Name, configTestDepositContractAddress))
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	require.NoError(t, configureExecutionConfig(cliCtx))
 
 	assert.Equal(t, uint64(100), params.BeaconConfig().DepositChainID)
 	assert.Equal(t, uint64(200), params.BeaconConfig().DepositNetworkID)
-	assert.Equal(t, "deposit-contract", params.BeaconConfig().DepositContractAddress)
+	assert.Equal(t, configTestDepositContractAddress, params.BeaconConfig().DepositContractAddress)
 }
 
 func TestConfigureExecutionSetting(t *testing.T) {
@@ -95,18 +101,18 @@ func TestConfigureExecutionSetting(t *testing.T) {
 	assert.LogsContain(t, hook, "ZB is not a valid fee recipient address")
 	require.NoError(t, err)
 
-	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
+	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, configTestSuggestedFeeRecipient0))
 	cliCtx = cli.NewContext(&app, set, nil)
 	err = configureExecutionSetting(cliCtx)
 	require.NoError(t, err)
-	recipient0 := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+	recipient0 := common.MustParseAddress(configTestSuggestedFeeRecipient0)
 	assert.Equal(t, recipient0, params.BeaconConfig().DefaultFeeRecipient)
 
-	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000aAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa"))
+	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, configTestSuggestedFeeRecipient1))
 	cliCtx = cli.NewContext(&app, set, nil)
 	err = configureExecutionSetting(cliCtx)
 	require.NoError(t, err)
-	recipient1 := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000aAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa")
+	recipient1 := common.MustParseAddress(configTestSuggestedFeeRecipient1)
 	assert.Equal(t, recipient1, params.BeaconConfig().DefaultFeeRecipient)
 }
 

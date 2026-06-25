@@ -30,6 +30,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const testSuggestedFeeRecipient = "Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
 // Ensure BeaconNode implements interfaces.
 var _ statefeed.Notifier = (*BeaconNode)(nil)
 
@@ -45,8 +47,8 @@ func TestNodeClose_OK(t *testing.T) {
 	set.String("p2p-encoding", "ssz", "p2p encoding scheme")
 	set.Bool("demo-config", true, "demo configuration")
 	set.String("deposit-contract", "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", "deposit contract address")
-	set.String("suggested-fee-recipient", "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89A", "fee recipient")
-	require.NoError(t, set.Set("suggested-fee-recipient", "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89A"))
+	set.String("suggested-fee-recipient", testSuggestedFeeRecipient, "fee recipient")
+	require.NoError(t, set.Set("suggested-fee-recipient", testSuggestedFeeRecipient))
 	cmd.ValidatorMonitorIndicesFlag.Value = &cli.IntSlice{}
 	cmd.ValidatorMonitorIndicesFlag.Value.SetInt(1)
 	ctx := cli.NewContext(&app, set, nil)
@@ -65,8 +67,8 @@ func TestNodeStart_Ok(t *testing.T) {
 	tmp := fmt.Sprintf("%s/datadirtest2", t.TempDir())
 	set := flag.NewFlagSet("test", 0)
 	set.String("datadir", tmp, "node data directory")
-	set.String("suggested-fee-recipient", "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89A", "fee recipient")
-	require.NoError(t, set.Set("suggested-fee-recipient", "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89A"))
+	set.String("suggested-fee-recipient", testSuggestedFeeRecipient, "fee recipient")
+	require.NoError(t, set.Set("suggested-fee-recipient", testSuggestedFeeRecipient))
 
 	ctx := cli.NewContext(&app, set, nil)
 	node, err := New(ctx, nil, WithBlockchainFlagOptions([]blockchain.Option{}),
@@ -91,8 +93,8 @@ func TestNodeStart_Ok_registerDeterministicGenesisService(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	set.String("datadir", tmp, "node data directory")
 	set.Uint64(flags.InteropNumValidatorsFlag.Name, numValidators, "")
-	set.String("suggested-fee-recipient", "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89A", "fee recipient")
-	require.NoError(t, set.Set("suggested-fee-recipient", "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89A"))
+	set.String("suggested-fee-recipient", testSuggestedFeeRecipient, "fee recipient")
+	require.NoError(t, set.Set("suggested-fee-recipient", testSuggestedFeeRecipient))
 	ee := &enginev1.ExecutionPayloadZond{
 		ParentHash:    make([]byte, 32),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
@@ -156,8 +158,8 @@ func TestClearDB(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	set.String("datadir", tmp, "node data directory")
 	set.Bool(cmd.ForceClearDB.Name, true, "force clear db")
-	set.String("suggested-fee-recipient", "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89A", "fee recipient")
-	require.NoError(t, set.Set("suggested-fee-recipient", "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89A"))
+	set.String("suggested-fee-recipient", testSuggestedFeeRecipient, "fee recipient")
+	require.NoError(t, set.Set("suggested-fee-recipient", testSuggestedFeeRecipient))
 	context := cli.NewContext(&app, set, nil)
 	_, err = New(context, nil, WithExecutionChainOptions([]execution.Option{
 		execution.WithHttpEndpoint(endpoint),

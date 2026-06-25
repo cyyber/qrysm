@@ -241,7 +241,7 @@ func TestGetAltairDuties_UnknownPubkey(t *testing.T) {
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}
 
-	unknownPubkey := bytesutil.PadTo([]byte{'u'}, 48)
+	unknownPubkey := bytesutil.PadTo([]byte{'u'}, field_params.MLDSA87PubkeyLength)
 	req := &qrysmpb.DutiesRequest{
 		PublicKeys: [][]byte{unknownPubkey},
 	}
@@ -346,8 +346,15 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	res, err := vs.GetDuties(context.Background(), req)
 	require.NoError(t, err, "Could not call epoch committee assignment")
 	assert.Equal(t, 2, len(res.CurrentEpochDuties))
-	assert.Equal(t, primitives.Slot(3), res.CurrentEpochDuties[0].AttesterSlot)
-	assert.Equal(t, primitives.Slot(3), res.CurrentEpochDuties[1].AttesterSlot)
+	for i := 0; i < len(res.CurrentEpochDuties); i++ {
+		assert.Equal(t, primitives.ValidatorIndex(i), res.CurrentEpochDuties[i].ValidatorIndex)
+		if res.CurrentEpochDuties[i].AttesterSlot > bs.Slot()+params.BeaconConfig().SlotsPerEpoch {
+			t.Errorf(
+				"CurrentEpochDuties[%d].AttesterSlot %d should be no later than %d",
+				i, res.CurrentEpochDuties[i].AttesterSlot, bs.Slot()+params.BeaconConfig().SlotsPerEpoch,
+			)
+		}
+	}
 }
 
 func TestGetDuties_SyncNotReady(t *testing.T) {
