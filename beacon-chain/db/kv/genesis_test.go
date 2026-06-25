@@ -77,9 +77,12 @@ func TestLoadGenesisFromFile(t *testing.T) {
 		require.NoError(t, undo2())
 	}()
 
-	gs, err := util.NewBeaconStateZond()
-	require.NoError(t, err)
-	sb, err := gs.MarshalSSZ()
+	fp := "testdata/mainnet.genesis.ssz"
+	rfp, err := bazel.Runfile(fp)
+	if err == nil {
+		fp = rfp
+	}
+	sb, err := os.ReadFile(fp)
 	require.NoError(t, err)
 
 	db := setupDB(t)
