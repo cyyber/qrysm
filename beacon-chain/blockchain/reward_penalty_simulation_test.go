@@ -25,6 +25,16 @@ import (
 	"github.com/theQRL/qrysm/time/slots"
 )
 
+const (
+	missedDutiesValidatorCount         uint64                    = 512
+	missedDutiesEpochCount             primitives.Epoch          = 10
+	missedDutiesWithLeakValidatorCount uint64                    = 2048
+	proposerSlashingValidatorCount     uint64                    = 512
+	proposerSlashingEpochCount         primitives.Epoch          = 4
+	rewardPenaltyTargetIndex           primitives.ValidatorIndex = 16
+	expectedSlashedEffectiveBalance    uint64                    = 38749000000000
+)
+
 func TestReceiveBlock_Simulation(t *testing.T) {
 	ctx := context.Background()
 
@@ -132,8 +142,8 @@ func TestReceiveBlock_Simulation(t *testing.T) {
 func TestReceiveBlock_Simulation_MissedDuties(t *testing.T) {
 	ctx := context.Background()
 
-	numValidators := uint64(512)
-	numEpochs := primitives.Epoch(10)
+	numValidators := missedDutiesValidatorCount
+	numEpochs := missedDutiesEpochCount
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	totalSlots := uint64(numEpochs) * uint64(slotsPerEpoch)
 	t.Logf("SlotsPerEpoch: %d, totalSlots: %d", slotsPerEpoch, totalSlots)
@@ -160,7 +170,7 @@ func TestReceiveBlock_Simulation_MissedDuties(t *testing.T) {
 	currState := genesis.Copy()
 
 	// Target validator index
-	targetIdx := primitives.ValidatorIndex(16)
+	targetIdx := rewardPenaltyTargetIndex
 	val := genesis.Validators()[targetIdx]
 	d, err := walletmldsa87.NewMLDSA87Descriptor()
 	require.NoError(t, err)
@@ -311,8 +321,8 @@ func TestReceiveBlock_Simulation_MissedDuties(t *testing.T) {
 func TestReceiveBlock_Simulation_MissedDuties_WithLeak(t *testing.T) {
 	ctx := context.Background()
 
-	numValidators := uint64(2048)
-	numEpochs := primitives.Epoch(10)
+	numValidators := missedDutiesWithLeakValidatorCount
+	numEpochs := missedDutiesEpochCount
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	totalSlots := uint64(numEpochs) * uint64(slotsPerEpoch)
 	t.Logf("SlotsPerEpoch: %d, totalSlots: %d", slotsPerEpoch, totalSlots)
@@ -339,7 +349,7 @@ func TestReceiveBlock_Simulation_MissedDuties_WithLeak(t *testing.T) {
 	currState := genesis.Copy()
 
 	// Target validator index
-	targetIdx := primitives.ValidatorIndex(16)
+	targetIdx := rewardPenaltyTargetIndex
 	val := genesis.Validators()[targetIdx]
 	d, err := walletmldsa87.NewMLDSA87Descriptor()
 	require.NoError(t, err)
@@ -490,8 +500,8 @@ func TestReceiveBlock_Simulation_MissedDuties_WithLeak(t *testing.T) {
 func TestReceiveBlock_Simulation_ProposerSlashing(t *testing.T) {
 	ctx := context.Background()
 
-	numValidators := uint64(512)
-	numEpochs := primitives.Epoch(4)
+	numValidators := proposerSlashingValidatorCount
+	numEpochs := proposerSlashingEpochCount
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	totalSlots := uint64(numEpochs) * uint64(slotsPerEpoch)
 	t.Logf("SlotsPerEpoch: %d, totalSlots: %d", slotsPerEpoch, totalSlots)
@@ -518,7 +528,7 @@ func TestReceiveBlock_Simulation_ProposerSlashing(t *testing.T) {
 	currState := genesis.Copy()
 
 	// Target validator index to be slashed
-	targetIdx := primitives.ValidatorIndex(16)
+	targetIdx := rewardPenaltyTargetIndex
 	val := genesis.Validators()[targetIdx]
 	initialEffectiveBalance := val.EffectiveBalance
 	t.Logf("Target validator public key: %x", val.PublicKey)
@@ -609,7 +619,7 @@ func TestReceiveBlock_Simulation_ProposerSlashing(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, true, targetVal.Slashed, "Target validator should be slashed")
-	require.Equal(t, uint64(38749000000000), targetVal.EffectiveBalance, "Target effective balance mismatch")
+	require.Equal(t, expectedSlashedEffectiveBalance, targetVal.EffectiveBalance, "Target effective balance mismatch")
 	if headState.Balances()[targetIdx] >= initialEffectiveBalance {
 		t.Fatalf("Target validator balance should decrease after slashing: initial=%d final=%d", initialEffectiveBalance, headState.Balances()[targetIdx])
 	}
@@ -630,7 +640,7 @@ func TestReceiveBlock_Simulation_AttesterSlashing(t *testing.T) {
 			name:          "512 validators, slashing at slot 129",
 			numValidators: 512,
 			slashingSlot:  129,
-			expectedEff:   38749000000000,
+			expectedEff:   expectedSlashedEffectiveBalance,
 		},
 		{
 			name:          "256 validators, slashing at slot 257",
