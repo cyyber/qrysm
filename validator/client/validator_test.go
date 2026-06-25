@@ -1504,8 +1504,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 	client := validatormock.NewMockValidatorClient(ctrl)
 	nodeClient := validatormock.NewMockNodeClient(ctrl)
 	defaultFeeStr := "Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000046Fb65722E7b2455043BFEBf6177F1D2e9738D9"
-	defaultFeeAddr, err := common.NewAddressFromString(defaultFeeStr)
-	require.NoError(t, err)
+	defaultFeeAddr := common.MustParseAddress(defaultFeeStr)
 	byteValueAddress, err := hexutil.DecodeQ("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000046Fb65722E7b2455043BFEBf6177F1D2e9738D9")
 	require.NoError(t, err)
 	recipient0 := common.MustParseAddress("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055Fb65722E7b2455043BFEBf6177F1D2e9738D9")

@@ -362,10 +362,9 @@ func notActive(t *testing.T) [field_params.MLDSA87PubkeyLength]byte {
 }
 
 func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
-	feeRecipient, err := common.NewAddressFromString(runnerTestFeeRecipient)
-	require.NoError(t, err)
+	feeRecipient := common.MustParseAddress(runnerTestFeeRecipient)
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
-	err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
+	err := v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 		DefaultConfig: &validatorserviceconfig.ProposerOption{
 			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
 				FeeRecipient: feeRecipient,
@@ -389,10 +388,9 @@ func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 }
 
 func TestUpdateProposerSettingsAt_EpochEndOk(t *testing.T) {
-	feeRecipient, err := common.NewAddressFromString(runnerTestFeeRecipient)
-	require.NoError(t, err)
+	feeRecipient := common.MustParseAddress(runnerTestFeeRecipient)
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, ProposerSettingWait: time.Duration(params.BeaconConfig().SecondsPerSlot-1) * time.Second}
-	err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
+	err := v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 		DefaultConfig: &validatorserviceconfig.ProposerOption{
 			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
 				FeeRecipient: feeRecipient,
@@ -416,14 +414,13 @@ func TestUpdateProposerSettingsAt_EpochEndOk(t *testing.T) {
 }
 
 func TestUpdateProposerSettings_ContinuesAfterValidatorRegistrationFails(t *testing.T) {
-	feeRecipient, err := common.NewAddressFromString(runnerTestFeeRecipient)
-	require.NoError(t, err)
+	feeRecipient := common.MustParseAddress(runnerTestFeeRecipient)
 	errSomeotherError := errors.New("some internal error")
 	v := &testutil.FakeValidator{
 		ProposerSettingsErr: errors.Wrap(ErrBuilderValidatorRegistration, errSomeotherError.Error()),
 		Km:                  &mockKeymanager{accountsChangedFeed: &event.Feed{}},
 	}
-	err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
+	err := v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 		DefaultConfig: &validatorserviceconfig.ProposerOption{
 			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
 				FeeRecipient: feeRecipient,

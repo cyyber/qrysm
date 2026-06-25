@@ -105,8 +105,7 @@ func TestWithdrawalCredentialsAddress(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.wantHex = "0x" + strings.TrimPrefix(strings.ToLower(tc.addrHex), "q")
-			addr, err := common.NewAddressFromString(tc.addrHex)
-			require.NoError(t, err)
+			addr := common.MustParseAddress(tc.addrHex)
 			got := deposit.WithdrawalCredentialsAddress(addr)
 			gotHex := "0x" + hex.EncodeToString(got)
 			require.Equal(t, tc.wantHex, gotHex)
