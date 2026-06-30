@@ -286,6 +286,6 @@ replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/theQRL/grpc-gate
 // Point go-qrl and go-qrllib at the 64-byte-address branches for the
 // 64B address / 64B VM word migration. Drop these replace directives once
 // the branches are merged to main and tagged upstream.
-replace github.com/theQRL/go-qrl => github.com/rgeraldes24/go-qrl v0.0.0-20260630100232-639e2a63caa9
+replace github.com/theQRL/go-qrl => github.com/rgeraldes24/go-qrl v0.0.0-20260630145028-c39d6fa8a0c3
 
-replace github.com/theQRL/go-qrllib => github.com/rgeraldes24/go-qrllib v0.0.0-20260630095204-98dab8345b9c
+replace github.com/theQRL/go-qrllib => github.com/rgeraldes24/go-qrllib v0.0.0-20260630143844-7c11480b9049

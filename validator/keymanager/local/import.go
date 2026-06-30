@@ -34,12 +34,13 @@ func (km *Keymanager) ImportKeystores(
 	}
 	enc := keystorev1.New()
 	bar := progress.InitializeProgressBar(len(keystores), "Importing accounts...")
-	keys := map[string]string{}
+	importedKeySet := make(map[string]bool)
 	statuses := make([]*qrlpbservice.ImportedKeystoreStatus, len(keystores))
 	var err error
 	// 1) Copy the in memory keystore
 	storeCopy := km.accountsStore.Copy()
 	importedKeys := make([][]byte, 0)
+	importedSeeds := make([][]byte, 0)
 	existingPubKeys := make(map[string]bool)
 	for i := 0; i < len(storeCopy.Seeds); i++ {
 		existingPubKeys[string(storeCopy.PublicKeys[i])] = true
@@ -59,7 +60,7 @@ func (km *Keymanager) ImportKeystores(
 			log.Error(err)
 		}
 		// if key exists prior to being added then output log that duplicate key was found
-		_, isDuplicateInArray := keys[string(pubKeyBytes)]
+		_, isDuplicateInArray := importedKeySet[string(pubKeyBytes)]
 		_, isDuplicateInExisting := existingPubKeys[string(pubKeyBytes)]
 		if isDuplicateInArray || isDuplicateInExisting {
 			log.Warnf("Duplicate key in import will be ignored: %#x", pubKeyBytes)
@@ -69,8 +70,9 @@ func (km *Keymanager) ImportKeystores(
 			continue
 		}
 
-		keys[string(pubKeyBytes)] = string(seedBytes)
+		importedKeySet[string(pubKeyBytes)] = true
 		importedKeys = append(importedKeys, pubKeyBytes)
+		importedSeeds = append(importedSeeds, seedBytes)
 		statuses[i] = &qrlpbservice.ImportedKeystoreStatus{
 			Status: qrlpbservice.ImportedKeystoreStatus_IMPORTED,
 		}
@@ -81,9 +83,9 @@ func (km *Keymanager) ImportKeystores(
 	}
 	// 2) Update copied keystore with new keys,clear duplicates in existing set
 	// duplicates,errored ones are already skipped
-	for pubKey, privKey := range keys {
-		storeCopy.PublicKeys = append(storeCopy.PublicKeys, []byte(pubKey))
-		storeCopy.Seeds = append(storeCopy.Seeds, []byte(privKey))
+	for i, pubKey := range importedKeys {
+		storeCopy.PublicKeys = append(storeCopy.PublicKeys, pubKey)
+		storeCopy.Seeds = append(storeCopy.Seeds, importedSeeds[i])
 	}
 	//3 & 4) save to disk and re-initializes keystore
 	if err := km.SaveStoreAndReInitialize(ctx, storeCopy); err != nil {

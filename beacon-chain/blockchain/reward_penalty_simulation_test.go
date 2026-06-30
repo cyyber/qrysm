@@ -8,7 +8,7 @@ import (
 
 	bitfield "github.com/theQRL/go-bitfield"
 	"github.com/theQRL/go-qrl/crypto/pqcrypto"
-	walletmldsa87 "github.com/theQRL/go-qrllib/wallet/ml_dsa_87"
+	walletmldsa87 "github.com/theQRL/go-qrllib/wallet/mldsa87"
 	"github.com/theQRL/qrysm/beacon-chain/core/helpers"
 	"github.com/theQRL/qrysm/beacon-chain/core/transition"
 	"github.com/theQRL/qrysm/beacon-chain/operations/slashings"

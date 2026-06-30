@@ -158,7 +158,7 @@ go_test(
         "@com_github_theqrl_go_qrl//common",
         "@com_github_theqrl_go_qrl//core/types",
         "@com_github_theqrl_go_qrl//crypto/pqcrypto",
-        "@com_github_theqrl_go_qrllib//wallet/ml_dsa_87",
+        "@com_github_theqrl_go_qrllib//wallet/mldsa87",
         "@in_gopkg_d4l3k_messagediff_v1//:messagediff_v1",
         "@org_golang_google_protobuf//proto",
     ],

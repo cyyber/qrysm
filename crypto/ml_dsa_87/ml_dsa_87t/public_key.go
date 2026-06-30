@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/theQRL/go-qrllib/wallet/ml_dsa_87"
+	ml_dsa_87 "github.com/theQRL/go-qrllib/wallet/mldsa87"
 	field_params "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87/common"
 )

@@ -12,7 +12,7 @@ go_library(
         "//cmd/staking-deposit-cli/misc",
         "//config/fieldparams",
         "@com_github_theqrl_go_qrllib//qrl",
-        "@com_github_theqrl_go_qrllib//wallet/ml_dsa_87",
+        "@com_github_theqrl_go_qrllib//wallet/mldsa87",
         "@org_golang_x_crypto//sha3",
     ],
 )

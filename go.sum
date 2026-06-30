@@ -64,8 +64,6 @@ github.com/Shopify/toxiproxy v2.1.4+incompatible/go.mod h1:OXgGpZ6Cli1/URJOF1DMx
 github.com/VictoriaMetrics/fastcache v1.13.0 h1:AW4mheMR5Vd9FkAPUv+NH6Nhw+fmbTMGMsNAoA/+4G0=
 github.com/VictoriaMetrics/fastcache v1.13.0/go.mod h1:hHXhl4DA2fTL2HTZDJFXWgW0LNjo6B+4aj2Wmng3TjU=
 github.com/VividCortex/gohistogram v1.0.0/go.mod h1:Pf5mBqqDxYaXu3hDrrU+w6nw50o/4+TcAqDqk/vUH7g=
-github.com/adamtka42/go-qrllib v0.0.0-20260528135157-a4888358f555 h1:VECtgGZ+sQfNpAZuGUREE8Jbe7Fm0R20PxyoybbUaWw=
-github.com/adamtka42/go-qrllib v0.0.0-20260528135157-a4888358f555/go.mod h1:ZXa20c5HYw59NNWeS9JgG3TZH0C8dZPSzqRGhJqq6to=
 github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5/go.mod h1:SkGFH1ia65gfNATL8TAiHDNxPzPdmEL5uirI2Uyuz6c=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
@@ -930,12 +928,10 @@ github.com/raulk/go-watchdog v1.3.0 h1:oUmdlHxdkXRJlwfG0O9omj8ukerm8MEQavSiDTEtB
 github.com/raulk/go-watchdog v1.3.0/go.mod h1:fIvOnLbF0b0ZwkB9YU4mOW9Did//4vPZtDqv66NfsMU=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
-github.com/rgeraldes24/go-qrl v0.0.0-20260624101155-6dfdf3429d83 h1:BeOBMBzNlu7rGVb3q3rsQ7nu1pZHsVprhvIqFJEebbE=
-github.com/rgeraldes24/go-qrl v0.0.0-20260624101155-6dfdf3429d83/go.mod h1:uRsn/WSqPh+Q1+V14ZNNLF/Znoe8ixiXkhhfYQI/bTo=
-github.com/rgeraldes24/go-qrl v0.0.0-20260630100232-639e2a63caa9 h1:Skffsleh0XmWgvhqE1lugfEZvCQyzmQ3Ux/SlkNbvw0=
-github.com/rgeraldes24/go-qrl v0.0.0-20260630100232-639e2a63caa9/go.mod h1:Gvo03S3vLM/3DXQQiT4AvtPTqnn7L1eHQgZ2vzs2xa0=
-github.com/rgeraldes24/go-qrllib v0.0.0-20260630095204-98dab8345b9c h1:lyBkhwU9CfRFU20MxFJlIzs5lvwQF64d9wbvtB5ov0A=
-github.com/rgeraldes24/go-qrllib v0.0.0-20260630095204-98dab8345b9c/go.mod h1:cJalbgwzfscRXz7gqwPmmeC2wxB/QJh631N1dpihXuI=
+github.com/rgeraldes24/go-qrl v0.0.0-20260630145028-c39d6fa8a0c3 h1:74RrmO0Z3S0jvApvf8U+ussUyOppPymRwJHsZlmI2GE=
+github.com/rgeraldes24/go-qrl v0.0.0-20260630145028-c39d6fa8a0c3/go.mod h1:5zymVCt0w/n5E4/B4CIz08T05/9sD8O5WOnSU884z8U=
+github.com/rgeraldes24/go-qrllib v0.0.0-20260630143844-7c11480b9049 h1:AU86a+n9+sJlREXR3XRVdCPfb5B/rTN/GnCuDJWuAtY=
+github.com/rgeraldes24/go-qrllib v0.0.0-20260630143844-7c11480b9049/go.mod h1:cJalbgwzfscRXz7gqwPmmeC2wxB/QJh631N1dpihXuI=
 github.com/rivo/tview v0.0.0-20240118093911-742cf086196e h1:QLKAX9JLJ9RJVjnywcVg/U8nKNZvdftCtJRv1qzALYI=
 github.com/rivo/tview v0.0.0-20240118093911-742cf086196e/go.mod h1:c0SPlNPXkM+/Zgjn/0vD3W0Ds1yxstN7lpquqLDpWCg=
 github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	walletmldsa87 "github.com/theQRL/go-qrllib/wallet/ml_dsa_87"
+	walletmldsa87 "github.com/theQRL/go-qrllib/wallet/mldsa87"
 	"github.com/theQRL/qrysm/cmd/staking-deposit-cli/misc"
 	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"golang.org/x/crypto/sha3"

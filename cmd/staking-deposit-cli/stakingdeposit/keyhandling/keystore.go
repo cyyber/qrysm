@@ -13,7 +13,7 @@ import (
 	"runtime"
 
 	"github.com/google/uuid"
-	"github.com/theQRL/go-qrllib/wallet/ml_dsa_87"
+	ml_dsa_87 "github.com/theQRL/go-qrllib/wallet/mldsa87"
 	"github.com/theQRL/qrysm/cmd/staking-deposit-cli/misc"
 	field_params "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/encoding/bytesutil"

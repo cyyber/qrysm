@@ -10,7 +10,7 @@ import (
 	"github.com/theQRL/go-qrl/common"
 	"github.com/theQRL/go-qrl/core/types"
 	"github.com/theQRL/go-qrl/qrlclient"
-	"github.com/theQRL/go-qrllib/wallet/ml_dsa_87"
+	ml_dsa_87 "github.com/theQRL/go-qrllib/wallet/mldsa87"
 )
 
 var (

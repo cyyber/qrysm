@@ -16,7 +16,7 @@ go_library(
         "//pkg/tx-fuzz",
         "//pkg/tx-fuzz/flags",
         "//pkg/tx-fuzz/mutator",
-        "@com_github_theqrl_go_qrllib//wallet/ml_dsa_87",
+        "@com_github_theqrl_go_qrllib//wallet/mldsa87",
         "@com_github_theqrl_go_qrl//accounts/abi/bind",
         "@com_github_theqrl_go_qrl//common",
         "@com_github_theqrl_go_qrl//core/types",
