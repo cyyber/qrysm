@@ -31,6 +31,10 @@ func TestBlockSignature(t *testing.T) {
 
 	signature, err := BlockSignature(beaconState, block.Block, privKeys)
 	assert.NoError(t, err)
+	signatureAgain, err := BlockSignature(beaconState, block.Block, privKeys)
+	assert.NoError(t, err)
+	assert.DeepEqual(t, signature.Marshal(), signatureAgain.Marshal())
+
 	signingRoot, err := signing.ComputeSigningRoot(block.Block, domain)
 	require.NoError(t, err)
 

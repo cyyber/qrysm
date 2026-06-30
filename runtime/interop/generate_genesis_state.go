@@ -131,11 +131,15 @@ func createDepositData(privKey ml_dsa_87.MLDSA87Key, pubKey ml_dsa_87.PublicKey)
 	if err != nil {
 		return nil, err
 	}
+	signature := ml_dsa_87.SignDeterministic(privKey, root[:])
+	if signature == nil {
+		return nil, errors.New("could not sign deposit data deterministically")
+	}
 	di := &qrysmpb.Deposit_Data{
 		PublicKey:             depositMessage.PublicKey,
 		WithdrawalCredentials: depositMessage.WithdrawalCredentials,
 		Amount:                depositMessage.Amount,
-		Signature:             privKey.Sign(root[:]).Marshal(),
+		Signature:             signature.Marshal(),
 	}
 	return di, nil
 }

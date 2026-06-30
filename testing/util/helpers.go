@@ -28,15 +28,7 @@ func RandaoReveal(beaconState state.ReadOnlyBeaconState, epoch primitives.Epoch,
 	}
 	// The proposer signs the epoch for the RANDAO reveal.
 	sszEpoch := primitives.SSZUint64(epoch)
-	domain, err := signing.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorsRoot())
-	if err != nil {
-		return nil, err
-	}
-	signingRoot, err := signing.ComputeSigningRoot(&sszEpoch, domain)
-	if err != nil {
-		return nil, err
-	}
-	return ml_dsa_87.SignDeterministic(privKeys[proposerIdx], signingRoot[:]).Marshal(), nil
+	return computeDomainAndSignDeterministic(beaconState, epoch, &sszEpoch, params.BeaconConfig().DomainRandao, privKeys[proposerIdx])
 }
 
 // BlockSignature calculates the post-state root of the block and returns the signature.
@@ -100,7 +92,7 @@ func BlockSignature(
 	if err != nil {
 		return nil, err
 	}
-	return privKeys[proposerIdx].Sign(blockRoot[:]), nil
+	return deterministicSignature(privKeys[proposerIdx], blockRoot[:])
 }
 
 // Random32Bytes generates a random 32 byte slice.

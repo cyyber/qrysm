@@ -60,7 +60,11 @@ func generateSyncAggregate(st state.BeaconState, privs []ml_dsa_87.MLDSA87Key, p
 		if err != nil {
 			return nil, err
 		}
-		sigs = append(sigs, privs[idx].Sign(r[:]).Marshal())
+		sig, err := deterministicSign(privs[idx], r[:])
+		if err != nil {
+			return nil, err
+		}
+		sigs = append(sigs, sig)
 		if currSize == 512 {
 			bitfield.Bitvector512(bVector).SetBitAt(uint64(i), true)
 		}
