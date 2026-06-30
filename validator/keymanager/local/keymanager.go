@@ -40,9 +40,10 @@ const (
 
 // Keymanager implementation for local keystores utilizing EIP-2335.
 type Keymanager struct {
-	wallet              iface.Wallet
-	accountsStore       *accountStore
-	accountsChangedFeed *event.Feed
+	wallet                  iface.Wallet
+	accountsStore           *accountStore
+	accountsChangedFeed     *event.Feed
+	deterministicSignatures bool
 }
 
 // SetupConfig includes configuration values for initializing
@@ -115,7 +116,8 @@ type InteropKeymanagerConfig struct {
 // InteropKeys are used for testing purposes.
 func NewInteropKeymanager(_ context.Context, offset, numValidatorKeys uint64) (*Keymanager, error) {
 	k := &Keymanager{
-		accountsChangedFeed: new(event.Feed),
+		accountsChangedFeed:     new(event.Feed),
+		deterministicSignatures: true,
 	}
 	if numValidatorKeys == 0 {
 		return k, nil
@@ -207,7 +209,7 @@ func (km *Keymanager) FetchValidatingSeeds(ctx context.Context) ([][field_params
 }
 
 // Sign signs a message using a validator key.
-func (*Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (ml_dsa_87.Signature, error) {
+func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (ml_dsa_87.Signature, error) {
 	publicKey := req.PublicKey
 	if publicKey == nil {
 		return nil, errors.New("nil public key in request")
@@ -217,6 +219,13 @@ func (*Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (ml_d
 	lock.RUnlock()
 	if !ok {
 		return nil, errors.New("no signing key found in keys cache")
+	}
+	if km.deterministicSignatures {
+		sig := ml_dsa_87.SignDeterministic(secretKey, req.SigningRoot)
+		if sig == nil {
+			return nil, errors.New("could not sign message deterministically")
+		}
+		return sig, nil
 	}
 	return secretKey.Sign(req.SigningRoot), nil
 }

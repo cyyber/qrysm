@@ -346,8 +346,15 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	res, err := vs.GetDuties(context.Background(), req)
 	require.NoError(t, err, "Could not call epoch committee assignment")
 	assert.Equal(t, 2, len(res.CurrentEpochDuties))
-	assert.Equal(t, primitives.Slot(3), res.CurrentEpochDuties[0].AttesterSlot)
-	assert.Equal(t, primitives.Slot(4), res.CurrentEpochDuties[1].AttesterSlot)
+	assert.DeepEqual(t, pubkey0, res.CurrentEpochDuties[0].PublicKey)
+	assert.Equal(t, primitives.ValidatorIndex(0), res.CurrentEpochDuties[0].ValidatorIndex)
+	assert.DeepEqual(t, pubkey1, res.CurrentEpochDuties[1].PublicKey)
+	assert.Equal(t, primitives.ValidatorIndex(1), res.CurrentEpochDuties[1].ValidatorIndex)
+	for _, duty := range res.CurrentEpochDuties {
+		if duty.AttesterSlot >= params.BeaconConfig().SlotsPerEpoch {
+			t.Fatalf("assigned slot %d must be within epoch 0", duty.AttesterSlot)
+		}
+	}
 }
 
 func TestGetDuties_SyncNotReady(t *testing.T) {

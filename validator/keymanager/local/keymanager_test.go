@@ -150,6 +150,34 @@ func TestLocalKeymanager_Sign(t *testing.T) {
 	}
 }
 
+func TestInteropKeymanager_SignDeterministic(t *testing.T) {
+	ResetCaches()
+	t.Cleanup(ResetCaches)
+	ctx := context.Background()
+	km, err := NewInteropKeymanager(ctx, 0, 1)
+	require.NoError(t, err)
+	publicKeys, err := km.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(publicKeys))
+
+	data := []byte("hello world")
+	signRequest := &validatorpb.SignRequest{
+		PublicKey:   publicKeys[0][:],
+		SigningRoot: data,
+	}
+	sig1, err := km.Sign(ctx, signRequest)
+	require.NoError(t, err)
+	sig2, err := km.Sign(ctx, signRequest)
+	require.NoError(t, err)
+	assert.DeepEqual(t, sig1.Marshal(), sig2.Marshal())
+
+	pubKey, err := ml_dsa_87.PublicKeyFromBytes(publicKeys[0][:])
+	require.NoError(t, err)
+	if !sig1.Verify(pubKey, data) {
+		t.Fatalf("Expected sig to verify for pubkey %#x and data %v", pubKey.Marshal(), data)
+	}
+}
+
 func TestLocalKeymanager_Sign_NoPublicKeySpecified(t *testing.T) {
 	req := &validatorpb.SignRequest{
 		PublicKey: nil,
