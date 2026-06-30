@@ -2,6 +2,7 @@ package ml_dsa_87t
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/theQRL/go-qrllib/wallet/ml_dsa_87"
 	field_params "github.com/theQRL/qrysm/config/fieldparams"
@@ -47,7 +48,11 @@ func (m *mlDSA87Key) PublicKey() common.PublicKey {
 }
 
 func (m *mlDSA87Key) Sign(msg []byte) common.Signature {
-	signature, err := m.w.Sign(msg)
+	return m.SignWithRand(nil, msg)
+}
+
+func (m *mlDSA87Key) SignWithRand(random io.Reader, msg []byte) common.Signature {
+	signature, err := m.w.Sign(random, msg)
 	if err != nil {
 		return nil
 	}

@@ -30,8 +30,9 @@ func TestProcessRandao_IncorrectProposerFailsVerification(t *testing.T) {
 	require.NoError(t, err)
 	root, err := (&qrysmpb.SigningData{ObjectRoot: buf, Domain: domain}).HashTreeRoot()
 	require.NoError(t, err)
-	// We make the previous validator's index sign the message instead of the proposer.
-	epochSignature := privKeys[proposerIdx-1].Sign(root[:])
+	// We make a different validator sign the message instead of the proposer.
+	wrongProposerIdx := (int(proposerIdx) + 1) % len(privKeys)
+	epochSignature := privKeys[wrongProposerIdx].Sign(root[:])
 	b := util.NewBeaconBlockZond()
 	b.Block = &qrysmpb.BeaconBlockZond{
 		Body: &qrysmpb.BeaconBlockBodyZond{

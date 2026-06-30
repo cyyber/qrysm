@@ -2,7 +2,6 @@ package util
 
 import (
 	"context"
-	"encoding/binary"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -27,12 +26,17 @@ func RandaoReveal(beaconState state.ReadOnlyBeaconState, epoch primitives.Epoch,
 	if err != nil {
 		return []byte{}, errors.Wrap(err, "could not get beacon proposer index")
 	}
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, uint64(epoch))
-
-	// We make the previous validator's index sign the message instead of the proposer.
+	// The proposer signs the epoch for the RANDAO reveal.
 	sszEpoch := primitives.SSZUint64(epoch)
-	return signing.ComputeDomainAndSign(beaconState, epoch, &sszEpoch, params.BeaconConfig().DomainRandao, privKeys[proposerIdx])
+	domain, err := signing.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorsRoot())
+	if err != nil {
+		return nil, err
+	}
+	signingRoot, err := signing.ComputeSigningRoot(&sszEpoch, domain)
+	if err != nil {
+		return nil, err
+	}
+	return ml_dsa_87.SignDeterministic(privKeys[proposerIdx], signingRoot[:]).Marshal(), nil
 }
 
 // BlockSignature calculates the post-state root of the block and returns the signature.

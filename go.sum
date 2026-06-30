@@ -932,6 +932,10 @@ github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqn
 github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/rgeraldes24/go-qrl v0.0.0-20260624101155-6dfdf3429d83 h1:BeOBMBzNlu7rGVb3q3rsQ7nu1pZHsVprhvIqFJEebbE=
 github.com/rgeraldes24/go-qrl v0.0.0-20260624101155-6dfdf3429d83/go.mod h1:uRsn/WSqPh+Q1+V14ZNNLF/Znoe8ixiXkhhfYQI/bTo=
+github.com/rgeraldes24/go-qrl v0.0.0-20260630100232-639e2a63caa9 h1:Skffsleh0XmWgvhqE1lugfEZvCQyzmQ3Ux/SlkNbvw0=
+github.com/rgeraldes24/go-qrl v0.0.0-20260630100232-639e2a63caa9/go.mod h1:Gvo03S3vLM/3DXQQiT4AvtPTqnn7L1eHQgZ2vzs2xa0=
+github.com/rgeraldes24/go-qrllib v0.0.0-20260630095204-98dab8345b9c h1:lyBkhwU9CfRFU20MxFJlIzs5lvwQF64d9wbvtB5ov0A=
+github.com/rgeraldes24/go-qrllib v0.0.0-20260630095204-98dab8345b9c/go.mod h1:cJalbgwzfscRXz7gqwPmmeC2wxB/QJh631N1dpihXuI=
 github.com/rivo/tview v0.0.0-20240118093911-742cf086196e h1:QLKAX9JLJ9RJVjnywcVg/U8nKNZvdftCtJRv1qzALYI=
 github.com/rivo/tview v0.0.0-20240118093911-742cf086196e/go.mod h1:c0SPlNPXkM+/Zgjn/0vD3W0Ds1yxstN7lpquqLDpWCg=
 github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=

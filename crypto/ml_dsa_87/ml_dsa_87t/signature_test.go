@@ -128,7 +128,7 @@ func TestCopy(t *testing.T) {
 	key, ok := rkey.(*mlDSA87Key)
 	require.Equal(t, true, ok)
 
-	sig, err := key.w.Sign([]byte("foo"))
+	sig, err := key.w.Sign(nil, []byte("foo"))
 	require.NoError(t, err)
 	signatureA := &Signature{s: &sig}
 	signatureB, ok := signatureA.Copy().(*Signature)
@@ -138,7 +138,7 @@ func TestCopy(t *testing.T) {
 	assert.NotEqual(t, signatureA.s, signatureB.s)
 	assert.DeepEqual(t, signatureA, signatureB)
 
-	sig, err = key.w.Sign([]byte("bar"))
+	sig, err = key.w.Sign(nil, []byte("bar"))
 	require.NoError(t, err)
 	signatureA.s = &sig
 	assert.DeepNotEqual(t, signatureA, signatureB)
