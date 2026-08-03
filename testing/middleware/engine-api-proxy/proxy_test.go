@@ -18,7 +18,7 @@ import (
 )
 
 func TestProxy(t *testing.T) {
-	// These tests use fixed random TCP ports, which can collide or require privileges.
+	// TODO: Allocate deterministic, available TCP ports for this test.
 	t.Skip("proxy port selection is nondeterministic")
 
 	t.Run("fails to proxy if destination is down", func(t *testing.T) {
@@ -87,7 +87,7 @@ func TestProxy(t *testing.T) {
 }
 
 func TestProxy_CustomInterceptors(t *testing.T) {
-	// These tests use fixed random TCP ports, which can collide or require privileges.
+	// TODO: Allocate deterministic, available TCP ports for this test.
 	t.Skip("proxy port selection is nondeterministic")
 
 	t.Run("only intercepts engine API methods", func(t *testing.T) {

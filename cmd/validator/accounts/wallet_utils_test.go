@@ -17,7 +17,7 @@ import (
 )
 
 func TestWalletWithKeymanager(t *testing.T) {
-	// FetchValidatingPublicKeys does not guarantee the same order as the import log.
+	// TODO: Make validating public key ordering deterministic.
 	t.Skip("keystore ordering is nondeterministic")
 
 	logHook := test.NewGlobal()

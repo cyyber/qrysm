@@ -297,7 +297,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 }
 
 func TestProposer_ComputeStateRoot_OK(t *testing.T) {
-	// The generated validator state does not produce a stable proposer index.
+	// TODO: Make generated validator proposer selection deterministic.
 	t.Skip("proposer selection is nondeterministic")
 
 	db := dbutil.SetupDB(t)

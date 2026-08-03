@@ -130,7 +130,7 @@ func TestReceiveBlock_Simulation(t *testing.T) {
 }
 
 func TestReceiveBlock_Simulation_MissedDuties(t *testing.T) {
-	// Random committee and proposer assignments change the simulated balance totals.
+	// TODO: Make committee and proposer assignments deterministic.
 	t.Skip("reward simulation assignments are nondeterministic")
 
 	ctx := context.Background()
@@ -308,7 +308,7 @@ func TestReceiveBlock_Simulation_MissedDuties(t *testing.T) {
 }
 
 func TestReceiveBlock_Simulation_MissedDuties_WithLeak(t *testing.T) {
-	// Random committee and proposer assignments change the simulated balance totals.
+	// TODO: Make committee and proposer assignments deterministic.
 	t.Skip("reward simulation assignments are nondeterministic")
 
 	ctx := context.Background()
@@ -486,7 +486,7 @@ func TestReceiveBlock_Simulation_MissedDuties_WithLeak(t *testing.T) {
 }
 
 func TestReceiveBlock_Simulation_ProposerSlashing(t *testing.T) {
-	// Random committee and proposer assignments change the simulated balance totals.
+	// TODO: Make committee and proposer assignments deterministic.
 	t.Skip("reward simulation assignments are nondeterministic")
 
 	ctx := context.Background()

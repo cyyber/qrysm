@@ -307,7 +307,7 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 }
 
 func TestGetDuties_MultipleKeys_OK(t *testing.T) {
-	// The generated validator state does not produce stable committee assignments.
+	// TODO: Make generated validator committee assignments deterministic.
 	t.Skip("attester slots are nondeterministic")
 
 	genesis := util.NewBeaconBlockZond()
