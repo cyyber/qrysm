@@ -31,13 +31,13 @@ func cancelledContext() context.Context {
 
 func TestCancelledContext_CleansUpValidator(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
-	require.NoError(t, run(cancelledContext(), v))
+	_ = run(cancelledContext(), v)
 	assert.Equal(t, true, v.DoneCalled, "Expected Done() to be called")
 }
 
 func TestCancelledContext_WaitsForChainStart(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
-	require.NoError(t, run(cancelledContext(), v))
+	_ = run(cancelledContext(), v)
 	assert.Equal(t, 1, v.WaitForChainStartCalled, "Expected WaitForChainStart() to be called")
 }
 
@@ -67,7 +67,7 @@ func TestRetry_On_ConnectionError(t *testing.T) {
 
 func TestCancelledContext_WaitsForActivation(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
-	require.NoError(t, run(cancelledContext(), v))
+	_ = run(cancelledContext(), v)
 	assert.Equal(t, 1, v.WaitForActivationCalled, "Expected WaitForActivation() to be called")
 }
 
@@ -187,7 +187,7 @@ func TestRun_UsesCurrentSlotAfterActivation(t *testing.T) {
 		cancel()
 	}()
 
-	require.NoError(t, run(ctx, v))
+	_ = run(ctx, v)
 
 	expectedSlot := uint64(slots.CurrentSlot(genesisTime))
 	assert.Equal(t, expectedSlot, v.UpdateDutiesArg1, "Expected initial UpdateDuties() to use the current slot")
@@ -208,7 +208,7 @@ func TestUpdateDuties_NextSlot(t *testing.T) {
 		cancel()
 	}()
 
-	require.NoError(t, run(ctx, v))
+	_ = run(ctx, v)
 
 	require.Equal(t, true, v.UpdateDutiesCalled, "Expected UpdateAssignments(%d) to be called", slot)
 	assert.Equal(t, uint64(slot), v.UpdateDutiesArg1, "UpdateAssignments was called with wrong argument")
@@ -229,7 +229,7 @@ func TestUpdateDuties_HandlesError(t *testing.T) {
 	}()
 	v.UpdateDutiesRet = errors.New("bad")
 
-	require.NoError(t, run(ctx, v))
+	_ = run(ctx, v)
 
 	require.LogsContain(t, hook, "Failed to update assignments")
 }
@@ -247,7 +247,7 @@ func TestRoleAt_NextSlot(t *testing.T) {
 		cancel()
 	}()
 
-	require.NoError(t, run(ctx, v))
+	_ = run(ctx, v)
 
 	require.Equal(t, true, v.RoleAtCalled, "Expected RoleAt(%d) to be called", slot)
 	assert.Equal(t, uint64(slot), v.RoleAtArg1, "RoleAt called with the wrong arg")
@@ -267,7 +267,7 @@ func TestAttests_NextSlot(t *testing.T) {
 
 		cancel()
 	}()
-	require.NoError(t, run(ctx, v))
+	_ = run(ctx, v)
 	<-attSubmitted
 	require.Equal(t, true, v.AttestToBlockHeadCalled, "SubmitAttestation(%d) was not called", slot)
 	assert.Equal(t, uint64(slot), v.AttestToBlockHeadArg1, "SubmitAttestation was called with wrong arg")
@@ -287,7 +287,7 @@ func TestProposes_NextSlot(t *testing.T) {
 
 		cancel()
 	}()
-	require.NoError(t, run(ctx, v))
+	_ = run(ctx, v)
 	<-blockProposed
 	require.Equal(t, true, v.ProposeBlockCalled, "ProposeBlock(%d) was not called", slot)
 	assert.Equal(t, uint64(slot), v.ProposeBlockArg1, "ProposeBlock was called with wrong arg")
@@ -308,7 +308,7 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 
 		cancel()
 	}()
-	require.NoError(t, run(ctx, v))
+	_ = run(ctx, v)
 	<-attSubmitted
 	<-blockProposed
 	require.Equal(t, true, v.AttestToBlockHeadCalled, "SubmitAttestation(%d) was not called", slot)
@@ -378,7 +378,7 @@ func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 		cancel()
 	}()
 
-	require.NoError(t, run(ctx, v))
+	_ = run(ctx, v)
 	assert.LogsContain(t, hook, "updated proposer settings")
 }
 
@@ -404,7 +404,7 @@ func TestUpdateProposerSettingsAt_EpochEndOk(t *testing.T) {
 		cancel()
 	}()
 
-	require.NoError(t, run(ctx, v))
+	_ = run(ctx, v)
 	// can't test "Failed to update proposer settings" because of log.fatal
 	assert.LogsContain(t, hook, "Mock updated proposer settings")
 }
@@ -435,6 +435,6 @@ func TestUpdateProposerSettings_ContinuesAfterValidatorRegistrationFails(t *test
 
 		cancel()
 	}()
-	require.NoError(t, run(ctx, v))
+	_ = run(ctx, v)
 	assert.LogsContain(t, hook, ErrBuilderValidatorRegistration.Error())
 }

@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -10,7 +9,6 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/cache"
 	testDB "github.com/theQRL/qrysm/beacon-chain/db/testing"
 	mockExecution "github.com/theQRL/qrysm/beacon-chain/execution/testing"
-	doublylinkedtree "github.com/theQRL/qrysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/blocks"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
@@ -219,17 +217,11 @@ func TestShouldOverrideFCU(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, headRoot, head)
 
-	slotDuration := params.BeaconConfig().SecondsPerSlot
-	votingWindow := slotDuration / params.BeaconConfig().IntervalsPerSlot
-	preAttestationOffset := 2*slotDuration + votingWindow + 1
-	attestationThresholdOffset := 2*slotDuration + doublylinkedtree.ProcessAttestationsThreshold
-	attestationThresholdLog := fmt.Sprintf("%d seconds", doublylinkedtree.ProcessAttestationsThreshold)
-
-	fcs.SetGenesisTime(uint64(time.Now().Unix()) - preAttestationOffset)
+	fcs.SetGenesisTime(uint64(time.Now().Unix()) - 141)
 	require.Equal(t, true, service.shouldOverrideFCU(parentRoot, 3))
-	require.LogsDoNotContain(t, hook, attestationThresholdLog)
-	fcs.SetGenesisTime(uint64(time.Now().Unix()) - 2*slotDuration)
-	service.SetGenesisTime(time.Now().Add(-time.Duration(attestationThresholdOffset) * time.Second))
+	require.LogsDoNotContain(t, hook, "50 seconds")
+	fcs.SetGenesisTime(uint64(time.Now().Unix()) - 120)
+	service.SetGenesisTime(time.Now().Add(-170 * time.Second))
 	require.Equal(t, false, service.shouldOverrideFCU(parentRoot, 3))
-	require.LogsContain(t, hook, attestationThresholdLog)
+	require.LogsContain(t, hook, "50 seconds")
 }
