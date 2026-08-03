@@ -93,6 +93,8 @@ type MockValidator struct {
 	proposerSettings *validatorserviceconfig.ProposerSettings
 }
 
+func (_ *MockValidator) SetTicker() {}
+
 func (_ *MockValidator) LogSyncCommitteeMessagesSubmitted() {}
 
 func (_ *MockValidator) Done() {

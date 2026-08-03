@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus/hooks/test"
-	"github.com/theQRL/go-qrl/common/hexutil"
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/validator/accounts"
@@ -55,9 +54,9 @@ func TestWalletWithKeymanager(t *testing.T) {
 	require.Equal(t, len(accNames), 0)
 
 	// Create 2 keys.
-	createKeystore(t, keysDir)
+	firstKeystore, _ := createKeystore(t, keysDir)
 	time.Sleep(time.Second)
-	createKeystore(t, keysDir)
+	secondKeystore, _ := createKeystore(t, keysDir)
 	require.NoError(t, accountsImport(cliCtx))
 
 	w, k, err := walletWithKeymanager(cliCtx)
@@ -66,7 +65,7 @@ func TestWalletWithKeymanager(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, len(keys), 2)
 	require.Equal(t, w.KeymanagerKind(), keymanager.Local)
-	hexKeys := []string{hexutil.Encode(keys[0][:])[2:], hexutil.Encode(keys[1][:])[2:]} // imported keystores don't include the 0x in name
+	hexKeys := []string{firstKeystore.Pubkey, secondKeystore.Pubkey}
 
 	assert.LogsContain(t, logHook, fmt.Sprintf("Imported accounts %v,", hexKeys))
 }

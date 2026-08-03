@@ -309,7 +309,6 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 		StateGen:              stategen.New(db, doublylinkedtree.New()),
 	}
 	req := util.NewBeaconBlockZond()
-	req.Block.ProposerIndex = 35
 	req.Block.ParentRoot = parentRoot[:]
 	req.Block.Slot = 1
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
@@ -317,6 +316,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(ctx, beaconState)
 	require.NoError(t, err)
+	req.Block.ProposerIndex = proposerIdx
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 	req.Block.Body.RandaoReveal = randaoReveal
 	currentEpoch := coretime.CurrentEpoch(beaconState)
@@ -2116,15 +2116,15 @@ func TestProposer_GetSyncAggregate_OK(t *testing.T) {
 
 	aggregate, err := proposerServer.getSyncAggregate(context.Background(), 1, bytesutil.ToBytes32(conts[0].BlockRoot), nil)
 	require.NoError(t, err)
-	require.DeepEqual(t, bitfield.Bitvector128{0xf}, aggregate.SyncCommitteeBits)
+	require.DeepEqual(t, []byte{0xf}, []byte(aggregate.SyncCommitteeBits))
 
 	aggregate, err = proposerServer.getSyncAggregate(context.Background(), 2, bytesutil.ToBytes32(conts[0].BlockRoot), nil)
 	require.NoError(t, err)
-	require.DeepEqual(t, bitfield.Bitvector128{0xaa}, aggregate.SyncCommitteeBits)
+	require.DeepEqual(t, []byte{0xaa}, []byte(aggregate.SyncCommitteeBits))
 
 	aggregate, err = proposerServer.getSyncAggregate(context.Background(), 3, bytesutil.ToBytes32(conts[0].BlockRoot), nil)
 	require.NoError(t, err)
-	require.DeepEqual(t, bitfield.NewBitvector128(), aggregate.SyncCommitteeBits)
+	require.DeepEqual(t, []byte(qrysmpb.NewSyncCommitteeAggregationBits()), []byte(aggregate.SyncCommitteeBits))
 }
 
 func TestProposer_PrepareBeaconProposer(t *testing.T) {

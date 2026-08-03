@@ -129,10 +129,10 @@ func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 	oneThird := slots.DivideSlotBy(3 /* one third of slot duration */)
 	timeToSleep := oneThird + oneThird
 
-	twoThirdTime := currentTime.Add(timeToSleep)
+	twoThirdTime := slots.StartTime(validator.genesisTime, numOfSlots).Add(timeToSleep)
 	validator.waitToSlotTwoThirds(context.Background(), numOfSlots)
 	currentTime = time.Now()
-	assert.Equal(t, twoThirdTime.Unix(), time.Now().Unix())
+	assert.Equal(t, twoThirdTime.Unix(), currentTime.Unix())
 }
 
 func TestWaitForSlotTwoThird_DoneContext_ReturnsImmediately(t *testing.T) {
