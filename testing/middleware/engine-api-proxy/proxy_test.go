@@ -18,9 +18,6 @@ import (
 )
 
 func TestProxy(t *testing.T) {
-	// TODO: Allocate deterministic, available TCP ports for this test.
-	t.Skip("proxy port selection is nondeterministic")
-
 	t.Run("fails to proxy if destination is down", func(t *testing.T) {
 		logger := logrus.New()
 		hook := logTest.NewLocal(logger)
@@ -87,9 +84,6 @@ func TestProxy(t *testing.T) {
 }
 
 func TestProxy_CustomInterceptors(t *testing.T) {
-	// TODO: Allocate deterministic, available TCP ports for this test.
-	t.Skip("proxy port selection is nondeterministic")
-
 	t.Run("only intercepts engine API methods", func(t *testing.T) {
 		ctx := t.Context()
 
