@@ -117,9 +117,6 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 }
 
 func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
-	// TODO: Remove the wall-clock scheduling dependency from this assertion.
-	t.Skip("wall-clock timing is nondeterministic")
-
 	cfg := params.BeaconConfig().Copy()
 	cfg.SecondsPerSlot = 12
 	params.OverrideBeaconConfig(cfg)
