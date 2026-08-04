@@ -309,6 +309,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 		StateGen:              stategen.New(db, doublylinkedtree.New()),
 	}
 	req := util.NewBeaconBlockZond()
+	req.Block.ProposerIndex = 45
 	req.Block.ParentRoot = parentRoot[:]
 	req.Block.Slot = 1
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
@@ -316,7 +317,6 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(ctx, beaconState)
 	require.NoError(t, err)
-	req.Block.ProposerIndex = proposerIdx
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 	req.Block.Body.RandaoReveal = randaoReveal
 	currentEpoch := coretime.CurrentEpoch(beaconState)
