@@ -40,7 +40,11 @@ func RandaoReveal(beaconState state.ReadOnlyBeaconState, epoch primitives.Epoch,
 	if err != nil {
 		return nil, err
 	}
-	return deterministicSign(privKeys[proposerIdx], signingRoot[:])
+	signature, err := privKeys[proposerIdx].SignDeterministic(signingRoot[:])
+	if err != nil {
+		return nil, err
+	}
+	return signature.Marshal(), nil
 }
 
 // BlockSignature calculates the post-state root of the block and returns the signature.

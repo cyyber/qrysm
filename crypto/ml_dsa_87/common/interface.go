@@ -9,6 +9,7 @@ package common
 type SecretKey interface {
 	PublicKey() PublicKey
 	Sign(msg []byte) Signature
+	SignDeterministic(msg []byte) (Signature, error)
 	Marshal() []byte
 }
 

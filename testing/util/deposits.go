@@ -208,7 +208,7 @@ func signedDeposit(
 	if err != nil {
 		return nil, err
 	}
-	signature, err := deterministicSign(secretKey, sigRoot[:])
+	signature, err := secretKey.SignDeterministic(sigRoot[:])
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +216,7 @@ func signedDeposit(
 		PublicKey:             publicKey,
 		Amount:                balance,
 		WithdrawalCredentials: withdrawalCreds,
-		Signature:             signature,
+		Signature:             signature.Marshal(),
 	}
 
 	deposit := &qrysmpb.Deposit{
@@ -365,7 +365,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*qrysmpb.D
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not get signing root of deposit data and domain")
 			}
-			signature, err := deterministicSign(secretKeys[1], sigRoot[:])
+			signature, err := secretKeys[1].SignDeterministic(sigRoot[:])
 			if err != nil {
 				return nil, nil, err
 			}
@@ -374,7 +374,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*qrysmpb.D
 				PublicKey:             depositMessage.PublicKey,
 				Amount:                depositMessage.Amount,
 				WithdrawalCredentials: depositMessage.WithdrawalCredentials,
-				Signature:             signature,
+				Signature:             signature.Marshal(),
 			}
 			deposit := &qrysmpb.Deposit{
 				Data: depositData,
