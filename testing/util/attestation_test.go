@@ -56,14 +56,3 @@ func TestGenerateAttestations_EpochBoundary(t *testing.T) {
 	_, err := GenerateAttestations(gs, pk, 1, params.BeaconConfig().SlotsPerEpoch, false)
 	require.NoError(t, err)
 }
-
-func TestGenerateAttestations_DeterministicSignatures(t *testing.T) {
-	genesisState, privateKeys := DeterministicGenesisStateZond(t, 32)
-	attestations, err := GenerateAttestations(genesisState, privateKeys, 1, params.BeaconConfig().SlotsPerEpoch, false)
-	require.NoError(t, err)
-	require.NotEqual(t, 0, len(attestations))
-
-	attestationsAgain, err := GenerateAttestations(genesisState, privateKeys, 1, params.BeaconConfig().SlotsPerEpoch, false)
-	require.NoError(t, err)
-	require.DeepEqual(t, attestations[0].Signatures, attestationsAgain[0].Signatures)
-}

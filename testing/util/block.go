@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/theQRL/qrysm/beacon-chain/core/helpers"
+	"github.com/theQRL/qrysm/beacon-chain/core/signing"
 	"github.com/theQRL/qrysm/beacon-chain/core/time"
 	"github.com/theQRL/qrysm/beacon-chain/db/iface"
 	"github.com/theQRL/qrysm/beacon-chain/state"
@@ -63,7 +64,7 @@ func GenerateProposerSlashingForValidator(
 	})
 	currentEpoch := time.CurrentEpoch(bState)
 	var err error
-	header1.Signature, err = computeDomainAndSignDeterministic(bState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, priv)
+	header1.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, priv)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +78,7 @@ func GenerateProposerSlashingForValidator(
 			ParentRoot:    make([]byte, fieldparams.RootLength),
 		},
 	}
-	header2.Signature, err = computeDomainAndSignDeterministic(bState, currentEpoch, header2.Header, params.BeaconConfig().DomainBeaconProposer, priv)
+	header2.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, header2.Header, params.BeaconConfig().DomainBeaconProposer, priv)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +133,7 @@ func GenerateAttesterSlashingForValidator(
 		},
 		AttestingIndices: []uint64{uint64(idx)},
 	}
-	sig, err := computeDomainAndSignDeterministic(bState, currentEpoch, att1.Data, params.BeaconConfig().DomainBeaconAttester, priv)
+	sig, err := signing.ComputeDomainAndSign(bState, currentEpoch, att1.Data, params.BeaconConfig().DomainBeaconAttester, priv)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +155,7 @@ func GenerateAttesterSlashingForValidator(
 		},
 		AttestingIndices: []uint64{uint64(idx)},
 	}
-	sig2, err := computeDomainAndSignDeterministic(bState, currentEpoch, att2.Data, params.BeaconConfig().DomainBeaconAttester, priv)
+	sig2, err := signing.ComputeDomainAndSign(bState, currentEpoch, att2.Data, params.BeaconConfig().DomainBeaconAttester, priv)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +220,7 @@ func GenerateVoluntaryExits(bState state.BeaconState, k ml_dsa_87.MLDSA87Key, id
 		},
 	}
 	var err error
-	exit.Signature, err = computeDomainAndSignDeterministic(bState, currentEpoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, k)
+	exit.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, k)
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +252,7 @@ func generateVoluntaryExits(
 				ValidatorIndex: valIndex,
 			},
 		}
-		exit.Signature, err = computeDomainAndSignDeterministic(bState, currentEpoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, privs[valIndex])
+		exit.Signature, err = signing.ComputeDomainAndSign(bState, currentEpoch, exit.Exit, params.BeaconConfig().DomainVoluntaryExit, privs[valIndex])
 		if err != nil {
 			return nil, err
 		}

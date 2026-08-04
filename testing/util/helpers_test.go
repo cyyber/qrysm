@@ -2,11 +2,13 @@ package util
 
 import (
 	"context"
+	"encoding/binary"
 	"testing"
 
 	"github.com/theQRL/qrysm/beacon-chain/core/helpers"
 	"github.com/theQRL/qrysm/beacon-chain/core/signing"
 	"github.com/theQRL/qrysm/beacon-chain/core/time"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
@@ -31,10 +33,6 @@ func TestBlockSignature(t *testing.T) {
 
 	signature, err := BlockSignature(beaconState, block.Block, privKeys)
 	assert.NoError(t, err)
-	signatureAgain, err := BlockSignature(beaconState, block.Block, privKeys)
-	assert.NoError(t, err)
-	assert.DeepEqual(t, signature.Marshal(), signatureAgain.Marshal())
-
 	signingRoot, err := signing.ComputeSigningRoot(block.Block, domain)
 	require.NoError(t, err)
 
@@ -51,13 +49,12 @@ func TestRandaoReveal(t *testing.T) {
 	epoch := time.CurrentEpoch(beaconState)
 	randaoReveal, err := RandaoReveal(beaconState, epoch, privKeys)
 	assert.NoError(t, err)
-	randaoRevealAgain, err := RandaoReveal(beaconState, epoch, privKeys)
-	assert.NoError(t, err)
-	assert.DeepEqual(t, randaoReveal, randaoRevealAgain)
 
 	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), beaconState)
 	assert.NoError(t, err)
-	// The proposer signs the epoch for the RANDAO reveal.
+	buf := make([]byte, fieldparams.RootLength)
+	binary.LittleEndian.PutUint64(buf, uint64(epoch))
+	// We make the previous validator's index sign the message instead of the proposer.
 	sszUint := primitives.SSZUint64(epoch)
 	domain, err := signing.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorsRoot())
 	require.NoError(t, err)

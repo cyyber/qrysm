@@ -3,16 +3,14 @@ package ml_dsa_87t
 import (
 	"fmt"
 
-	qrlmldsa "github.com/theQRL/go-qrllib/crypto/ml_dsa_87"
-	walletcommon "github.com/theQRL/go-qrllib/wallet/common"
-	walletmldsa "github.com/theQRL/go-qrllib/wallet/ml_dsa_87"
+	"github.com/theQRL/go-qrllib/wallet/ml_dsa_87"
 	field_params "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87/common"
 	"github.com/theQRL/qrysm/crypto/rand"
 )
 
 type mlDSA87Key struct {
-	w *walletmldsa.Wallet
+	w *ml_dsa_87.Wallet
 }
 
 func RandKey() (common.SecretKey, error) {
@@ -21,7 +19,7 @@ func RandKey() (common.SecretKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	w, err := walletmldsa.NewWalletFromSeed(seed)
+	w, err := ml_dsa_87.NewWalletFromSeed(seed)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +33,7 @@ func SecretKeyFromSeed(seed []byte) (common.SecretKey, error) {
 	var sizedSeed [field_params.MLDSA87SeedLength]uint8
 	copy(sizedSeed[:], seed)
 
-	w, err := walletmldsa.NewWalletFromSeed(sizedSeed)
+	w, err := ml_dsa_87.NewWalletFromSeed(sizedSeed)
 	if err != nil {
 		return nil, err
 	}
@@ -54,23 +52,6 @@ func (m *mlDSA87Key) Sign(msg []byte) common.Signature {
 		return nil
 	}
 	return &Signature{s: &signature}
-}
-
-func (m *mlDSA87Key) SignDeterministic(msg []byte) (common.Signature, error) {
-	seed := m.w.GetSeed()
-	signer, err := qrlmldsa.NewMLDSA87FromSeed(seed.HashSHA256())
-	if err != nil {
-		return nil, err
-	}
-	descriptor, err := walletmldsa.NewMLDSA87Descriptor()
-	if err != nil {
-		return nil, err
-	}
-	signature, err := signer.SignDeterministic(walletcommon.SigningContext(descriptor.ToDescriptor()), msg)
-	if err != nil {
-		return nil, err
-	}
-	return &Signature{s: &signature}, nil
 }
 
 // Marshal a secret key into a LittleEndian byte slice.

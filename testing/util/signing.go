@@ -1,39 +1,26 @@
 package util
 
 import (
-	fssz "github.com/prysmaticlabs/fastssz"
-	"github.com/theQRL/qrysm/beacon-chain/core/signing"
-	"github.com/theQRL/qrysm/beacon-chain/state"
-	"github.com/theQRL/qrysm/consensus-types/primitives"
+	qrlmldsa "github.com/theQRL/go-qrllib/crypto/ml_dsa_87"
+	walletcommon "github.com/theQRL/go-qrllib/wallet/common"
+	walletmldsa "github.com/theQRL/go-qrllib/wallet/ml_dsa_87"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
 )
 
 func deterministicSign(key ml_dsa_87.MLDSA87Key, msg []byte) ([]byte, error) {
-	signature, err := deterministicSignature(key, msg)
+	var seed walletcommon.Seed
+	copy(seed[:], key.Marshal())
+	signer, err := qrlmldsa.NewMLDSA87FromSeed(seed.HashSHA256())
 	if err != nil {
 		return nil, err
 	}
-	return signature.Marshal(), nil
-}
-
-func deterministicSignature(key ml_dsa_87.MLDSA87Key, msg []byte) (ml_dsa_87.Signature, error) {
-	return ml_dsa_87.SignDeterministic(key, msg)
-}
-
-func computeDomainAndSignDeterministic(
-	st state.ReadOnlyBeaconState,
-	epoch primitives.Epoch,
-	object fssz.HashRoot,
-	domain [4]byte,
-	key ml_dsa_87.MLDSA87Key,
-) ([]byte, error) {
-	signatureDomain, err := signing.Domain(st.Fork(), epoch, domain, st.GenesisValidatorsRoot())
+	descriptor, err := walletmldsa.NewMLDSA87Descriptor()
 	if err != nil {
 		return nil, err
 	}
-	signingRoot, err := signing.ComputeSigningRoot(object, signatureDomain)
+	signature, err := signer.SignDeterministic(walletcommon.SigningContext(descriptor.ToDescriptor()), msg)
 	if err != nil {
 		return nil, err
 	}
-	return deterministicSign(key, signingRoot[:])
+	return signature[:], nil
 }

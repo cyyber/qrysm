@@ -54,17 +54,3 @@ func TestGenerateGenesisStateZond(t *testing.T) {
 	_, err = st.MarshalSSZ()
 	require.NoError(t, err)
 }
-
-func TestDepositDataFromKeys_DeterministicSignatures(t *testing.T) {
-	privKeys, pubKeys, err := DeterministicallyGenerateKeys(0, 4)
-	require.NoError(t, err)
-	deposits, roots, err := DepositDataFromKeys(privKeys, pubKeys)
-	require.NoError(t, err)
-
-	depositsAgain, rootsAgain, err := DepositDataFromKeys(privKeys, pubKeys)
-	require.NoError(t, err)
-	for i := range deposits {
-		require.DeepEqual(t, deposits[i].Signature, depositsAgain[i].Signature)
-		require.DeepEqual(t, roots[i], rootsAgain[i])
-	}
-}
