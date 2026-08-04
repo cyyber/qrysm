@@ -331,7 +331,7 @@ func TestValidateIndexedAttestation_AboveMaxLength(t *testing.T) {
 func TestValidateIndexedAttestation_BadAttestationsSignatureSet(t *testing.T) {
 	beaconState, keys := util.DeterministicGenesisStateZond(t, 256)
 
-	sig := keys[0].Sign([]byte{'t', 'e', 's', 't'})
+	sig := util.Sign(t, keys[0], []byte{'t', 'e', 's', 't'})
 	list := bitfield.Bitlist{0b111}
 	var atts []*qrysmpb.Attestation
 	for range 1000 {
@@ -410,7 +410,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 	var sigs [][]byte
 	for i, u := range comm1 {
 		att1.AggregationBits.SetBitAt(uint64(i), true)
-		sigs = append(sigs, keys[u].Sign(root[:]).Marshal())
+		sigs = append(sigs, util.Sign(t, keys[u], root[:]).Marshal())
 	}
 	att1.Signatures = sigs
 
@@ -430,7 +430,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 	sigs = nil
 	for i, u := range comm2 {
 		att2.AggregationBits.SetBitAt(uint64(i), true)
-		sigs = append(sigs, keys[u].Sign(root[:]).Marshal())
+		sigs = append(sigs, util.Sign(t, keys[u], root[:]).Marshal())
 	}
 	att2.Signatures = sigs
 }
@@ -469,7 +469,7 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 	var sigs [][]byte
 	for i, u := range comm1 {
 		att1.AggregationBits.SetBitAt(uint64(i), true)
-		sigs = append(sigs, keys[u].Sign(root[:]).Marshal())
+		sigs = append(sigs, util.Sign(t, keys[u], root[:]).Marshal())
 	}
 	att1.Signatures = sigs
 
@@ -487,7 +487,7 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 	sigs = nil
 	for i, u := range comm2 {
 		att2.AggregationBits.SetBitAt(uint64(i), true)
-		sigs = append(sigs, keys[u].Sign(root[:]).Marshal())
+		sigs = append(sigs, util.Sign(t, keys[u], root[:]).Marshal())
 	}
 	att2.Signatures = sigs
 
@@ -533,7 +533,7 @@ func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
 	var sigs [][]byte
 	for i, u := range comm1 {
 		att1.AggregationBits.SetBitAt(uint64(i), true)
-		sigs = append(sigs, keys[u].Sign(root[:]).Marshal())
+		sigs = append(sigs, util.Sign(t, keys[u], root[:]).Marshal())
 	}
 	att1.Signatures = sigs
 
@@ -551,7 +551,7 @@ func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
 	sigs = nil
 	for i, u := range comm2 {
 		att2.AggregationBits.SetBitAt(uint64(i), true)
-		sigs = append(sigs, keys[u].Sign(root[:]).Marshal())
+		sigs = append(sigs, util.Sign(t, keys[u], root[:]).Marshal())
 	}
 	att2.Signatures = sigs
 

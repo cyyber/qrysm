@@ -46,12 +46,12 @@ func (m *mlDSA87Key) PublicKey() common.PublicKey {
 	return &PublicKey{p: &p}
 }
 
-func (m *mlDSA87Key) Sign(msg []byte) common.Signature {
+func (m *mlDSA87Key) Sign(msg []byte) (common.Signature, error) {
 	signature, err := m.w.Sign(msg)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return &Signature{s: &signature}
+	return &Signature{s: &signature}, nil
 }
 
 func (m *mlDSA87Key) SignDeterministic(msg []byte) (common.Signature, error) {

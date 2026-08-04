@@ -100,7 +100,7 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 		signingRoot, err := container.HashTreeRoot()
 		require.NoError(t, err)
 		privKey := privKeys[proposalWrapper.SignedBeaconBlockHeader.Header.ProposerIndex]
-		proposalWrapper.SignedBeaconBlockHeader.Signature = privKey.Sign(signingRoot[:]).Marshal()
+		proposalWrapper.SignedBeaconBlockHeader.Signature = util.Sign(t, privKey, signingRoot[:]).Marshal()
 	}
 
 	s.blksQueue.extend(signedBlkHeaders)
@@ -199,7 +199,7 @@ func Test_processQueuedBlocks_DetectsDoubleProposals_AcrossBatches(t *testing.T)
 			signingRoot, err := container.HashTreeRoot()
 			require.NoError(t, err)
 			privKey := privKeys[proposalWrapper.SignedBeaconBlockHeader.Header.ProposerIndex]
-			proposalWrapper.SignedBeaconBlockHeader.Signature = privKey.Sign(signingRoot[:]).Marshal()
+			proposalWrapper.SignedBeaconBlockHeader.Signature = util.Sign(t, privKey, signingRoot[:]).Marshal()
 		}
 		s.blksQueue.extend(batch)
 		currentSlotChan <- primitives.Slot(4)

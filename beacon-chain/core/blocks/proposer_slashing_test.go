@@ -197,11 +197,11 @@ func TestVerifyProposerSlashing(t *testing.T) {
 	require.NoError(t, beaconState.SetSlot(currentSlot))
 	rand1, err := ml_dsa_87.RandKey()
 	require.NoError(t, err)
-	sig1 := rand1.Sign([]byte("foo")).Marshal()
+	sig1 := util.Sign(t, rand1, []byte("foo")).Marshal()
 
 	rand2, err := ml_dsa_87.RandKey()
 	require.NoError(t, err)
-	sig2 := rand2.Sign([]byte("bar")).Marshal()
+	sig2 := util.Sign(t, rand2, []byte("bar")).Marshal()
 
 	tests := []struct {
 		name    string
@@ -287,12 +287,12 @@ func TestVerifyProposerSlashing(t *testing.T) {
 			if tt.args.slashing.Header_1.Signature == nil {
 				sr, err := signing.ComputeSigningRoot(tt.args.slashing.Header_1.Header, d)
 				require.NoError(t, err)
-				tt.args.slashing.Header_1.Signature = sk.Sign(sr[:]).Marshal()
+				tt.args.slashing.Header_1.Signature = util.Sign(t, sk, sr[:]).Marshal()
 			}
 			if tt.args.slashing.Header_2.Signature == nil {
 				sr, err := signing.ComputeSigningRoot(tt.args.slashing.Header_2.Header, d)
 				require.NoError(t, err)
-				tt.args.slashing.Header_2.Signature = sk.Sign(sr[:]).Marshal()
+				tt.args.slashing.Header_2.Signature = util.Sign(t, sk, sr[:]).Marshal()
 			}
 			if err := blocks.VerifyProposerSlashing(tt.args.beaconState, tt.args.slashing); (err != nil || tt.wantErr != "") && err.Error() != tt.wantErr {
 				t.Errorf("VerifyProposerSlashing() error = %v, wantErr %v", err, tt.wantErr)

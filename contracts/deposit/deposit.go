@@ -50,11 +50,15 @@ func DepositInput(depositKey ml_dsa_87.MLDSA87Key, withdrawalAddr common.Address
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
+	signature, err := depositKey.Sign(root[:])
+	if err != nil {
+		return nil, [32]byte{}, err
+	}
 	di := &qrysmpb.Deposit_Data{
 		PublicKey:             depositMessage.PublicKey,
 		WithdrawalCredentials: depositMessage.WithdrawalCredentials,
 		Amount:                depositMessage.Amount,
-		Signature:             depositKey.Sign(root[:]).Marshal(),
+		Signature:             signature.Marshal(),
 	}
 
 	dr, err := di.HashTreeRoot()

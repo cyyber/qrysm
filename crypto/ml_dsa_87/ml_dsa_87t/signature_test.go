@@ -16,7 +16,7 @@ func TestSignVerify(t *testing.T) {
 	require.NoError(t, err)
 	pub := priv.PublicKey()
 	msg := []byte("hello")
-	sig := priv.Sign(msg)
+	sig := signForTest(t, priv, msg)
 	assert.Equal(t, true, sig.Verify(pub, msg), "Signature did not verify")
 }
 
@@ -26,7 +26,7 @@ func TestVerifySingleSignature_InvalidSignature(t *testing.T) {
 	pub := priv.PublicKey()
 	msgA := [32]byte{'h', 'e', 'l', 'l', 'o'}
 	msgB := [32]byte{'o', 'l', 'l', 'e', 'h'}
-	sigA := priv.Sign(msgA[:]).Marshal()
+	sigA := signForTest(t, priv, msgA[:]).Marshal()
 	valid, err := VerifySignature(sigA, msgB, pub)
 	assert.NoError(t, err)
 	assert.Equal(t, false, valid, "Signature did verify")
@@ -37,7 +37,7 @@ func TestVerifySingleSignature_ValidSignature(t *testing.T) {
 	require.NoError(t, err)
 	pub := priv.PublicKey()
 	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
-	sig := priv.Sign(msg[:]).Marshal()
+	sig := signForTest(t, priv, msg[:]).Marshal()
 	valid, err := VerifySignature(sig, msg, pub)
 	assert.NoError(t, err)
 	assert.Equal(t, true, valid, "Signature did not verify")
@@ -52,7 +52,7 @@ func TestVerifyMultipleSignatures(t *testing.T) {
 		priv, err := RandKey()
 		require.NoError(t, err)
 		pub := priv.PublicKey()
-		sig := priv.Sign(msg[:]).Marshal()
+		sig := signForTest(t, priv, msg[:]).Marshal()
 		pubkeys[i] = []common.PublicKey{pub}
 		sigs[i] = [][]byte{sig}
 		msgs = append(msgs, msg)
@@ -68,13 +68,20 @@ func TestVerifyMultipleSignatures(t *testing.T) {
 		priv, err := RandKey()
 		require.NoError(t, err)
 		pub := priv.PublicKey()
-		sig := priv.Sign(msg1[:]).Marshal()
+		sig := signForTest(t, priv, msg1[:]).Marshal()
 		pubkeys1 = append(pubkeys1, pub)
 		sigs1 = append(sigs1, sig)
 	}
 	verify, err = VerifyMultipleSignatures([][][]byte{sigs1}, [][32]byte{msg1}, [][]common.PublicKey{pubkeys1})
 	assert.NoError(t, err, "Signature did not verify")
 	assert.Equal(t, true, verify, "Signature did not verify")
+}
+
+func signForTest(t *testing.T, key common.SecretKey, msg []byte) common.Signature {
+	t.Helper()
+	signature, err := key.Sign(msg)
+	require.NoError(t, err)
+	return signature
 }
 
 func TestSignatureFromBytes(t *testing.T) {

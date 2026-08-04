@@ -62,7 +62,7 @@ func TestProposeAttestation_OK(t *testing.T) {
 
 	sk, err := ml_dsa_87.RandKey()
 	require.NoError(t, err)
-	sig := sk.Sign([]byte("dummy_test_data"))
+	sig := util.Sign(t, sk, []byte("dummy_test_data"))
 	req := &qrysmpb.Attestation{
 		Signatures: [][]byte{sig.Marshal()},
 		Data: &qrysmpb.AttestationData{

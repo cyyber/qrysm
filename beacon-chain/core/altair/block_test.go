@@ -278,7 +278,7 @@ func Test_VerifySyncCommitteeSigs(t *testing.T) {
 
 	mlDSA87Key, err := ml_dsa_87.RandKey()
 	require.NoError(t, err)
-	require.ErrorContains(t, "provided signatures and pubkeys have differing lengths", altair.VerifySyncCommitteeSigs(beaconState, pks, [][]byte{mlDSA87Key.Sign([]byte{'m', 'e', 'o', 'w'}).Marshal()}))
+	require.ErrorContains(t, "provided signatures and pubkeys have differing lengths", altair.VerifySyncCommitteeSigs(beaconState, pks, [][]byte{util.Sign(t, mlDSA87Key, []byte{'m', 'e', 'o', 'w'}).Marshal()}))
 	require.ErrorContains(t, "invalid sync committee signature", altair.VerifySyncCommitteeSigs(beaconState, pks, sigsBad))
 	require.NoError(t, altair.VerifySyncCommitteeSigs(beaconState, pks, sigs))
 }

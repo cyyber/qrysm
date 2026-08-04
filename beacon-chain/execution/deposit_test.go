@@ -125,7 +125,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 
 	deposits, keys, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
-	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'})
+	sig := util.Sign(t, keys[0], []byte{'F', 'A', 'K', 'E'})
 	deposits[0].Data.Signature = sig.Marshal()
 
 	generatedTrie, _, err := util.DepositTrieFromDeposits(deposits)
@@ -178,7 +178,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	signedRoot, err := signing.ComputeSigningRoot(deposit.Data, d)
 	require.NoError(t, err)
 
-	sig := priv.Sign(signedRoot[:])
+	sig := util.Sign(t, priv, signedRoot[:])
 	deposit.Data.Signature = sig.Marshal()
 
 	generatedTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)

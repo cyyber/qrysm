@@ -191,11 +191,15 @@ func insertDoubleAttestationIntoPool(_ *e2eTypes.EvaluationContext, conns ...*gr
 		// Set the bits of half the committee to be slashed.
 		attBitfield := bitfield.NewBitlist(uint64(len(committee)))
 		attBitfield.SetBitAt(i, true)
+		signature, err := privKeys[committee[i]].Sign(signingRoot[:])
+		if err != nil {
+			return err
+		}
 
 		att := &qrysmpb.Attestation{
 			AggregationBits: attBitfield,
 			Data:            attData,
-			Signatures:      [][]byte{privKeys[committee[i]].Sign(signingRoot[:]).Marshal()},
+			Signatures:      [][]byte{signature.Marshal()},
 		}
 		// We only broadcast to conns[0] here since we can trust that at least 1 node will be online.
 		// Only broadcasting the attestation to one node also helps test slashing propagation.
@@ -318,7 +322,11 @@ func generateSignedBeaconBlock(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute signing root")
 	}
-	sig := privKeys[proposerIndex].Sign(signingRoot[:]).Marshal()
+	signature, err := privKeys[proposerIndex].Sign(signingRoot[:])
+	if err != nil {
+		return nil, err
+	}
+	sig := signature.Marshal()
 	signedBlk := &qrysmpb.SignedBeaconBlockZond{
 		Block:     blk,
 		Signature: sig,

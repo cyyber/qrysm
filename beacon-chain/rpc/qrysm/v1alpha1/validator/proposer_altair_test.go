@@ -78,9 +78,9 @@ func TestProposer_GetSyncAggregate_IncludesSyncCommitteeMessages(t *testing.T) {
 
 	r := params.BeaconConfig().ZeroHash
 	msgs := []*qrysmpb.SyncCommitteeMessage{
-		{Slot: 1, BlockRoot: r[:], ValidatorIndex: 0, Signature: priv0.Sign([]byte("m0")).Marshal()},
-		{Slot: 1, BlockRoot: r[:], ValidatorIndex: 1, Signature: priv1.Sign([]byte("m1")).Marshal()},
-		{Slot: 1, BlockRoot: r[:], ValidatorIndex: 2, Signature: priv2.Sign([]byte("m2")).Marshal()},
+		{Slot: 1, BlockRoot: r[:], ValidatorIndex: 0, Signature: util.Sign(t, priv0, []byte("m0")).Marshal()},
+		{Slot: 1, BlockRoot: r[:], ValidatorIndex: 1, Signature: util.Sign(t, priv1, []byte("m1")).Marshal()},
+		{Slot: 1, BlockRoot: r[:], ValidatorIndex: 2, Signature: util.Sign(t, priv2, []byte("m2")).Marshal()},
 	}
 	for _, msg := range msgs {
 		require.NoError(t, proposerServer.SyncCommitteePool.SaveSyncCommitteeMessage(msg))
@@ -91,7 +91,7 @@ func TestProposer_GetSyncAggregate_IncludesSyncCommitteeMessages(t *testing.T) {
 	contrib := &qrysmpb.SyncCommitteeContribution{
 		Slot:              1,
 		SubcommitteeIndex: 0,
-		Signatures:        [][]byte{priv3.Sign([]byte("c4")).Marshal()},
+		Signatures:        [][]byte{util.Sign(t, priv3, []byte("c4")).Marshal()},
 		AggregationBits:   poolBits,
 		BlockRoot:         r[:],
 	}
@@ -152,10 +152,10 @@ func Test_aggregatedSyncCommitteeMessages_NoIntersectionWithPoolContributions(t 
 
 	r := params.BeaconConfig().ZeroHash
 	msgs := []*qrysmpb.SyncCommitteeMessage{
-		{Slot: 1, BlockRoot: r[:], ValidatorIndex: 0, Signature: priv0.Sign([]byte("m0")).Marshal()},
-		{Slot: 1, BlockRoot: r[:], ValidatorIndex: 1, Signature: priv1.Sign([]byte("m1")).Marshal()},
-		{Slot: 1, BlockRoot: r[:], ValidatorIndex: 2, Signature: priv2.Sign([]byte("m2")).Marshal()},
-		{Slot: 1, BlockRoot: r[:], ValidatorIndex: 3, Signature: priv3.Sign([]byte("m3")).Marshal()},
+		{Slot: 1, BlockRoot: r[:], ValidatorIndex: 0, Signature: util.Sign(t, priv0, []byte("m0")).Marshal()},
+		{Slot: 1, BlockRoot: r[:], ValidatorIndex: 1, Signature: util.Sign(t, priv1, []byte("m1")).Marshal()},
+		{Slot: 1, BlockRoot: r[:], ValidatorIndex: 2, Signature: util.Sign(t, priv2, []byte("m2")).Marshal()},
+		{Slot: 1, BlockRoot: r[:], ValidatorIndex: 3, Signature: util.Sign(t, priv3, []byte("m3")).Marshal()},
 	}
 	for _, msg := range msgs {
 		require.NoError(t, proposerServer.SyncCommitteePool.SaveSyncCommitteeMessage(msg))
@@ -166,7 +166,7 @@ func Test_aggregatedSyncCommitteeMessages_NoIntersectionWithPoolContributions(t 
 	cont := &qrysmpb.SyncCommitteeContribution{
 		Slot:              1,
 		SubcommitteeIndex: 0,
-		Signatures:        [][]byte{priv3.Sign([]byte("c3")).Marshal()},
+		Signatures:        [][]byte{util.Sign(t, priv3, []byte("c3")).Marshal()},
 		AggregationBits:   poolBits,
 		BlockRoot:         r[:],
 	}

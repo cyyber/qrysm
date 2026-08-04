@@ -149,8 +149,7 @@ func (m *mockKeymanager) Sign(_ context.Context, req *validatorpb.SignRequest) (
 	if !ok {
 		return nil, errors.New("not found")
 	}
-	sig := privKey.Sign(req.SigningRoot)
-	return sig, nil
+	return privKey.Sign(req.SigningRoot)
 }
 
 func (m *mockKeymanager) SubscribeAccountChanges(pubKeysChan chan [][field_params.MLDSA87PubkeyLength]byte) event.Subscription {

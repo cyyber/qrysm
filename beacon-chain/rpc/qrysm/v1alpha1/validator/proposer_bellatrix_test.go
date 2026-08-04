@@ -119,7 +119,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		sBid := &qrysmpb.SignedBuilderBidZond{
 			Message:   bid,
-			Signature: sk.Sign(sr[:]).Marshal(),
+			Signature: util.Sign(t, sk, sr[:]).Marshal(),
 		}
 		vs.BlockBuilder = &builderTest.MockBuilderService{
 			BidZond:       sBid,
@@ -182,7 +182,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		sBid := &qrysmpb.SignedBuilderBidZond{
 			Message:   bid,
-			Signature: sk.Sign(sr[:]).Marshal(),
+			Signature: util.Sign(t, sk, sr[:]).Marshal(),
 		}
 		vs.BlockBuilder = &builderTest.MockBuilderService{
 			BidZond:       sBid,
@@ -309,7 +309,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 	require.NoError(t, err)
 	sBidZond := &qrysmpb.SignedBuilderBidZond{
 		Message:   bidZond,
-		Signature: sk.Sign(srZond[:]).Marshal(),
+		Signature: util.Sign(t, sk, srZond[:]).Marshal(),
 	}
 
 	require.NoError(t, err)
@@ -525,7 +525,7 @@ func TestServer_validateBuilderSignature(t *testing.T) {
 	require.NoError(t, err)
 	pbBid := &qrysmpb.SignedBuilderBidZond{
 		Message:   bid,
-		Signature: sk.Sign(sr[:]).Marshal(),
+		Signature: util.Sign(t, sk, sr[:]).Marshal(),
 	}
 	sBid, err := builder.WrappedSignedBuilderBidZond(pbBid)
 	require.NoError(t, err)

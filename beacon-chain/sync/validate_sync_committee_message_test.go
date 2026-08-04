@@ -30,6 +30,7 @@ import (
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
+	"github.com/theQRL/qrysm/testing/util"
 	"github.com/theQRL/qrysm/time/slots"
 )
 
@@ -368,7 +369,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 					PublicKey:            bytesutil.ToBytes2592(keys[chosenVal].PublicKey().Marshal()),
 				}
 
-				msg.Signature = keys[chosenVal].Sign(sigRoot[:]).Marshal()
+				msg.Signature = util.Sign(t, keys[chosenVal], sigRoot[:]).Marshal()
 				msg.BlockRoot = headRoot[:]
 				msg.ValidatorIndex = primitives.ValidatorIndex(chosenVal)
 				msg.Slot = slots.PrevSlot(hState.Slot())

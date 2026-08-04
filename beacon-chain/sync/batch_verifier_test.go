@@ -14,8 +14,8 @@ import (
 func TestValidateWithBatchVerifier(t *testing.T) {
 	_, keys, err := util.DeterministicDepositsAndKeys(10)
 	assert.NoError(t, err)
-	sig := keys[0].Sign(make([]byte, 32))
-	badSig := keys[1].Sign(make([]byte, 32))
+	sig := util.Sign(t, keys[0], make([]byte, 32))
+	badSig := util.Sign(t, keys[1], make([]byte, 32))
 	validSet := &ml_dsa_87.SignatureBatch{
 		Messages:     [][32]byte{{}},
 		PublicKeys:   [][]ml_dsa_87.PublicKey{{keys[0].PublicKey()}},

@@ -640,7 +640,7 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 	require.NoError(t, err)
 	msg := util.NewBeaconBlockZond()
 	msg.Block.ParentRoot = util.Random32Bytes(t)
-	msg.Signature = sk.Sign([]byte("data")).Marshal()
+	msg.Signature = util.Sign(t, sk, []byte("data")).Marshal()
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
 		FinalizedCheckPoint: &qrysmpb.Checkpoint{
@@ -751,7 +751,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	msg := util.NewBeaconBlockZond()
 	msg.Block.Slot = 10
 	msg.Block.ParentRoot = util.Random32Bytes(t)
-	msg.Signature = sk.Sign([]byte("data")).Marshal()
+	msg.Signature = util.Sign(t, sk, []byte("data")).Marshal()
 
 	chainService := &mock.ChainService{Genesis: time.Now()}
 	r := &Service{
@@ -799,7 +799,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	msg := util.NewBeaconBlockZond()
 	msg.Block.ParentRoot = util.Random32Bytes(t)
 	msg.Block.Slot = 10
-	msg.Signature = sk.Sign([]byte("data")).Marshal()
+	msg.Signature = util.Sign(t, sk, []byte("data")).Marshal()
 
 	genesisTime := time.Now()
 	chainService := &mock.ChainService{

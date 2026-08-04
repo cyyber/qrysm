@@ -122,7 +122,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 	}
 	sr, err := signing.ComputeSigningRoot(deposit.Data, bytesutil.ToBytes(3, 32))
 	require.NoError(t, err)
-	sig := sk.Sign(sr[:])
+	sig := util.Sign(t, sk, sr[:])
 	deposit.Data.Signature = sig.Marshal()
 	leaf, err := deposit.Data.HashTreeRoot()
 	require.NoError(t, err)

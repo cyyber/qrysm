@@ -378,7 +378,10 @@ func proposeVoluntaryExit(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientC
 		if err != nil {
 			return err
 		}
-		signature := privKeys[exitedIndex].Sign(signingData[:])
+		signature, err := privKeys[exitedIndex].Sign(signingData[:])
+		if err != nil {
+			return err
+		}
 		signedExit := &qrysmpb.SignedVoluntaryExit{
 			Exit:      voluntaryExit,
 			Signature: signature.Marshal(),

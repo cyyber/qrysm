@@ -27,11 +27,12 @@ func TestVerifyRegistrationSignature(t *testing.T) {
 	require.NoError(t, err)
 	sr, err := signing.ComputeSigningRoot(reg, domain)
 	require.NoError(t, err)
-	sk.Sign(sr[:]).Marshal()
+	signature, err := sk.Sign(sr[:])
+	require.NoError(t, err)
 
 	sReg := &qrysmpb.SignedValidatorRegistrationV1{
 		Message:   reg,
-		Signature: sk.Sign(sr[:]).Marshal(),
+		Signature: signature.Marshal(),
 	}
 	require.NoError(t, signing.VerifyRegistrationSignature(sReg))
 

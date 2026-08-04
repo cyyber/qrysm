@@ -229,7 +229,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				sigs := make([][]byte, len(attestingIndices))
 				for i, validatorIndex := range attestingIndices {
 					privKey := privKeys[validatorIndex]
-					sigs[i] = privKey.Sign(signingRoot[:]).Marshal()
+					sigs[i] = util.Sign(t, privKey, signingRoot[:]).Marshal()
 				}
 				attestationWrapper.IndexedAttestation.Signatures = sigs
 			}

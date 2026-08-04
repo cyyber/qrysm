@@ -59,7 +59,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	require.NoError(t, err)
 	signingRoot, err := signing.ComputeSigningRoot(depData, domain)
 	require.NoError(t, err)
-	depData.Signature = priv1.Sign(signingRoot[:]).Marshal()
+	depData.Signature = util.Sign(t, priv1, signingRoot[:]).Marshal()
 
 	deposit := &qrysmpb.Deposit{
 		Data: depData,

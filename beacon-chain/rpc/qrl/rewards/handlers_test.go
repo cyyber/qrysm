@@ -97,12 +97,12 @@ func TestBlockRewards(t *testing.T) {
 			Attestation_1: &qrysmpb.IndexedAttestation{
 				AttestingIndices: []uint64{0},
 				Data:             attData1,
-				Signatures:       [][]byte{secretKeys[0].Sign(sigRoot1[:]).Marshal()},
+				Signatures:       [][]byte{util.Sign(t, secretKeys[0], sigRoot1[:]).Marshal()},
 			},
 			Attestation_2: &qrysmpb.IndexedAttestation{
 				AttestingIndices: []uint64{0},
 				Data:             attData2,
-				Signatures:       [][]byte{secretKeys[0].Sign(sigRoot2[:]).Marshal()},
+				Signatures:       [][]byte{util.Sign(t, secretKeys[0], sigRoot2[:]).Marshal()},
 			},
 		},
 	}
@@ -130,11 +130,11 @@ func TestBlockRewards(t *testing.T) {
 		{
 			Header_1: &qrysmpb.SignedBeaconBlockHeader{
 				Header:    header1,
-				Signature: secretKeys[1].Sign(sigRoot1[:]).Marshal(),
+				Signature: util.Sign(t, secretKeys[1], sigRoot1[:]).Marshal(),
 			},
 			Header_2: &qrysmpb.SignedBeaconBlockHeader{
 				Header:    header2,
-				Signature: secretKeys[1].Sign(sigRoot2[:]).Marshal(),
+				Signature: util.Sign(t, secretKeys[1], sigRoot2[:]).Marshal(),
 			},
 		},
 	}
@@ -148,8 +148,8 @@ func TestBlockRewards(t *testing.T) {
 	require.NoError(t, err)
 	// Bits set in sync committee bits determine which validators will be treated as participating in sync committee.
 	// These validators have to sign the message.
-	sig1 := secretKeys[149].Sign(r[:]).Marshal()
-	sig2 := secretKeys[48].Sign(r[:]).Marshal()
+	sig1 := util.Sign(t, secretKeys[149], r[:]).Marshal()
+	sig2 := util.Sign(t, secretKeys[48], r[:]).Marshal()
 	b.Block.Body.SyncAggregate = &qrysmpb.SyncAggregate{SyncCommitteeBits: scBits, SyncCommitteeSignatures: [][]byte{sig1, sig2}}
 
 	sbb, err := blocks.NewSignedBeaconBlock(b)
@@ -521,7 +521,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 	// These validators have to sign the message.
 	sigs := make([][]byte, fieldparams.SyncCommitteeLength-2)
 	for i := range sigs {
-		sigs[i] = secretKeys[i].Sign(r[:]).Marshal()
+		sigs[i] = util.Sign(t, secretKeys[i], r[:]).Marshal()
 	}
 	b.Block.Body.SyncAggregate = &qrysmpb.SyncAggregate{SyncCommitteeBits: scBits, SyncCommitteeSignatures: sigs}
 	sbb, err := blocks.NewSignedBeaconBlock(b)

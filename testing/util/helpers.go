@@ -18,7 +18,16 @@ import (
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
 	"github.com/theQRL/qrysm/crypto/rand"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
+	"github.com/theQRL/qrysm/testing/require"
 )
+
+// Sign signs msg and fails the test if signing fails.
+func Sign(t testing.TB, key ml_dsa_87.MLDSA87Key, msg []byte) ml_dsa_87.Signature {
+	t.Helper()
+	signature, err := key.Sign(msg)
+	require.NoError(t, err)
+	return signature
+}
 
 // RandaoReveal returns a signature of the requested epoch using the beacon proposer private key.
 func RandaoReveal(beaconState state.ReadOnlyBeaconState, epoch primitives.Epoch, privKeys []ml_dsa_87.MLDSA87Key) ([]byte, error) {
@@ -108,7 +117,7 @@ func BlockSignature(
 	if err != nil {
 		return nil, err
 	}
-	return privKeys[proposerIdx].Sign(blockRoot[:]), nil
+	return privKeys[proposerIdx].Sign(blockRoot[:])
 }
 
 // Random32Bytes generates a random 32 byte slice.

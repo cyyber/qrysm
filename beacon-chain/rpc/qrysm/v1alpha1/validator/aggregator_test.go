@@ -63,7 +63,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 
 	priv, err := ml_dsa_87.RandKey()
 	require.NoError(t, err)
-	sig := priv.Sign([]byte{'A'})
+	sig := util.Sign(t, priv, []byte{'A'})
 	req := &qrysmpb.AggregateSelectionRequest{CommitteeIndex: 1, SlotSignature: sig.Marshal(), PublicKey: pubKey(3)}
 	wanted := "Could not locate validator index in DB"
 	_, err = server.SubmitAggregateSelectionProof(ctx, req)
@@ -92,7 +92,7 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 
 	priv, err := ml_dsa_87.RandKey()
 	require.NoError(t, err)
-	sig := priv.Sign([]byte{'A'})
+	sig := util.Sign(t, priv, []byte{'A'})
 	v, err := s.ValidatorAtIndex(1)
 	require.NoError(t, err)
 	pubKey := v.PublicKey
@@ -127,7 +127,7 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 
 	priv, err := ml_dsa_87.RandKey()
 	require.NoError(t, err)
-	sig := priv.Sign([]byte{'B'})
+	sig := util.Sign(t, priv, []byte{'B'})
 	v, err := beaconState.ValidatorAtIndex(1)
 	require.NoError(t, err)
 	pubKey := v.PublicKey
@@ -166,7 +166,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 
 	priv, err := ml_dsa_87.RandKey()
 	require.NoError(t, err)
-	sig := priv.Sign([]byte{'B'})
+	sig := util.Sign(t, priv, []byte{'B'})
 	v, err := beaconState.ValidatorAtIndex(1)
 	require.NoError(t, err)
 	pubKey := v.PublicKey
@@ -207,7 +207,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 
 	priv, err := ml_dsa_87.RandKey()
 	require.NoError(t, err)
-	sig := priv.Sign([]byte{'B'})
+	sig := util.Sign(t, priv, []byte{'B'})
 	v, err := beaconState.ValidatorAtIndex(1)
 	require.NoError(t, err)
 	pubKey := v.PublicKey
@@ -285,8 +285,11 @@ func generateUnaggregatedAtt(state state.ReadOnlyBeaconState, index uint64, priv
 		if err != nil {
 			return nil, err
 		}
-		sig := privKeys[indice].Sign(hashTreeRoot[:]).Marshal()
-		sigs[i] = sig
+		sig, err := privKeys[indice].Sign(hashTreeRoot[:])
+		if err != nil {
+			return nil, err
+		}
+		sigs[i] = sig.Marshal()
 	}
 
 	att.Signatures = sigs
@@ -333,7 +336,7 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 
 	priv, err := ml_dsa_87.RandKey()
 	require.NoError(t, err)
-	sig := priv.Sign([]byte{'B'})
+	sig := util.Sign(t, priv, []byte{'B'})
 	v, err := beaconState.ValidatorAtIndex(1)
 	require.NoError(t, err)
 	pubKey := v.PublicKey
@@ -385,7 +388,7 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 
 	priv, err := ml_dsa_87.RandKey()
 	require.NoError(t, err)
-	sig := priv.Sign([]byte{'B'})
+	sig := util.Sign(t, priv, []byte{'B'})
 	v, err := beaconState.ValidatorAtIndex(1)
 	require.NoError(t, err)
 	pubKey := v.PublicKey

@@ -84,7 +84,7 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 
 	msg := util.NewBeaconBlockZond()
 	msg.Block.ParentRoot = util.Random32Bytes(t)
-	msg.Signature = sk.Sign([]byte("data")).Marshal()
+	msg.Signature = util.Sign(t, sk, []byte("data")).Marshal()
 	p2p.ReceivePubSub(topic, msg)
 	// wait for chainstart to be sent
 	time.Sleep(400 * time.Millisecond)
@@ -163,7 +163,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 	require.NoError(t, err)
 	msg := util.NewBeaconBlockZond()
 	msg.Block.ParentRoot = util.Random32Bytes(t)
-	msg.Signature = sk.Sign([]byte("data")).Marshal()
+	msg.Signature = util.Sign(t, sk, []byte("data")).Marshal()
 	p2p.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
 

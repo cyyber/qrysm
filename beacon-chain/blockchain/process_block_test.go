@@ -939,8 +939,8 @@ func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 	require.NoError(t, err)
 	signingRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
 	assert.NoError(t, err, "Could not get signing root of beacon block header")
-	sig0 := privKeys[0].Sign(signingRoot[:]).Marshal()
-	sig1 := privKeys[1].Sign(signingRoot[:]).Marshal()
+	sig0 := util.Sign(t, privKeys[0], signingRoot[:]).Marshal()
+	sig1 := util.Sign(t, privKeys[1], signingRoot[:]).Marshal()
 	att1.Signatures = [][]byte{sig0, sig1}
 
 	att2 := util.HydrateIndexedAttestation(&qrysmpb.IndexedAttestation{
@@ -948,8 +948,8 @@ func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 	})
 	signingRoot, err = signing.ComputeSigningRoot(att2.Data, domain)
 	assert.NoError(t, err, "Could not get signing root of beacon block header")
-	sig0 = privKeys[0].Sign(signingRoot[:]).Marshal()
-	sig1 = privKeys[1].Sign(signingRoot[:]).Marshal()
+	sig0 = util.Sign(t, privKeys[0], signingRoot[:]).Marshal()
+	sig1 = util.Sign(t, privKeys[1], signingRoot[:]).Marshal()
 	att2.Signatures = [][]byte{sig0, sig1}
 	slashings := []*qrysmpb.AttesterSlashing{
 		{
