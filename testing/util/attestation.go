@@ -174,7 +174,11 @@ func GenerateAttestations(
 			sigs := make([][]byte, 0)
 			for b := i; b < i+bitsPerAtt; b++ {
 				aggregationBits.SetBitAt(b, true)
-				sigs = append(sigs, privs[committee[b]].Sign(dataRoot[:]).Marshal())
+				signature, err := deterministicSign(privs[committee[b]], dataRoot[:])
+				if err != nil {
+					return nil, err
+				}
+				sigs = append(sigs, signature)
 			}
 
 			att := &qrysmpb.Attestation{

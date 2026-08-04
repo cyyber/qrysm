@@ -69,6 +69,9 @@ func TestDepositsWithBalance_MatchesDeterministic(t *testing.T) {
 		if !bytes.Equal(deposits[i].Data.WithdrawalCredentials, determDeposits[i].Data.WithdrawalCredentials) {
 			t.Errorf("Expected deposit withdrawal credentials %d to match", i)
 		}
+		if !bytes.Equal(deposits[i].Data.Signature, determDeposits[i].Data.Signature) {
+			t.Errorf("Expected deposit signature %d to match", i)
+		}
 		depositDataRoot, err := deposits[i].Data.HashTreeRoot()
 		require.NoError(t, err)
 		if !bytes.Equal(depositDataRoots[i][:], depositDataRoot[:]) {
@@ -110,6 +113,9 @@ func TestDepositsWithBalance_MatchesDeterministic_Cached(t *testing.T) {
 		}
 		if !bytes.Equal(deposits[i].Data.WithdrawalCredentials, determDeposits[i].Data.WithdrawalCredentials) {
 			t.Errorf("Expected deposit withdrawal credentials %d to match", i)
+		}
+		if !bytes.Equal(deposits[i].Data.Signature, determDeposits[i].Data.Signature) {
+			t.Errorf("Expected deposit signature %d to match", i)
 		}
 		depositDataRoot, err := deposits[i].Data.HashTreeRoot()
 		require.NoError(t, err)

@@ -30,6 +30,19 @@ func TestDeterministicGenesisStateZond(t *testing.T) {
 	require.Equal(t, params.BeaconConfig().MaxCommitteesPerSlot, uint64(st.NumValidators()))
 }
 
+func TestDeterministicGenesisStateZond_Reproducible(t *testing.T) {
+	validatorCount := params.BeaconConfig().MaxCommitteesPerSlot
+	first, _ := DeterministicGenesisStateZond(t, validatorCount)
+	firstRoot, err := first.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+
+	resetCache()
+	second, _ := DeterministicGenesisStateZond(t, validatorCount)
+	secondRoot, err := second.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+	require.DeepEqual(t, firstRoot, secondRoot)
+}
+
 func TestGenesisBeaconStateZond(t *testing.T) {
 	ctx := context.Background()
 	deposits, _, err := DeterministicDepositsAndKeys(params.BeaconConfig().MaxCommitteesPerSlot)

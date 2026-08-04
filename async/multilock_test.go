@@ -17,6 +17,7 @@ package async
 import (
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -121,33 +122,35 @@ func TestLockUnlock_CleansUnused(t *testing.T) {
 }
 
 func TestLockUnlock_DoesNotCleanIfHeldElsewhere(t *testing.T) {
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		lock := NewMultilock("cat")
-		lock.Lock()
-		// We take 200 milliseconds to release the lock on "cat"
-		<-time.After(200 * time.Millisecond)
-		lock.Unlock()
-		// Assert that at the end of this goroutine, all locks are cleared.
+	synctest.Test(t, func(t *testing.T) {
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() {
+			lock := NewMultilock("cat")
+			lock.Lock()
+			// We take 200 milliseconds to release the lock on "cat"
+			<-time.After(200 * time.Millisecond)
+			lock.Unlock()
+			// Assert that at the end of this goroutine, all locks are cleared.
+			assert.Equal(t, 0, len(locks.list))
+			wg.Done()
+		}()
+		go func() {
+			lock := NewMultilock("dog", "cat", "owl")
+			lock.Lock()
+			// We release the locks after 100 milliseconds, and check that "cat" is not
+			// cleared as a lock for it is still held by the previous goroutine.
+			<-time.After(100 * time.Millisecond)
+			lock.Unlock()
+			assert.Equal(t, 1, len(locks.list))
+			_, ok := locks.list["cat"]
+			assert.Equal(t, true, ok)
+			wg.Done()
+		}()
+		wg.Wait()
+		// We expect that at the end of this test, all locks are cleared.
 		assert.Equal(t, 0, len(locks.list))
-		wg.Done()
-	}()
-	go func() {
-		lock := NewMultilock("dog", "cat", "owl")
-		lock.Lock()
-		// We release the locks after 100 milliseconds, and check that "cat" is not
-		// cleared as a lock for it is still held by the previous goroutine.
-		<-time.After(100 * time.Millisecond)
-		lock.Unlock()
-		assert.Equal(t, 1, len(locks.list))
-		_, ok := locks.list["cat"]
-		assert.Equal(t, true, ok)
-		wg.Done()
-	}()
-	wg.Wait()
-	// We expect that at the end of this test, all locks are cleared.
-	assert.Equal(t, 0, len(locks.list))
+	})
 }
 
 func TestYield(t *testing.T) {

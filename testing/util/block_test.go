@@ -263,3 +263,45 @@ func TestGenerateVoluntaryExits(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, coreBlock.VerifyExitAndSignature(val, beaconState, exit))
 }
+
+func TestGeneratedOperations_DeterministicSignatures(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.ShardCommitteePeriod = 0
+	params.OverrideBeaconConfig(config)
+
+	beaconState, privateKeys := DeterministicGenesisStateZond(t, 256)
+	validatorIndex := primitives.ValidatorIndex(2)
+
+	proposerSlashing, err := GenerateProposerSlashingForValidator(beaconState, privateKeys[validatorIndex], validatorIndex)
+	require.NoError(t, err)
+	proposerSlashingAgain, err := GenerateProposerSlashingForValidator(beaconState, privateKeys[validatorIndex], validatorIndex)
+	require.NoError(t, err)
+	require.DeepEqual(t, proposerSlashing.Header_1.Signature, proposerSlashingAgain.Header_1.Signature)
+	require.DeepEqual(t, proposerSlashing.Header_2.Signature, proposerSlashingAgain.Header_2.Signature)
+
+	attesterSlashing, err := GenerateAttesterSlashingForValidator(beaconState, privateKeys[validatorIndex], validatorIndex)
+	require.NoError(t, err)
+	attesterSlashingAgain, err := GenerateAttesterSlashingForValidator(beaconState, privateKeys[validatorIndex], validatorIndex)
+	require.NoError(t, err)
+	require.DeepEqual(t, attesterSlashing.Attestation_1.Signatures, attesterSlashingAgain.Attestation_1.Signatures)
+	require.DeepEqual(t, attesterSlashing.Attestation_2.Signatures, attesterSlashingAgain.Attestation_2.Signatures)
+
+	exit, err := GenerateVoluntaryExits(beaconState, privateKeys[0], 0)
+	require.NoError(t, err)
+	exitAgain, err := GenerateVoluntaryExits(beaconState, privateKeys[0], 0)
+	require.NoError(t, err)
+	require.DeepEqual(t, exit.Signature, exitAgain.Signature)
+}
+
+func TestGenerateSyncAggregate_DeterministicSignatures(t *testing.T) {
+	beaconState, privateKeys := DeterministicGenesisStateZond(t, 256)
+	parentRoot := [32]byte{1}
+	aggregate, err := generateSyncAggregate(beaconState, privateKeys, parentRoot)
+	require.NoError(t, err)
+	require.NotEqual(t, 0, len(aggregate.SyncCommitteeSignatures))
+
+	aggregateAgain, err := generateSyncAggregate(beaconState, privateKeys, parentRoot)
+	require.NoError(t, err)
+	require.DeepEqual(t, aggregate.SyncCommitteeSignatures, aggregateAgain.SyncCommitteeSignatures)
+}

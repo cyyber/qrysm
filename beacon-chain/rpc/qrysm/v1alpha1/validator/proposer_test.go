@@ -297,9 +297,6 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 }
 
 func TestProposer_ComputeStateRoot_OK(t *testing.T) {
-	// TODO: Make generated validator proposer selection deterministic.
-	t.Skip("proposer selection is nondeterministic")
-
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
 
@@ -312,7 +309,6 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 		StateGen:              stategen.New(db, doublylinkedtree.New()),
 	}
 	req := util.NewBeaconBlockZond()
-	req.Block.ProposerIndex = 35
 	req.Block.ParentRoot = parentRoot[:]
 	req.Block.Slot = 1
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
@@ -320,6 +316,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(ctx, beaconState)
 	require.NoError(t, err)
+	req.Block.ProposerIndex = proposerIdx
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
 	req.Block.Body.RandaoReveal = randaoReveal
 	currentEpoch := coretime.CurrentEpoch(beaconState)
