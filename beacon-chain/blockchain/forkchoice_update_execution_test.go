@@ -197,6 +197,7 @@ func TestShouldOverrideFCU(t *testing.T) {
 	ctx, fcs := tr.ctx, tr.fcs
 
 	service.SetGenesisTime(time.Now().Add(-time.Duration(2*params.BeaconConfig().SecondsPerSlot) * time.Second))
+	fcs.SetGenesisTime(uint64(time.Now().Unix()) - 2*params.BeaconConfig().SecondsPerSlot)
 	headRoot := [32]byte{'b'}
 	parentRoot := [32]byte{'a'}
 	ojc := &qrysmpb.Checkpoint{}
