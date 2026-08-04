@@ -152,13 +152,6 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 
 func Test_notifyNewHeadEvent(t *testing.T) {
 	ctx := context.Background()
-	waitForEvent := func(t *testing.T, notifier *mock.MockStateNotifier) {
-		t.Helper()
-		deadline := time.Now().Add(5 * time.Second)
-		for len(notifier.ReceivedEvents()) == 0 && time.Now().Before(deadline) {
-			time.Sleep(10 * time.Millisecond)
-		}
-	}
 
 	// notifyNewHeadEvent looks up the parent block's slot in forkchoice to
 	// decide whether an epoch transition occurred. Tests therefore need a
@@ -186,7 +179,6 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 		newHeadRoot := [32]byte{3}
 		err := srv.notifyNewHeadEvent(ctx, 1, bState, newHeadStateRoot[:], newHeadRoot[:])
 		require.NoError(t, err)
-		waitForEvent(t, notifier)
 		events := notifier.ReceivedEvents()
 		require.Equal(t, 1, len(events))
 
@@ -224,7 +216,6 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 		newHeadRoot := [32]byte{3}
 		err = srv.notifyNewHeadEvent(ctx, epoch2Start, bState, newHeadStateRoot[:], newHeadRoot[:])
 		require.NoError(t, err)
-		waitForEvent(t, notifier)
 		events := notifier.ReceivedEvents()
 		require.Equal(t, 1, len(events))
 
@@ -274,7 +265,6 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 		newHeadRoot := [32]byte{3}
 		require.NoError(t, srv.notifyNewHeadEvent(ctx, newHeadSlot, bState, newHeadStateRoot[:], newHeadRoot[:]))
 
-		waitForEvent(t, notifier)
 		events := notifier.ReceivedEvents()
 		require.Equal(t, 1, len(events))
 		eventHead, ok := events[0].Data.(*qrlpb.EventHead)
@@ -309,7 +299,6 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 		newHeadRoot := [32]byte{3}
 		require.NoError(t, srv.notifyNewHeadEvent(ctx, newHeadSlot, bState, newHeadStateRoot[:], newHeadRoot[:]))
 
-		waitForEvent(t, notifier)
 		events := notifier.ReceivedEvents()
 		require.Equal(t, 1, len(events))
 		eventHead, ok := events[0].Data.(*qrlpb.EventHead)
