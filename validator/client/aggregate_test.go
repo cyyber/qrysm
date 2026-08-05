@@ -123,13 +123,16 @@ func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 
 	validator, _, _, finish := setup(t)
 	defer finish()
-	currentTime := time.Now()
+	// Prysm preserves subsecond precision in its genesis time. Qrysm stores genesis
+	// time in whole Unix seconds, so truncate the reference time to avoid a
+	// one-second mismatch between the expected and actual slot boundaries.
+	currentTime := time.Now().Truncate(time.Second)
 	numOfSlots := primitives.Slot(4)
 	validator.genesisTime = uint64(currentTime.Unix()) - uint64(numOfSlots.Mul(params.BeaconConfig().SecondsPerSlot))
 	oneThird := slots.DivideSlotBy(3 /* one third of slot duration */)
 	timeToSleep := oneThird + oneThird
 
-	twoThirdTime := slots.StartTime(validator.genesisTime, numOfSlots).Add(timeToSleep)
+	twoThirdTime := currentTime.Add(timeToSleep)
 	validator.waitToSlotTwoThirds(context.Background(), numOfSlots)
 	currentTime = time.Now()
 	assert.Equal(t, twoThirdTime.Unix(), time.Now().Unix())
