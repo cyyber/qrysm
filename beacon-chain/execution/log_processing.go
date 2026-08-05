@@ -27,7 +27,7 @@ import (
 
 var (
 	depositEventSignatureHash = hash.Keccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
-	depositEventSignature     = common.BytesToEventSignatureLogTopic(depositEventSignatureHash[:])
+	depositEventSignature     = common.HashToLogTopic(common.Hash(depositEventSignatureHash))
 )
 
 const executionDataSavingInterval = 1000

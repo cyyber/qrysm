@@ -233,6 +233,7 @@ go_test(
         "@com_github_pkg_errors//:errors",
         "@com_github_sirupsen_logrus//:logrus",
         "@com_github_sirupsen_logrus//hooks/test",
+        "@com_github_stretchr_testify//require",
         "@com_github_theqrl_go_bitfield//:go-bitfield",
         "@com_github_theqrl_go_qrl//common",
         "@com_github_theqrl_go_qrl//core/types",

@@ -54,6 +54,14 @@ func (m *mlDSA87Key) Sign(msg []byte) common.Signature {
 	return &Signature{s: &signature}
 }
 
+func (m *mlDSA87Key) SignDeterministic(msg []byte) (common.Signature, error) {
+	signature, err := m.w.SignDeterministic(msg)
+	if err != nil {
+		return nil, err
+	}
+	return &Signature{s: &signature}, nil
+}
+
 // Marshal a secret key into a LittleEndian byte slice.
 func (m *mlDSA87Key) Marshal() []byte {
 	keyBytes := m.w.GetSeed()

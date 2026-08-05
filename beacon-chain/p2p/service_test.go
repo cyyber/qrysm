@@ -15,6 +15,7 @@ import (
 	libp2ptcp "github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	"github.com/multiformats/go-multiaddr"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	testifyrequire "github.com/stretchr/testify/require"
 	"github.com/theQRL/go-qrl/p2p/discover"
 	"github.com/theQRL/go-qrl/p2p/qnode"
 	mock "github.com/theQRL/qrysm/beacon-chain/blockchain/testing"
@@ -268,8 +269,9 @@ func TestListenForNewNodes(t *testing.T) {
 
 	require.NoError(t, cs.SetClock(startup.NewClock(genesisTime, gvr)))
 
-	time.Sleep(4 * time.Second)
-	assert.Equal(t, 5, len(s.host.Network().Peers()), "Not all peers added to peerstore")
+	testifyrequire.Eventually(t, func() bool {
+		return len(s.host.Network().Peers()) == 5
+	}, 15*time.Second, 100*time.Millisecond, "Not all peers added to peerstore")
 	require.NoError(t, s.Stop())
 	exitRoutine <- true
 }

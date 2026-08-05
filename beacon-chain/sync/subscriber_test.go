@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -12,6 +13,7 @@ import (
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	testifyrequire "github.com/stretchr/testify/require"
 	"github.com/theQRL/qrysm/async/abool"
 	mockChain "github.com/theQRL/qrysm/beacon-chain/blockchain/testing"
 	"github.com/theQRL/qrysm/beacon-chain/cache"
@@ -571,8 +573,11 @@ func TestFilterSubnetPeers(t *testing.T) {
 	p.Connect(p2)
 	p.Connect(p3)
 
-	// Sleep a while to allow peers to connect.
-	time.Sleep(100 * time.Millisecond)
+	testifyrequire.Eventually(t, func() bool {
+		return slices.Contains(p.PubSub().ListPeers(subnet10), p1.PeerID()) &&
+			slices.Contains(p.PubSub().ListPeers(subnet10), p2.PeerID()) &&
+			slices.Contains(p.PubSub().ListPeers(subnet20), p2.PeerID())
+	}, 15*time.Second, 100*time.Millisecond)
 
 	wantedPeers := []peer.ID{p1.PeerID(), p2.PeerID(), p3.PeerID()}
 	// Expect Peer 3 to be marked as suitable.
@@ -585,8 +590,10 @@ func TestFilterSubnetPeers(t *testing.T) {
 	for i := 1; i <= flags.Get().MinimumPeersPerSubnet; i++ {
 		nPeer := createPeer(t, subnet20)
 		p.Connect(nPeer)
+		testifyrequire.Eventually(t, func() bool {
+			return slices.Contains(p.PubSub().ListPeers(subnet20), nPeer.PeerID())
+		}, 15*time.Second, 100*time.Millisecond)
 		wantedPeers = append(wantedPeers, nPeer.BHost.ID())
-		time.Sleep(100 * time.Millisecond)
 	}
 
 	recPeers = r.filterNeededPeers(wantedPeers)

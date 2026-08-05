@@ -75,6 +75,7 @@ func TestIsCurrentEpochSyncCommittee_UsingCommittee(t *testing.T) {
 func TestIsCurrentEpochSyncCommittee_DoesNotExist(t *testing.T) {
 	ClearCache()
 	defer ClearCache()
+	params.SetupTestConfigCleanup(t)
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().SyncCommitteeSize)
 	syncCommittee := &qrysmpb.SyncCommittee{}
 	for i := range validators {

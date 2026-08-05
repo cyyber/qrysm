@@ -174,21 +174,21 @@ func TestExpectedWithdrawals(t *testing.T) {
 		expectedWithdrawal1 := &ExpectedWithdrawal{
 			Index:          strconv.FormatUint(0, 10),
 			ValidatorIndex: strconv.FormatUint(5, 10),
-			Address:        hexutil.Encode(validators[5].WithdrawalCredentials[:]),
+			Address:        hexutil.Encode(validators[5].WithdrawalCredentials),
 			// Decreased due to epoch processing when state advanced forward
 			Amount: strconv.FormatUint(39995900344532, 10),
 		}
 		expectedWithdrawal2 := &ExpectedWithdrawal{
 			Index:          strconv.FormatUint(1, 10),
 			ValidatorIndex: strconv.FormatUint(14, 10),
-			Address:        hexutil.Encode(validators[14].WithdrawalCredentials[:]),
+			Address:        hexutil.Encode(validators[14].WithdrawalCredentials),
 			// MaxEffectiveBalance + MinDepositAmount + decrease after epoch processing
 			Amount: strconv.FormatUint(39996900344532, 10),
 		}
 		expectedWithdrawal3 := &ExpectedWithdrawal{
 			Index:          strconv.FormatUint(2, 10),
 			ValidatorIndex: strconv.FormatUint(15, 10),
-			Address:        hexutil.Encode(validators[15].WithdrawalCredentials[:]),
+			Address:        hexutil.Encode(validators[15].WithdrawalCredentials),
 			// Decreased due to epoch processing when state advanced forward
 			Amount: strconv.FormatUint(900344532, 10),
 		}
