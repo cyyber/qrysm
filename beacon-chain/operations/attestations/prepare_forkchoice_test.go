@@ -1,7 +1,6 @@
 package attestations
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"sort"
@@ -113,15 +112,9 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 	received := s.cfg.Pool.ForkchoiceAttestations()
 
 	sort.Slice(received, func(i, j int) bool {
-		if received[i].Data.Slot == received[j].Data.Slot {
-			return bytes.Compare(received[i].AggregationBits, received[j].AggregationBits) < 0
-		}
 		return received[i].Data.Slot < received[j].Data.Slot
 	})
 	sort.Slice(wanted, func(i, j int) bool {
-		if wanted[i].Data.Slot == wanted[j].Data.Slot {
-			return bytes.Compare(wanted[i].AggregationBits, wanted[j].AggregationBits) < 0
-		}
 		return wanted[i].Data.Slot < wanted[j].Data.Slot
 	})
 

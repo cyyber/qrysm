@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/mux"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	testifyrequire "github.com/stretchr/testify/require"
 	"github.com/theQRL/qrysm/api/gateway/apimiddleware"
 	"github.com/theQRL/qrysm/cmd/beacon-chain/flags"
 	"github.com/theQRL/qrysm/testing/assert"
@@ -97,10 +98,15 @@ func TestGateway_StartStop(t *testing.T) {
 	require.NoError(t, err)
 
 	g.Start()
-	go func() {
-		require.LogsContain(t, hook, "Starting gRPC gateway")
-		require.LogsDoNotContain(t, hook, "Starting API middleware")
-	}()
+	testifyrequire.Eventually(t, func() bool {
+		for _, entry := range hook.AllEntries() {
+			if entry.Message == "Starting gRPC gateway" {
+				return true
+			}
+		}
+		return false
+	}, time.Second, 10*time.Millisecond)
+	require.LogsDoNotContain(t, hook, "Starting API middleware")
 	err = g.Stop()
 	require.NoError(t, err)
 }
