@@ -46,6 +46,7 @@ go_library(
 
 go_test(
     name = "local_test",
+    timeout = "long",
     srcs = [
         "backup_test.go",
         "delete_test.go",

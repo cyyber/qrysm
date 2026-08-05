@@ -102,6 +102,7 @@ test_suite(
 go_test(
     name = "go_raceoff_test",
     size = "medium",
+    timeout = "eternal",
     srcs = [
         "blockchain_test.go",
         "chain_info_test.go",

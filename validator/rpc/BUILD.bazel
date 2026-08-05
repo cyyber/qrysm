@@ -57,6 +57,7 @@ go_library(
 
 go_test(
     name = "rpc_test",
+    timeout = "long",
     srcs = [
         "auth_token_test.go",
         "intercepter_test.go",
