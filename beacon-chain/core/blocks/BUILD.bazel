@@ -96,8 +96,6 @@ go_test(
         "//proto/engine/v1:engine",
         "//proto/qrysm/v1alpha1",
         "//proto/qrysm/v1alpha1/attestation",
-        "//proto/qrysm/v1alpha1/attestation/aggregation",
-        "//proto/qrysm/v1alpha1/attestation/aggregation/attestations",
         "//runtime/version",
         "//testing/assert",
         "//testing/require",

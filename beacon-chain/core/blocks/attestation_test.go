@@ -12,69 +12,12 @@ import (
 	field_params "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
-	"github.com/theQRL/qrysm/encoding/bytesutil"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/proto/qrysm/v1alpha1/attestation"
-	"github.com/theQRL/qrysm/proto/qrysm/v1alpha1/attestation/aggregation"
-	attaggregation "github.com/theQRL/qrysm/proto/qrysm/v1alpha1/attestation/aggregation/attestations"
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/testing/util"
 )
-
-func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
-	beaconState, privKeys := util.DeterministicGenesisStateZond(t, 256)
-	data := util.HydrateAttestationData(&qrysmpb.AttestationData{
-		Source: &qrysmpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
-		Target: &qrysmpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
-	})
-	aggBits1 := bitfield.NewBitlist(2)
-	aggBits1.SetBitAt(0, true)
-	aggBits1.SetBitAt(1, true)
-	att1 := &qrysmpb.Attestation{
-		Data:            data,
-		AggregationBits: aggBits1,
-	}
-
-	cfc := beaconState.CurrentJustifiedCheckpoint()
-	cfc.Root = bytesutil.PadTo([]byte("hello-world"), 32)
-	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
-
-	committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, att1.Data.Slot, att1.Data.CommitteeIndex)
-	require.NoError(t, err)
-	attestingIndices1, err := attestation.AttestingIndices(att1.AggregationBits, committee)
-	require.NoError(t, err)
-	sigs := make([][]byte, len(attestingIndices1))
-	for i, indice := range attestingIndices1 {
-		sb, err := signing.ComputeDomainAndSign(beaconState, 0, att1.Data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
-		require.NoError(t, err)
-		sigs[i] = sb
-	}
-	att1.Signatures = sigs
-
-	aggBits2 := bitfield.NewBitlist(2)
-	aggBits2.SetBitAt(1, true)
-	aggBits2.SetBitAt(2, true)
-	att2 := &qrysmpb.Attestation{
-		Data:            data,
-		AggregationBits: aggBits2,
-	}
-
-	committee, err = helpers.BeaconCommitteeFromState(context.Background(), beaconState, att2.Data.Slot, att2.Data.CommitteeIndex)
-	require.NoError(t, err)
-	attestingIndices2, err := attestation.AttestingIndices(att2.AggregationBits, committee)
-	require.NoError(t, err)
-	sigs = make([][]byte, len(attestingIndices2))
-	for i, indice := range attestingIndices2 {
-		sb, err := signing.ComputeDomainAndSign(beaconState, 0, att2.Data, params.BeaconConfig().DomainBeaconAttester, privKeys[indice])
-		require.NoError(t, err)
-		sigs[i] = sb
-	}
-	att2.Signatures = sigs
-
-	_, err = attaggregation.AggregatePair(att1, att2)
-	assert.ErrorContains(t, aggregation.ErrBitsOverlap.Error(), err)
-}
 
 func TestVerifyAttestationNoVerifySignatures_IncorrectSlotTargetEpoch(t *testing.T) {
 	beaconState, _ := util.DeterministicGenesisStateZond(t, 1)

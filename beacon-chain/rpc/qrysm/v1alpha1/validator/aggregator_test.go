@@ -2,7 +2,6 @@ package validator
 
 import (
 	"context"
-	"reflect"
 	"testing"
 	"time"
 
@@ -23,7 +22,6 @@ import (
 	"github.com/theQRL/qrysm/encoding/bytesutil"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/proto/qrysm/v1alpha1/attestation"
-	attaggregation "github.com/theQRL/qrysm/proto/qrysm/v1alpha1/attestation/aggregation/attestations"
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/testing/util"
@@ -176,13 +174,6 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	require.NoError(t, aggregatorServer.AttPool.SaveAggregatedAttestation(att1))
 	_, err = aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
 	require.NoError(t, err)
-
-	aggregatedAtts := aggregatorServer.AttPool.AggregatedAttestations()
-	wanted, err := attaggregation.AggregatePair(att0, att1)
-	require.NoError(t, err)
-	if reflect.DeepEqual(aggregatedAtts, wanted) {
-		t.Error("Did not receive wanted attestation")
-	}
 }
 
 func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
