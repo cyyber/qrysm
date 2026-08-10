@@ -81,7 +81,7 @@ message DepositMessage {
   // 2592 byte ML-DSA-87 public key of the validator.
   bytes public_key = 1 [(theqrl.qrl.ext.ssz_size) = "2592", (theqrl.qrl.ext.spec_name) = "pubkey"];
 
-  // 64-byte QRL address that receives withdrawals.
+  // QRL address that receives withdrawals.
   bytes withdrawal_recipient = 2 [(theqrl.qrl.ext.ssz_size) = "64"];
 
   // Deposit amount in shor.
