@@ -9,7 +9,6 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/core/signing"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/container/trie"
-	"github.com/theQRL/qrysm/contracts/deposit"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
 	"github.com/theQRL/qrysm/encoding/bytesutil"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
@@ -188,7 +187,7 @@ func signedDeposit(
 	if err != nil {
 		return nil, err
 	}
-	withdrawalRecipient := deposit.WithdrawalRecipientAddress(withdrawalAddr)
+	withdrawalRecipient := withdrawalAddr.Bytes()
 	depositMessage := &qrysmpb.DepositMessage{
 		PublicKey:           publicKey,
 		Amount:              balance,
@@ -350,7 +349,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*qrysmpb.D
 			depositMessage := &qrysmpb.DepositMessage{
 				PublicKey:           publicKeys[1].Marshal(),
 				Amount:              params.BeaconConfig().MaxEffectiveBalance,
-				WithdrawalRecipient: deposit.WithdrawalRecipientAddress(addr1),
+				WithdrawalRecipient: addr1.Bytes(),
 			}
 
 			domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)

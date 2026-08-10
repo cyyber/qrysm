@@ -12,7 +12,6 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/core/signing"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/container/trie"
-	"github.com/theQRL/qrysm/contracts/deposit"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 )
@@ -115,7 +114,7 @@ func createDepositData(privKey ml_dsa_87.MLDSA87Key, pubKey ml_dsa_87.PublicKey)
 
 	depositMessage := &qrysmpb.DepositMessage{
 		PublicKey:           pubKey.Marshal(),
-		WithdrawalRecipient: deposit.WithdrawalRecipientAddress(withdrawalAddr),
+		WithdrawalRecipient: withdrawalAddr.Bytes(),
 		Amount:              params.BeaconConfig().MaxEffectiveBalance,
 	}
 

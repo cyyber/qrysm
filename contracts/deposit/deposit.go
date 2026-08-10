@@ -29,7 +29,7 @@ import (
 func DepositInput(depositKey ml_dsa_87.MLDSA87Key, withdrawalAddr common.Address, amountInShor uint64, forkVersion []byte) (*qrysmpb.Deposit_Data, [32]byte, error) {
 	depositMessage := &qrysmpb.DepositMessage{
 		PublicKey:           depositKey.PublicKey().Marshal(),
-		WithdrawalRecipient: WithdrawalRecipientAddress(withdrawalAddr),
+		WithdrawalRecipient: withdrawalAddr.Bytes(),
 		Amount:              amountInShor,
 	}
 
@@ -63,12 +63,6 @@ func DepositInput(depositKey ml_dsa_87.MLDSA87Key, withdrawalAddr common.Address
 	}
 
 	return di, dr, nil
-}
-
-// WithdrawalRecipientAddress forms a 64 byte withdrawal recipient containing
-// the execution address.
-func WithdrawalRecipientAddress(addr common.Address) []byte {
-	return addr.Bytes()
 }
 
 // VerifyDepositSignature verifies the correctness of Execution deposit ML-DSA-87 signature
