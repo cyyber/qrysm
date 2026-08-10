@@ -44,23 +44,23 @@ func TestHasExecutionWithdrawalRecipient(t *testing.T) {
 
 func TestIsFullyWithdrawableValidator(t *testing.T) {
 	// Wrong credential length
-	creds := []byte{0xFA, 0xCC}
+	withdrawalRecipient := []byte{0xFA, 0xCC}
 	v := &qrysmpb.Validator{
-		WithdrawalRecipient: creds,
+		WithdrawalRecipient: withdrawalRecipient,
 		WithdrawableEpoch:   2,
 	}
 	require.Equal(t, false, isFullyWithdrawableValidator(v, 3))
 	// Wrong withdrawable epoch
-	creds = make([]byte, 64)
+	withdrawalRecipient = make([]byte, 64)
 	v = &qrysmpb.Validator{
-		WithdrawalRecipient: creds,
+		WithdrawalRecipient: withdrawalRecipient,
 		WithdrawableEpoch:   2,
 	}
 	require.Equal(t, false, isFullyWithdrawableValidator(v, 1))
 	// Fully withdrawable
-	creds = make([]byte, 64)
+	withdrawalRecipient = make([]byte, 64)
 	v = &qrysmpb.Validator{
-		WithdrawalRecipient: creds,
+		WithdrawalRecipient: withdrawalRecipient,
 		WithdrawableEpoch:   2,
 	}
 	require.Equal(t, true, isFullyWithdrawableValidator(v, 3))

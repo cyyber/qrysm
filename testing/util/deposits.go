@@ -188,11 +188,11 @@ func signedDeposit(
 	if err != nil {
 		return nil, err
 	}
-	withdrawalCreds := deposit.WithdrawalRecipientAddress(withdrawalAddr)
+	withdrawalRecipient := deposit.WithdrawalRecipientAddress(withdrawalAddr)
 	depositMessage := &qrysmpb.DepositMessage{
 		PublicKey:           publicKey,
 		Amount:              balance,
-		WithdrawalRecipient: withdrawalCreds,
+		WithdrawalRecipient: withdrawalRecipient,
 	}
 
 	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
@@ -215,7 +215,7 @@ func signedDeposit(
 	depositData := &qrysmpb.Deposit_Data{
 		PublicKey:           publicKey,
 		Amount:              balance,
-		WithdrawalRecipient: withdrawalCreds,
+		WithdrawalRecipient: withdrawalRecipient,
 		Signature:           signature.Marshal(),
 	}
 

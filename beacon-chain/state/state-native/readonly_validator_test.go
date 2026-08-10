@@ -60,10 +60,10 @@ func TestReadOnlyValidator_PublicKey(t *testing.T) {
 }
 
 func TestReadOnlyValidator_WithdrawalRecipient(t *testing.T) {
-	creds := []byte{0xFA, 0xCC}
-	v, err := statenative.NewValidator(&qrysmpb.Validator{WithdrawalRecipient: creds})
+	withdrawalRecipient := []byte{0xFA, 0xCC}
+	v, err := statenative.NewValidator(&qrysmpb.Validator{WithdrawalRecipient: withdrawalRecipient})
 	require.NoError(t, err)
-	assert.DeepEqual(t, creds, v.WithdrawalRecipient())
+	assert.DeepEqual(t, withdrawalRecipient, v.WithdrawalRecipient())
 }
 
 func TestReadOnlyValidator_Slashed(t *testing.T) {

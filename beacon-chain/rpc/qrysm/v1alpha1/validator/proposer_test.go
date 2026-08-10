@@ -430,7 +430,7 @@ func TestProposer_PendingDeposits_OutsideExecutionFollowWindow(t *testing.T) {
 	require.NoError(t, err)
 
 	var mockSig [field_params.MLDSA87SignatureLength]byte
-	var mockCreds [field_params.WithdrawalRecipientLength]byte
+	var mockWithdrawalRecipient [field_params.WithdrawalRecipientLength]byte
 
 	// Using the merkleTreeIndex as the block number for this test...
 	readyDeposits := []*qrysmpb.DepositContainer{
@@ -441,7 +441,7 @@ func TestProposer_PendingDeposits_OutsideExecutionFollowWindow(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("a"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 		{
@@ -451,7 +451,7 @@ func TestProposer_PendingDeposits_OutsideExecutionFollowWindow(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("b"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 	}
@@ -464,7 +464,7 @@ func TestProposer_PendingDeposits_OutsideExecutionFollowWindow(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("c"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 		{
@@ -474,7 +474,7 @@ func TestProposer_PendingDeposits_OutsideExecutionFollowWindow(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("d"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 	}
@@ -569,7 +569,7 @@ func TestProposer_PendingDeposits_FollowsCorrectExecutionBlock(t *testing.T) {
 	require.NoError(t, err)
 
 	var mockSig [field_params.MLDSA87SignatureLength]byte
-	var mockCreds [field_params.WithdrawalRecipientLength]byte
+	var mockWithdrawalRecipient [field_params.WithdrawalRecipientLength]byte
 
 	// Using the merkleTreeIndex as the block number for this test...
 	readyDeposits := []*qrysmpb.DepositContainer{
@@ -580,7 +580,7 @@ func TestProposer_PendingDeposits_FollowsCorrectExecutionBlock(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("a"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 		{
@@ -590,7 +590,7 @@ func TestProposer_PendingDeposits_FollowsCorrectExecutionBlock(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("b"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 	}
@@ -603,7 +603,7 @@ func TestProposer_PendingDeposits_FollowsCorrectExecutionBlock(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("c"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 		{
@@ -613,7 +613,7 @@ func TestProposer_PendingDeposits_FollowsCorrectExecutionBlock(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("d"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 	}
@@ -685,7 +685,7 @@ func TestProposer_PendingDeposits_CantReturnBelowStateExecutionDepositIndex(t *t
 	require.NoError(t, err)
 
 	var mockSig [field_params.MLDSA87SignatureLength]byte
-	var mockCreds [field_params.WithdrawalRecipientLength]byte
+	var mockWithdrawalRecipient [field_params.WithdrawalRecipientLength]byte
 
 	readyDeposits := []*qrysmpb.DepositContainer{
 		{
@@ -694,7 +694,7 @@ func TestProposer_PendingDeposits_CantReturnBelowStateExecutionDepositIndex(t *t
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("a"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 		{
@@ -703,7 +703,7 @@ func TestProposer_PendingDeposits_CantReturnBelowStateExecutionDepositIndex(t *t
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("b"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 	}
@@ -716,7 +716,7 @@ func TestProposer_PendingDeposits_CantReturnBelowStateExecutionDepositIndex(t *t
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte{byte(i)}, field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		})
 	}
@@ -785,7 +785,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 	blkRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 	var mockSig [field_params.MLDSA87SignatureLength]byte
-	var mockCreds [field_params.WithdrawalRecipientLength]byte
+	var mockWithdrawalRecipient [field_params.WithdrawalRecipientLength]byte
 
 	readyDeposits := []*qrysmpb.DepositContainer{
 		{
@@ -794,7 +794,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("a"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 		{
@@ -803,7 +803,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("b"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 	}
@@ -816,7 +816,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte{byte(i)}, field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		})
 	}
@@ -883,7 +883,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 	blkRoot, err := blk.HashTreeRoot()
 	require.NoError(t, err)
 	var mockSig [field_params.MLDSA87SignatureLength]byte
-	var mockCreds [field_params.WithdrawalRecipientLength]byte
+	var mockWithdrawalRecipient [field_params.WithdrawalRecipientLength]byte
 
 	readyDeposits := []*qrysmpb.DepositContainer{
 		{
@@ -892,7 +892,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("a"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 		{
@@ -901,7 +901,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("b"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 	}
@@ -914,7 +914,7 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte{byte(i)}, field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		})
 	}
@@ -983,7 +983,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 	require.NoError(t, err)
 
 	var mockSig [field_params.MLDSA87SignatureLength]byte
-	var mockCreds [field_params.WithdrawalRecipientLength]byte
+	var mockWithdrawalRecipient [field_params.WithdrawalRecipientLength]byte
 
 	// Using the merkleTreeIndex as the block number for this test...
 	finalizedDeposits := []*qrysmpb.DepositContainer{
@@ -994,7 +994,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("a"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 		{
@@ -1004,7 +1004,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("b"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 	}
@@ -1017,7 +1017,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("c"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 		{
@@ -1027,7 +1027,7 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("d"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 	}
@@ -1099,7 +1099,7 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 	require.NoError(t, err)
 
 	var mockSig [field_params.MLDSA87SignatureLength]byte
-	var mockCreds [field_params.WithdrawalRecipientLength]byte
+	var mockWithdrawalRecipient [field_params.WithdrawalRecipientLength]byte
 
 	// Using the merkleTreeIndex as the block number for this test...
 	finalizedDeposits := []*qrysmpb.DepositContainer{
@@ -1110,7 +1110,7 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("a"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 		{
@@ -1120,7 +1120,7 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("b"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 	}
@@ -1133,7 +1133,7 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("c"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 		{
@@ -1143,7 +1143,7 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("d"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 	}
@@ -1170,10 +1170,10 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 	d := depositCache.AllDepositContainers(ctx)
 	origDeposit, ok := proto.Clone(d[0].Deposit).(*qrysmpb.Deposit)
 	assert.Equal(t, true, ok)
-	junkCreds := mockCreds
-	copy(junkCreds[:1], []byte{'A'})
+	invalidWithdrawalRecipient := mockWithdrawalRecipient
+	copy(invalidWithdrawalRecipient[:1], []byte{'A'})
 	// Mutate it since its a pointer
-	d[0].Deposit.Data.WithdrawalRecipient = junkCreds[:]
+	d[0].Deposit.Data.WithdrawalRecipient = invalidWithdrawalRecipient[:]
 	// Insert junk to corrupt trie.
 	err = depositCache.InsertFinalizedDeposits(ctx, 2, [32]byte{}, 0)
 	require.NoError(t, err)
@@ -1988,7 +1988,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestExecutionDataEqGenesisExecut
 	require.NoError(t, err)
 
 	var mockSig [field_params.MLDSA87SignatureLength]byte
-	var mockCreds [field_params.WithdrawalRecipientLength]byte
+	var mockWithdrawalRecipient [field_params.WithdrawalRecipientLength]byte
 
 	readyDeposits := []*qrysmpb.DepositContainer{
 		{
@@ -1997,7 +1997,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestExecutionDataEqGenesisExecut
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("a"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 		{
@@ -2006,7 +2006,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestExecutionDataEqGenesisExecut
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte("b"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		},
 	}
@@ -2019,7 +2019,7 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestExecutionDataEqGenesisExecut
 				Data: &qrysmpb.Deposit_Data{
 					PublicKey:           bytesutil.PadTo([]byte{byte(i)}, field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
-					WithdrawalRecipient: mockCreds[:],
+					WithdrawalRecipient: mockWithdrawalRecipient[:],
 				}},
 		})
 	}

@@ -377,7 +377,7 @@ func depositJSONToDepositData(input *depositDataJSON) ([]byte, *qrysmpb.Deposit_
 	if err != nil {
 		return nil, nil, err
 	}
-	creds, err := hex.DecodeString(strings.TrimPrefix(input.WithdrawalRecipient, "0x"))
+	withdrawalRecipient, err := hex.DecodeString(strings.TrimPrefix(input.WithdrawalRecipient, "0x"))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -387,7 +387,7 @@ func depositJSONToDepositData(input *depositDataJSON) ([]byte, *qrysmpb.Deposit_
 	}
 	return root, &qrysmpb.Deposit_Data{
 		PublicKey:           pk,
-		WithdrawalRecipient: creds,
+		WithdrawalRecipient: withdrawalRecipient,
 		Amount:              input.Amount,
 		Signature:           sig,
 	}, nil

@@ -1002,7 +1002,7 @@ func DepositsToConsensus(src []*Deposit) ([]*qrysmpb.Deposit, error) {
 		if err != nil {
 			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Pubkey", i))
 		}
-		withdrawalCreds, err := DecodeHexWithLength(d.Data.WithdrawalRecipient, fieldparams.WithdrawalRecipientLength)
+		withdrawalRecipient, err := DecodeHexWithLength(d.Data.WithdrawalRecipient, fieldparams.WithdrawalRecipientLength)
 		if err != nil {
 			return nil, NewDecodeError(err, fmt.Sprintf("[%d].WithdrawalRecipient", i))
 		}
@@ -1018,7 +1018,7 @@ func DepositsToConsensus(src []*Deposit) ([]*qrysmpb.Deposit, error) {
 			Proof: proof,
 			Data: &qrysmpb.Deposit_Data{
 				PublicKey:           pubkey,
-				WithdrawalRecipient: withdrawalCreds,
+				WithdrawalRecipient: withdrawalRecipient,
 				Amount:              amount,
 				Signature:           sig,
 			},

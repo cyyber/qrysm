@@ -73,9 +73,9 @@ func (v readOnlyValidator) PublicKey() [field_params.MLDSA87PubkeyLength]byte {
 // WithdrawalRecipient returns the withdrawal recipient of the
 // read only validator.
 func (v readOnlyValidator) WithdrawalRecipient() []byte {
-	creds := make([]byte, len(v.validator.WithdrawalRecipient))
-	copy(creds, v.validator.WithdrawalRecipient)
-	return creds
+	withdrawalRecipient := make([]byte, len(v.validator.WithdrawalRecipient))
+	copy(withdrawalRecipient, v.validator.WithdrawalRecipient)
+	return withdrawalRecipient
 }
 
 // Slashed returns the read only validator is slashed.
