@@ -9,7 +9,6 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/core/signing"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/container/trie"
-	"github.com/theQRL/qrysm/contracts/deposit"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
 	"github.com/theQRL/qrysm/encoding/bytesutil"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
@@ -188,11 +187,11 @@ func signedDeposit(
 	if err != nil {
 		return nil, err
 	}
-	withdrawalCreds := deposit.WithdrawalCredentialsAddress(withdrawalAddr)
+	withdrawalRecipient := withdrawalAddr.Bytes()
 	depositMessage := &qrysmpb.DepositMessage{
-		PublicKey:             publicKey,
-		Amount:                balance,
-		WithdrawalCredentials: withdrawalCreds,
+		PublicKey:           publicKey,
+		Amount:              balance,
+		WithdrawalRecipient: withdrawalRecipient,
 	}
 
 	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
@@ -213,10 +212,10 @@ func signedDeposit(
 		return nil, err
 	}
 	depositData := &qrysmpb.Deposit_Data{
-		PublicKey:             publicKey,
-		Amount:                balance,
-		WithdrawalCredentials: withdrawalCreds,
-		Signature:             signature.Marshal(),
+		PublicKey:           publicKey,
+		Amount:              balance,
+		WithdrawalRecipient: withdrawalRecipient,
+		Signature:           signature.Marshal(),
 	}
 
 	deposit := &qrysmpb.Deposit{
@@ -348,9 +347,9 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*qrysmpb.D
 		// Create the new deposits and add them to the trie. Always use the first validator to create deposit
 		for i := range numRequired {
 			depositMessage := &qrysmpb.DepositMessage{
-				PublicKey:             publicKeys[1].Marshal(),
-				Amount:                params.BeaconConfig().MaxEffectiveBalance,
-				WithdrawalCredentials: deposit.WithdrawalCredentialsAddress(addr1),
+				PublicKey:           publicKeys[1].Marshal(),
+				Amount:              params.BeaconConfig().MaxEffectiveBalance,
+				WithdrawalRecipient: addr1.Bytes(),
 			}
 
 			domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
@@ -371,10 +370,10 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*qrysmpb.D
 			}
 			// Always use the same validator to sign
 			depositData := &qrysmpb.Deposit_Data{
-				PublicKey:             depositMessage.PublicKey,
-				Amount:                depositMessage.Amount,
-				WithdrawalCredentials: depositMessage.WithdrawalCredentials,
-				Signature:             signature.Marshal(),
+				PublicKey:           depositMessage.PublicKey,
+				Amount:              depositMessage.Amount,
+				WithdrawalRecipient: depositMessage.WithdrawalRecipient,
+				Signature:           signature.Marshal(),
 			}
 			deposit := &qrysmpb.Deposit{
 				Data: depositData,

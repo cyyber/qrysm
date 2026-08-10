@@ -56,13 +56,13 @@ func setupGenesisState(tb testing.TB, count uint64) *qrysmpb.BeaconStateZond {
 	genesisState, _, err := interop.GenerateGenesisStateZond(context.Background(), 0, count, &enginev1.ExecutionPayloadZond{}, &qrysmpb.ExecutionData{})
 	require.NoError(tb, err, "Could not generate genesis beacon state")
 	for i := uint64(1); i < count; i++ {
-		var someRoot [field_params.WithdrawalCredentialsLength]byte
+		var someRoot [field_params.WithdrawalRecipientLength]byte
 		var someKey [field_params.MLDSA87PubkeyLength]byte
 		copy(someRoot[:], strconv.Itoa(int(i)))
 		copy(someKey[:], strconv.Itoa(int(i)))
 		genesisState.Validators = append(genesisState.Validators, &qrysmpb.Validator{
 			PublicKey:                  someKey[:],
-			WithdrawalCredentials:      someRoot[:],
+			WithdrawalRecipient:        someRoot[:],
 			EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
 			Slashed:                    false,
 			ActivationEligibilityEpoch: 1,
@@ -90,11 +90,11 @@ func setupGenesisState(tb testing.TB, count uint64) *qrysmpb.BeaconStateZond {
 func BenchmarkCloneValidators_Proto(b *testing.B) {
 	validators := make([]*qrysmpb.Validator, 16384)
 	somePubKey := [field_params.MLDSA87PubkeyLength]byte{1, 2, 3}
-	someRoot := [field_params.WithdrawalCredentialsLength]byte{3, 4, 5}
+	someRoot := [field_params.WithdrawalRecipientLength]byte{3, 4, 5}
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
 			PublicKey:                  somePubKey[:],
-			WithdrawalCredentials:      someRoot[:],
+			WithdrawalRecipient:        someRoot[:],
 			EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
 			Slashed:                    false,
 			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -111,11 +111,11 @@ func BenchmarkCloneValidators_Proto(b *testing.B) {
 func BenchmarkCloneValidators_Manual(b *testing.B) {
 	validators := make([]*qrysmpb.Validator, 16384)
 	somePubKey := [field_params.MLDSA87PubkeyLength]byte{1, 2, 3}
-	someRoot := [field_params.WithdrawalCredentialsLength]byte{3, 4, 5}
+	someRoot := [field_params.WithdrawalRecipientLength]byte{3, 4, 5}
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
 			PublicKey:                  somePubKey[:],
-			WithdrawalCredentials:      someRoot[:],
+			WithdrawalRecipient:        someRoot[:],
 			EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
 			Slashed:                    false,
 			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
@@ -168,7 +168,7 @@ func cloneValidatorsManually(vals []*qrysmpb.Validator) []*qrysmpb.Validator {
 		val := vals[i]
 		res[i] = &qrysmpb.Validator{
 			PublicKey:                  val.PublicKey,
-			WithdrawalCredentials:      val.WithdrawalCredentials,
+			WithdrawalRecipient:        val.WithdrawalRecipient,
 			EffectiveBalance:           val.EffectiveBalance,
 			Slashed:                    val.Slashed,
 			ActivationEligibilityEpoch: val.ActivationEligibilityEpoch,

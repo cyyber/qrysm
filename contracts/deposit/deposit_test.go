@@ -2,8 +2,6 @@ package deposit_test
 
 import (
 	"crypto/rand"
-	"encoding/hex"
-	"strings"
 	"testing"
 
 	"github.com/theQRL/go-qrl/common"
@@ -35,9 +33,9 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 	sig, err := ml_dsa_87.SignatureFromBytes(result.Signature)
 	require.NoError(t, err)
 	testData := &qrysmpb.DepositMessage{
-		PublicKey:             result.PublicKey,
-		WithdrawalCredentials: result.WithdrawalCredentials,
-		Amount:                result.Amount,
+		PublicKey:           result.PublicKey,
+		WithdrawalRecipient: result.WithdrawalRecipient,
+		Amount:              result.Amount,
 	}
 	sr, err := testData.HashTreeRoot()
 	require.NoError(t, err)
@@ -81,37 +79,4 @@ func TestVerifyDepositSignature_InvalidSig(t *testing.T) {
 	if err == nil {
 		t.Fatal("Deposit Verification succeeds with a invalid signature")
 	}
-}
-
-func TestWithdrawalCredentialsAddress(t *testing.T) {
-	type tc struct {
-		name    string
-		addrHex string
-		wantHex string
-	}
-	tests := []tc{
-		{
-			name:    "zero address",
-			addrHex: "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-		},
-		{
-			name:    "leading zeros preserved",
-			addrHex: "Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000102030405060708090a0b0c0d0e0f10111213",
-		},
-		{
-			name:    "all 0xff",
-			addrHex: "Qffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-		},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			tc.wantHex = "0x" + strings.TrimPrefix(strings.ToLower(tc.addrHex), "q")
-			addr, err := common.NewAddressFromString(tc.addrHex)
-			require.NoError(t, err)
-			got := deposit.WithdrawalCredentialsAddress(addr)
-			gotHex := "0x" + hex.EncodeToString(got)
-			require.Equal(t, tc.wantHex, gotHex)
-		})
-	}
-
 }

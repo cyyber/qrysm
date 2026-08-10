@@ -266,7 +266,7 @@ func Test_V1AttToV1Alpha1(t *testing.T) {
 func Test_V1Alpha1ValidatorToV1(t *testing.T) {
 	v1Alpha1Validator := &qrysmpb.Validator{
 		PublicKey:                  []byte("pubkey"),
-		WithdrawalCredentials:      []byte("withdraw"),
+		WithdrawalRecipient:        []byte("withdraw"),
 		EffectiveBalance:           99,
 		Slashed:                    true,
 		ActivationEligibilityEpoch: 1,
@@ -278,7 +278,7 @@ func Test_V1Alpha1ValidatorToV1(t *testing.T) {
 	v1Validator := V1Alpha1ValidatorToV1(v1Alpha1Validator)
 	require.NotNil(t, v1Validator)
 	assert.DeepEqual(t, []byte("pubkey"), v1Validator.Pubkey)
-	assert.DeepEqual(t, []byte("withdraw"), v1Validator.WithdrawalCredentials)
+	assert.DeepEqual(t, []byte("withdraw"), v1Validator.WithdrawalRecipient)
 	assert.Equal(t, uint64(99), v1Validator.EffectiveBalance)
 	assert.Equal(t, true, v1Validator.Slashed)
 	assert.Equal(t, primitives.Epoch(1), v1Validator.ActivationEligibilityEpoch)
@@ -290,7 +290,7 @@ func Test_V1Alpha1ValidatorToV1(t *testing.T) {
 func Test_V1ValidatorToV1Alpha1(t *testing.T) {
 	v1Validator := &qrlpb.Validator{
 		Pubkey:                     []byte("pubkey"),
-		WithdrawalCredentials:      []byte("withdraw"),
+		WithdrawalRecipient:        []byte("withdraw"),
 		EffectiveBalance:           99,
 		Slashed:                    true,
 		ActivationEligibilityEpoch: 1,
@@ -302,7 +302,7 @@ func Test_V1ValidatorToV1Alpha1(t *testing.T) {
 	v1Alpha1Validator := V1ValidatorToV1Alpha1(v1Validator)
 	require.NotNil(t, v1Alpha1Validator)
 	assert.DeepEqual(t, []byte("pubkey"), v1Alpha1Validator.PublicKey)
-	assert.DeepEqual(t, []byte("withdraw"), v1Alpha1Validator.WithdrawalCredentials)
+	assert.DeepEqual(t, []byte("withdraw"), v1Alpha1Validator.WithdrawalRecipient)
 	assert.Equal(t, uint64(99), v1Alpha1Validator.EffectiveBalance)
 	assert.Equal(t, true, v1Alpha1Validator.Slashed)
 	assert.Equal(t, primitives.Epoch(1), v1Alpha1Validator.ActivationEligibilityEpoch)
@@ -433,7 +433,7 @@ func TestBeaconStateZondToProto(t *testing.T) {
 		state.ExecutionDepositIndex = 8
 		state.Validators = []*qrysmpb.Validator{{
 			PublicKey:                  bytesutil.PadTo([]byte("publickey"), 2592),
-			WithdrawalCredentials:      bytesutil.PadTo([]byte("withdrawalcredentials"), 64),
+			WithdrawalRecipient:        bytesutil.PadTo([]byte("withdrawalrecipient"), 64),
 			EffectiveBalance:           9,
 			Slashed:                    true,
 			ActivationEligibilityEpoch: 10,
@@ -538,7 +538,7 @@ func TestBeaconStateZondToProto(t *testing.T) {
 	resultValidator := result.Validators[0]
 	require.NotNil(t, resultValidator)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("publickey"), 2592), resultValidator.Pubkey)
-	assert.DeepEqual(t, bytesutil.PadTo([]byte("withdrawalcredentials"), fieldparams.WithdrawalCredentialsLength), resultValidator.WithdrawalCredentials)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("withdrawalrecipient"), fieldparams.WithdrawalRecipientLength), resultValidator.WithdrawalRecipient)
 	assert.Equal(t, uint64(9), resultValidator.EffectiveBalance)
 	assert.Equal(t, true, resultValidator.Slashed)
 	assert.Equal(t, primitives.Epoch(10), resultValidator.ActivationEligibilityEpoch)

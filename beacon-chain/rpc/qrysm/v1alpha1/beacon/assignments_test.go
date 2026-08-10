@@ -53,14 +53,14 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, 0, count)
 	for i := range count {
 		pubKey := make([]byte, field_params.MLDSA87PubkeyLength)
-		withdrawalCred := make([]byte, field_params.WithdrawalCredentialsLength)
+		withdrawalRecipient := make([]byte, field_params.WithdrawalRecipientLength)
 		binary.LittleEndian.PutUint64(pubKey, uint64(i))
 		validators = append(validators, &qrysmpb.Validator{
-			PublicKey:             pubKey,
-			WithdrawalCredentials: withdrawalCred,
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
-			ActivationEpoch:       0,
+			PublicKey:           pubKey,
+			WithdrawalRecipient: withdrawalRecipient,
+			ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance:    params.BeaconConfig().MaxEffectiveBalance,
+			ActivationEpoch:     0,
 		})
 	}
 
@@ -118,24 +118,24 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 	validators := make([]*qrysmpb.Validator, 0, count)
 	for i := range count {
 		pubKey := make([]byte, field_params.MLDSA87PubkeyLength)
-		withdrawalCred := make([]byte, field_params.WithdrawalCredentialsLength)
+		withdrawalRecipient := make([]byte, field_params.WithdrawalRecipientLength)
 		binary.LittleEndian.PutUint64(pubKey, uint64(i))
 		// Mark the validators with index divisible by 3 inactive.
 		if i%3 == 0 {
 			validators = append(validators, &qrysmpb.Validator{
-				PublicKey:             pubKey,
-				WithdrawalCredentials: withdrawalCred,
-				ExitEpoch:             0,
-				ActivationEpoch:       0,
-				EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
+				PublicKey:           pubKey,
+				WithdrawalRecipient: withdrawalRecipient,
+				ExitEpoch:           0,
+				ActivationEpoch:     0,
+				EffectiveBalance:    params.BeaconConfig().MaxEffectiveBalance,
 			})
 		} else {
 			validators = append(validators, &qrysmpb.Validator{
-				PublicKey:             pubKey,
-				WithdrawalCredentials: withdrawalCred,
-				ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-				EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
-				ActivationEpoch:       0,
+				PublicKey:           pubKey,
+				WithdrawalRecipient: withdrawalRecipient,
+				ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
+				EffectiveBalance:    params.BeaconConfig().MaxEffectiveBalance,
+				ActivationEpoch:     0,
 			})
 		}
 	}
@@ -199,14 +199,14 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 	ctx := context.Background()
 	count := 100
 	validators := make([]*qrysmpb.Validator, 0, count)
-	withdrawCreds := make([]byte, field_params.WithdrawalCredentialsLength)
+	withdrawalRecipient := make([]byte, field_params.WithdrawalRecipientLength)
 	for i := range count {
 		pubKey := make([]byte, field_params.MLDSA87PubkeyLength)
 		binary.LittleEndian.PutUint64(pubKey, uint64(i))
 		val := &qrysmpb.Validator{
-			PublicKey:             pubKey,
-			WithdrawalCredentials: withdrawCreds,
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			PublicKey:           pubKey,
+			WithdrawalRecipient: withdrawalRecipient,
+			ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
 		}
 		validators = append(validators, val)
 	}
@@ -276,16 +276,16 @@ func TestServer_ListAssignments_HandlesUnscheduledValidator(t *testing.T) {
 	ctx := context.Background()
 	count := 64
 	validators := make([]*qrysmpb.Validator, 0, count)
-	withdrawCreds := make([]byte, field_params.WithdrawalCredentialsLength)
+	withdrawalRecipient := make([]byte, field_params.WithdrawalRecipientLength)
 	for i := range count {
 		pubKey := make([]byte, field_params.MLDSA87PubkeyLength)
 		binary.LittleEndian.PutUint64(pubKey, uint64(i))
 		val := &qrysmpb.Validator{
-			PublicKey:             pubKey,
-			WithdrawalCredentials: withdrawCreds,
-			ActivationEpoch:       0,
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
+			PublicKey:           pubKey,
+			WithdrawalRecipient: withdrawalRecipient,
+			ActivationEpoch:     0,
+			ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance:    params.BeaconConfig().MaxEffectiveBalance,
 		}
 		// Mark index 0 as already-exited so it has no committee assignment.
 		if i == 0 {
@@ -331,14 +331,14 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	ctx := context.Background()
 	count := 100
 	validators := make([]*qrysmpb.Validator, 0, count)
-	withdrawCred := make([]byte, field_params.WithdrawalCredentialsLength)
+	withdrawalRecipient := make([]byte, field_params.WithdrawalRecipientLength)
 	for i := range count {
 		pubKey := make([]byte, field_params.MLDSA87PubkeyLength)
 		binary.LittleEndian.PutUint64(pubKey, uint64(i))
 		val := &qrysmpb.Validator{
-			PublicKey:             pubKey,
-			WithdrawalCredentials: withdrawCred,
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			PublicKey:           pubKey,
+			WithdrawalRecipient: withdrawalRecipient,
+			ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
 		}
 		validators = append(validators, val)
 	}

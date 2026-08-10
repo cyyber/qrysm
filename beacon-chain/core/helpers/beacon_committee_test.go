@@ -30,9 +30,9 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 		k := make([]byte, 48)
 		copy(k, strconv.Itoa(i))
 		validators[i] = &qrysmpb.Validator{
-			PublicKey:             k,
-			WithdrawalCredentials: make([]byte, 64),
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			PublicKey:           k,
+			WithdrawalRecipient: make([]byte, 64),
+			ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
 		}
 	}
 

@@ -41,8 +41,8 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 		require.NoError(t, err)
 		privKeys[i] = privKey
 		validators[i] = &qrysmpb.Validator{
-			PublicKey:             privKey.PublicKey().Marshal(),
-			WithdrawalCredentials: make([]byte, 64),
+			PublicKey:           privKey.PublicKey().Marshal(),
+			WithdrawalRecipient: make([]byte, 64),
 		}
 	}
 	err = beaconState.SetValidators(validators)
@@ -136,8 +136,8 @@ func Test_processQueuedBlocks_DetectsDoubleProposals_AcrossBatches(t *testing.T)
 		require.NoError(t, err)
 		privKeys[i] = privKey
 		validators[i] = &qrysmpb.Validator{
-			PublicKey:             privKey.PublicKey().Marshal(),
-			WithdrawalCredentials: make([]byte, 32),
+			PublicKey:           privKey.PublicKey().Marshal(),
+			WithdrawalRecipient: make([]byte, 32),
 		}
 	}
 	err = beaconState.SetValidators(validators)

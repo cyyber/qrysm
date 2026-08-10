@@ -236,9 +236,9 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 	require.NoError(t, err)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			PublicKey:             keys[i].PublicKey().Marshal(),
-			WithdrawalCredentials: make([]byte, 64),
+			ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
+			PublicKey:           keys[i].PublicKey().Marshal(),
+			WithdrawalRecipient: make([]byte, 64),
 		}
 	}
 
@@ -379,9 +379,9 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 	require.NoError(t, err)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			PublicKey:             keys[i].PublicKey().Marshal(),
-			WithdrawalCredentials: make([]byte, 64),
+			ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
+			PublicKey:           keys[i].PublicKey().Marshal(),
+			WithdrawalRecipient: make([]byte, 64),
 		}
 	}
 
@@ -443,9 +443,9 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 	require.NoError(t, err)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			PublicKey:             keys[i].PublicKey().Marshal(),
-			WithdrawalCredentials: make([]byte, 64),
+			ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
+			PublicKey:           keys[i].PublicKey().Marshal(),
+			WithdrawalRecipient: make([]byte, 64),
 		}
 	}
 
@@ -506,9 +506,9 @@ func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
 	require.NoError(t, err)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			PublicKey:             keys[i].PublicKey().Marshal(),
-			WithdrawalCredentials: make([]byte, 64),
+			ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
+			PublicKey:           keys[i].PublicKey().Marshal(),
+			WithdrawalRecipient: make([]byte, 64),
 		}
 	}
 

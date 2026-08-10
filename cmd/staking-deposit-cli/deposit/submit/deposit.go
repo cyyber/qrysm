@@ -121,7 +121,7 @@ func sendDepositTx(
 	if err != nil {
 		return err
 	}
-	credsBytes, err := hex.DecodeString(data.WithdrawalCredentials[2:])
+	recipientBytes, err := hex.DecodeString(data.WithdrawalRecipient[2:])
 	if err != nil {
 		return err
 	}
@@ -137,7 +137,7 @@ func sendDepositTx(
 	tx, err := contract.Deposit(
 		txOpts,
 		pubKeyBytes,
-		credsBytes,
+		recipientBytes,
 		sigBytes,
 		bytesutil.ToBytes32(depDataRootBytes),
 	)

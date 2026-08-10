@@ -23,14 +23,14 @@ import (
 //	- Let amount be the amount in Shor to be deposited by the validator where MIN_DEPOSIT_AMOUNT <= amount <= MAX_EFFECTIVE_BALANCE.
 //	- Set deposit_data.amount = amount.
 //	- Let signature be the result of bls_sign of the signing_root(deposit_data) with domain=compute_domain(DOMAIN_DEPOSIT). (Deposits are valid regardless of fork version, compute_domain will default to zeroes there).
-//	- Send a transaction on the QRL execution layer to DEPOSIT_CONTRACT_ADDRESS executing `deposit(pubkey: bytes[48], withdrawal_credentials: bytes[32], signature: bytes[96])` along with a deposit of amount Shor.
+//	- Send a transaction on the QRL execution layer to DEPOSIT_CONTRACT_ADDRESS executing `deposit(pubkey: bytes[2592], withdrawal_recipient: bytes[64], signature: bytes[4627])` along with a deposit of amount Shor.
 //
 // See: https://github.com/ethereum/consensus-specs/blob/master/specs/validator/0_beacon-chain-validator.md#submit-deposit
 func DepositInput(depositKey ml_dsa_87.MLDSA87Key, withdrawalAddr common.Address, amountInShor uint64, forkVersion []byte) (*qrysmpb.Deposit_Data, [32]byte, error) {
 	depositMessage := &qrysmpb.DepositMessage{
-		PublicKey:             depositKey.PublicKey().Marshal(),
-		WithdrawalCredentials: WithdrawalCredentialsAddress(withdrawalAddr),
-		Amount:                amountInShor,
+		PublicKey:           depositKey.PublicKey().Marshal(),
+		WithdrawalRecipient: withdrawalAddr.Bytes(),
+		Amount:              amountInShor,
 	}
 
 	sr, err := depositMessage.HashTreeRoot()
@@ -51,10 +51,10 @@ func DepositInput(depositKey ml_dsa_87.MLDSA87Key, withdrawalAddr common.Address
 		return nil, [32]byte{}, err
 	}
 	di := &qrysmpb.Deposit_Data{
-		PublicKey:             depositMessage.PublicKey,
-		WithdrawalCredentials: depositMessage.WithdrawalCredentials,
-		Amount:                depositMessage.Amount,
-		Signature:             depositKey.Sign(root[:]).Marshal(),
+		PublicKey:           depositMessage.PublicKey,
+		WithdrawalRecipient: depositMessage.WithdrawalRecipient,
+		Amount:              depositMessage.Amount,
+		Signature:           depositKey.Sign(root[:]).Marshal(),
 	}
 
 	dr, err := di.HashTreeRoot()
@@ -63,12 +63,6 @@ func DepositInput(depositKey ml_dsa_87.MLDSA87Key, withdrawalAddr common.Address
 	}
 
 	return di, dr, nil
-}
-
-// WithdrawalCredentialsAddress forms a 64 byte withdrawal credential containing
-// the execution address.
-func WithdrawalCredentialsAddress(addr common.Address) []byte {
-	return addr.Bytes()
 }
 
 // VerifyDepositSignature verifies the correctness of Execution deposit ML-DSA-87 signature
@@ -83,9 +77,9 @@ func VerifyDepositSignature(dd *qrysmpb.Deposit_Data, domain []byte) error {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
 	di := &qrysmpb.DepositMessage{
-		PublicKey:             ddCopy.PublicKey,
-		WithdrawalCredentials: ddCopy.WithdrawalCredentials,
-		Amount:                ddCopy.Amount,
+		PublicKey:           ddCopy.PublicKey,
+		WithdrawalRecipient: ddCopy.WithdrawalRecipient,
+		Amount:              ddCopy.Amount,
 	}
 	root, err := di.HashTreeRoot()
 	if err != nil {

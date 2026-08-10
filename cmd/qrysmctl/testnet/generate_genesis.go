@@ -153,11 +153,11 @@ var (
 // Represents a json object of hex string and uint64 values for
 // validators on Ethereum. This file can be generated using the official staking-deposit-cli.
 type depositDataJSON struct {
-	PubKey                string `json:"pubkey"`
-	Amount                uint64 `json:"amount"`
-	WithdrawalCredentials string `json:"withdrawal_credentials"`
-	DepositDataRoot       string `json:"deposit_data_root"`
-	Signature             string `json:"signature"`
+	PubKey              string `json:"pubkey"`
+	Amount              uint64 `json:"amount"`
+	WithdrawalRecipient string `json:"withdrawal_recipient"`
+	DepositDataRoot     string `json:"deposit_data_root"`
+	Signature           string `json:"signature"`
 }
 
 func cliActionGenerateGenesisState(cliCtx *cli.Context) error {
@@ -377,7 +377,7 @@ func depositJSONToDepositData(input *depositDataJSON) ([]byte, *qrysmpb.Deposit_
 	if err != nil {
 		return nil, nil, err
 	}
-	creds, err := hex.DecodeString(strings.TrimPrefix(input.WithdrawalCredentials, "0x"))
+	withdrawalRecipient, err := hex.DecodeString(strings.TrimPrefix(input.WithdrawalRecipient, "0x"))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -386,10 +386,10 @@ func depositJSONToDepositData(input *depositDataJSON) ([]byte, *qrysmpb.Deposit_
 		return nil, nil, err
 	}
 	return root, &qrysmpb.Deposit_Data{
-		PublicKey:             pk,
-		WithdrawalCredentials: creds,
-		Amount:                input.Amount,
-		Signature:             sig,
+		PublicKey:           pk,
+		WithdrawalRecipient: withdrawalRecipient,
+		Amount:              input.Amount,
+		Signature:           sig,
 	}, nil
 }
 

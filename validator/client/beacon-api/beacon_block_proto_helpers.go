@@ -288,9 +288,9 @@ func convertDepositsToProto(jsonDeposits []*apimiddleware.DepositJson) ([]*qrysm
 			return nil, errors.Wrapf(err, "failed to decode deposit public key `%s`", jsonDeposit.Data.PublicKey)
 		}
 
-		withdrawalCredentials, err := hexutil.Decode(jsonDeposit.Data.WithdrawalCredentials)
+		withdrawalRecipient, err := hexutil.Decode(jsonDeposit.Data.WithdrawalRecipient)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to decode deposit withdrawal credentials `%s`", jsonDeposit.Data.WithdrawalCredentials)
+			return nil, errors.Wrapf(err, "failed to decode deposit withdrawal recipient `%s`", jsonDeposit.Data.WithdrawalRecipient)
 		}
 
 		amount, err := strconv.ParseUint(jsonDeposit.Data.Amount, 10, 64)
@@ -306,10 +306,10 @@ func convertDepositsToProto(jsonDeposits []*apimiddleware.DepositJson) ([]*qrysm
 		deposits[depositIndex] = &qrysmpb.Deposit{
 			Proof: proofs,
 			Data: &qrysmpb.Deposit_Data{
-				PublicKey:             pubkey,
-				WithdrawalCredentials: withdrawalCredentials,
-				Amount:                amount,
-				Signature:             signature,
+				PublicKey:           pubkey,
+				WithdrawalRecipient: withdrawalRecipient,
+				Amount:              amount,
+				Signature:           signature,
 			},
 		}
 	}

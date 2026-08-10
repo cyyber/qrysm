@@ -402,10 +402,10 @@ type DepositJson struct {
 }
 
 type Deposit_DataJson struct {
-	PublicKey             string `json:"pubkey" hex:"true"`
-	WithdrawalCredentials string `json:"withdrawal_credentials" hex:"true"`
-	Amount                string `json:"amount"`
-	Signature             string `json:"signature" hex:"true"`
+	PublicKey           string `json:"pubkey" hex:"true"`
+	WithdrawalRecipient string `json:"withdrawal_recipient" hex:"true"`
+	Amount              string `json:"amount"`
+	Signature           string `json:"signature" hex:"true"`
 }
 
 type SignedVoluntaryExitJson struct {
@@ -494,7 +494,7 @@ type ForkJson struct {
 
 type ValidatorJson struct {
 	PublicKey                  string `json:"pubkey" hex:"true"`
-	WithdrawalCredentials      string `json:"withdrawal_credentials" hex:"true"`
+	WithdrawalRecipient        string `json:"withdrawal_recipient" hex:"true"`
 	EffectiveBalance           string `json:"effective_balance"`
 	Slashed                    bool   `json:"slashed"`
 	ActivationEligibilityEpoch string `json:"activation_eligibility_epoch"`

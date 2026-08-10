@@ -143,7 +143,7 @@ func validator() *qrysmpb.Validator {
 	wc := bytesutil.ToBytes32([]byte("withdrawal"))
 	return &qrysmpb.Validator{
 		PublicKey:                  pk[:],
-		WithdrawalCredentials:      wc[:],
+		WithdrawalRecipient:        wc[:],
 		EffectiveBalance:           123,
 		Slashed:                    true,
 		ActivationEligibilityEpoch: 123,

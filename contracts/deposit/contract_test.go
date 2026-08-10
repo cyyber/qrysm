@@ -33,7 +33,7 @@ func TestRegister_Below1Quanta(t *testing.T) {
 	var depositDataRoot [32]byte
 	copy(depositDataRoot[:], depositDataRoots[0])
 	testAccount.TxOpts.Value = mock.LessThan1Quanta()
-	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, pubKeys[0].Marshal(), depositDataItems[0].WithdrawalCredentials, depositDataItems[0].Signature, depositDataRoot)
+	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, pubKeys[0].Marshal(), depositDataItems[0].WithdrawalRecipient, depositDataItems[0].Signature, depositDataRoot)
 	assert.ErrorContains(t, "execution reverted", err, "Validator registration should have failed with insufficient deposit")
 }
 
@@ -51,13 +51,13 @@ func TestValidatorRegister_OK(t *testing.T) {
 
 	var depositDataRoot [32]byte
 	copy(depositDataRoot[:], depositDataRoots[0])
-	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, pubKeys[0].Marshal(), depositDataItems[0].WithdrawalCredentials, depositDataItems[0].Signature, depositDataRoot)
+	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, pubKeys[0].Marshal(), depositDataItems[0].WithdrawalRecipient, depositDataItems[0].Signature, depositDataRoot)
 	testAccount.Backend.Commit()
 	require.NoError(t, err, "Validator registration failed")
-	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, pubKeys[0].Marshal(), depositDataItems[0].WithdrawalCredentials, depositDataItems[0].Signature, depositDataRoot)
+	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, pubKeys[0].Marshal(), depositDataItems[0].WithdrawalRecipient, depositDataItems[0].Signature, depositDataRoot)
 	testAccount.Backend.Commit()
 	assert.NoError(t, err, "Validator registration failed")
-	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, pubKeys[0].Marshal(), depositDataItems[0].WithdrawalCredentials, depositDataItems[0].Signature, depositDataRoot)
+	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, pubKeys[0].Marshal(), depositDataItems[0].WithdrawalRecipient, depositDataItems[0].Signature, depositDataRoot)
 	testAccount.Backend.Commit()
 	assert.NoError(t, err, "Validator registration failed")
 

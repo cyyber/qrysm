@@ -12,7 +12,6 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/core/signing"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/container/trie"
-	"github.com/theQRL/qrysm/contracts/deposit"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 )
@@ -114,9 +113,9 @@ func createDepositData(privKey ml_dsa_87.MLDSA87Key, pubKey ml_dsa_87.PublicKey)
 	}
 
 	depositMessage := &qrysmpb.DepositMessage{
-		PublicKey:             pubKey.Marshal(),
-		WithdrawalCredentials: deposit.WithdrawalCredentialsAddress(withdrawalAddr),
-		Amount:                params.BeaconConfig().MaxEffectiveBalance,
+		PublicKey:           pubKey.Marshal(),
+		WithdrawalRecipient: withdrawalAddr.Bytes(),
+		Amount:              params.BeaconConfig().MaxEffectiveBalance,
 	}
 
 	sr, err := depositMessage.HashTreeRoot()
@@ -132,10 +131,10 @@ func createDepositData(privKey ml_dsa_87.MLDSA87Key, pubKey ml_dsa_87.PublicKey)
 		return nil, err
 	}
 	di := &qrysmpb.Deposit_Data{
-		PublicKey:             depositMessage.PublicKey,
-		WithdrawalCredentials: depositMessage.WithdrawalCredentials,
-		Amount:                depositMessage.Amount,
-		Signature:             privKey.Sign(root[:]).Marshal(),
+		PublicKey:           depositMessage.PublicKey,
+		WithdrawalRecipient: depositMessage.WithdrawalRecipient,
+		Amount:              depositMessage.Amount,
+		Signature:           privKey.Sign(root[:]).Marshal(),
 	}
 	return di, nil
 }

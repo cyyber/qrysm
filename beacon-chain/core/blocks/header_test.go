@@ -32,10 +32,10 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
-			PublicKey:             make([]byte, 32),
-			WithdrawalCredentials: make([]byte, 64),
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			Slashed:               true,
+			PublicKey:           make([]byte, 32),
+			WithdrawalRecipient: make([]byte, 64),
+			ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
+			Slashed:             true,
 		}
 	}
 
@@ -109,10 +109,10 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
-			PublicKey:             make([]byte, 32),
-			WithdrawalCredentials: make([]byte, 64),
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			Slashed:               true,
+			PublicKey:           make([]byte, 32),
+			WithdrawalRecipient: make([]byte, 64),
+			ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
+			Slashed:             true,
 		}
 	}
 
@@ -153,10 +153,10 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
-			PublicKey:             make([]byte, 48),
-			WithdrawalCredentials: make([]byte, 64),
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			Slashed:               true,
+			PublicKey:           make([]byte, 48),
+			WithdrawalRecipient: make([]byte, 64),
+			ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
+			Slashed:             true,
 		}
 	}
 
@@ -194,10 +194,10 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
-			PublicKey:             make([]byte, field_params.MLDSA87PubkeyLength),
-			WithdrawalCredentials: make([]byte, 64),
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			Slashed:               true,
+			PublicKey:           make([]byte, field_params.MLDSA87PubkeyLength),
+			WithdrawalRecipient: make([]byte, 64),
+			ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
+			Slashed:             true,
 		}
 	}
 
@@ -238,10 +238,10 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
-			PublicKey:             make([]byte, 32),
-			WithdrawalCredentials: make([]byte, 64),
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			Slashed:               true,
+			PublicKey:           make([]byte, 32),
+			WithdrawalRecipient: make([]byte, 64),
+			ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
+			Slashed:             true,
 		}
 	}
 
@@ -299,10 +299,10 @@ func TestBlockSignatureSet_OK(t *testing.T) {
 	validators := make([]*qrysmpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
 	for i := range validators {
 		validators[i] = &qrysmpb.Validator{
-			PublicKey:             make([]byte, 32),
-			WithdrawalCredentials: make([]byte, 64),
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
-			Slashed:               true,
+			PublicKey:           make([]byte, 32),
+			WithdrawalRecipient: make([]byte, 64),
+			ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
+			Slashed:             true,
 		}
 	}
 

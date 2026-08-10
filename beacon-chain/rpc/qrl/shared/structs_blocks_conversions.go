@@ -1002,9 +1002,9 @@ func DepositsToConsensus(src []*Deposit) ([]*qrysmpb.Deposit, error) {
 		if err != nil {
 			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Pubkey", i))
 		}
-		withdrawalCreds, err := DecodeHexWithLength(d.Data.WithdrawalCredentials, fieldparams.WithdrawalCredentialsLength)
+		withdrawalRecipient, err := DecodeHexWithLength(d.Data.WithdrawalRecipient, fieldparams.WithdrawalRecipientLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].WithdrawalCredentials", i))
+			return nil, NewDecodeError(err, fmt.Sprintf("[%d].WithdrawalRecipient", i))
 		}
 		amount, err := strconv.ParseUint(d.Data.Amount, 10, 64)
 		if err != nil {
@@ -1017,10 +1017,10 @@ func DepositsToConsensus(src []*Deposit) ([]*qrysmpb.Deposit, error) {
 		deposits[i] = &qrysmpb.Deposit{
 			Proof: proof,
 			Data: &qrysmpb.Deposit_Data{
-				PublicKey:             pubkey,
-				WithdrawalCredentials: withdrawalCreds,
-				Amount:                amount,
-				Signature:             sig,
+				PublicKey:           pubkey,
+				WithdrawalRecipient: withdrawalRecipient,
+				Amount:              amount,
+				Signature:           sig,
 			},
 		}
 	}
@@ -1037,10 +1037,10 @@ func DepositsFromConsensus(src []*qrysmpb.Deposit) ([]*Deposit, error) {
 		deposits[i] = &Deposit{
 			Proof: proof,
 			Data: &DepositData{
-				Pubkey:                hexutil.Encode(d.Data.PublicKey),
-				WithdrawalCredentials: hexutil.Encode(d.Data.WithdrawalCredentials),
-				Amount:                fmt.Sprintf("%d", d.Data.Amount),
-				Signature:             hexutil.Encode(d.Data.Signature),
+				Pubkey:              hexutil.Encode(d.Data.PublicKey),
+				WithdrawalRecipient: hexutil.Encode(d.Data.WithdrawalRecipient),
+				Amount:              fmt.Sprintf("%d", d.Data.Amount),
+				Signature:           hexutil.Encode(d.Data.Signature),
 			},
 		}
 	}

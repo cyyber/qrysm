@@ -35,8 +35,8 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 	}
 	registry := []*qrysmpb.Validator{
 		{
-			PublicKey:             []byte{1},
-			WithdrawalCredentials: []byte{1, 2, 3},
+			PublicKey:           []byte{1},
+			WithdrawalRecipient: []byte{1, 2, 3},
 		},
 	}
 	balances := []uint64{0}
@@ -59,9 +59,9 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	deposit := &qrysmpb.Deposit{
 		Data: &qrysmpb.Deposit_Data{
-			PublicKey:             bytesutil.PadTo([]byte{1, 2, 3}, field_params.MLDSA87PubkeyLength),
-			WithdrawalCredentials: make([]byte, 64),
-			Signature:             make([]byte, field_params.MLDSA87SignatureLength),
+			PublicKey:           bytesutil.PadTo([]byte{1, 2, 3}, field_params.MLDSA87PubkeyLength),
+			WithdrawalRecipient: make([]byte, 64),
+			Signature:           make([]byte, field_params.MLDSA87SignatureLength),
 		},
 	}
 	leaf, err := deposit.Data.HashTreeRoot()
@@ -106,8 +106,8 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 	}
 	registry := []*qrysmpb.Validator{
 		{
-			PublicKey:             []byte{1},
-			WithdrawalCredentials: []byte{1, 2, 3},
+			PublicKey:           []byte{1},
+			WithdrawalRecipient: []byte{1, 2, 3},
 		},
 	}
 	balances := []uint64{0}
@@ -137,10 +137,10 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 	require.NoError(t, err)
 	deposit := &qrysmpb.Deposit{
 		Data: &qrysmpb.Deposit_Data{
-			PublicKey:             sk.PublicKey().Marshal(),
-			Amount:                1000,
-			WithdrawalCredentials: make([]byte, 64),
-			Signature:             make([]byte, field_params.MLDSA87SignatureLength),
+			PublicKey:           sk.PublicKey().Marshal(),
+			Amount:              1000,
+			WithdrawalRecipient: make([]byte, 64),
+			Signature:           make([]byte, field_params.MLDSA87SignatureLength),
 		},
 	}
 	sr, err := signing.ComputeSigningRoot(deposit.Data, bytesutil.ToBytes(3, 32))
@@ -168,8 +168,8 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 			PublicKey: []byte{1, 2, 3},
 		},
 		{
-			PublicKey:             sk.PublicKey().Marshal(),
-			WithdrawalCredentials: []byte{1},
+			PublicKey:           sk.PublicKey().Marshal(),
+			WithdrawalRecipient: []byte{1},
 		},
 	}
 	balances := []uint64{0, 50}
@@ -198,8 +198,8 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 
 	registry := []*qrysmpb.Validator{
 		{
-			PublicKey:             []byte{1},
-			WithdrawalCredentials: []byte{1, 2, 3},
+			PublicKey:           []byte{1},
+			WithdrawalRecipient: []byte{1, 2, 3},
 		},
 	}
 	balances := []uint64{0}
@@ -242,8 +242,8 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 	}
 	registry := []*qrysmpb.Validator{
 		{
-			PublicKey:             []byte{1},
-			WithdrawalCredentials: []byte{1, 2, 3},
+			PublicKey:           []byte{1},
+			WithdrawalRecipient: []byte{1, 2, 3},
 		},
 	}
 	balances := []uint64{0}
@@ -282,7 +282,7 @@ func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
 
 	dep, _, err := util.DeterministicDepositsAndKeys(100)
 	require.NoError(t, err)
-	dep[0].Data.WithdrawalCredentials[0] ^= 0xff
+	dep[0].Data.WithdrawalRecipient[0] ^= 0xff
 	dep[0].Data.Signature = make([]byte, field_params.MLDSA87SignatureLength)
 	dt, _, err := util.DepositTrieFromDeposits(dep)
 	require.NoError(t, err)
@@ -301,8 +301,8 @@ func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
 	}
 	registry := []*qrysmpb.Validator{
 		{
-			PublicKey:             []byte{1},
-			WithdrawalCredentials: []byte{1, 2, 3},
+			PublicKey:           []byte{1},
+			WithdrawalRecipient: []byte{1, 2, 3},
 		},
 	}
 	balances := []uint64{0}
@@ -351,10 +351,10 @@ func TestProcessDeposit_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) 
 	require.NoError(t, err)
 	deposit := &qrysmpb.Deposit{
 		Data: &qrysmpb.Deposit_Data{
-			PublicKey:             sk.PublicKey().Marshal(),
-			Amount:                1000,
-			WithdrawalCredentials: make([]byte, 64),
-			Signature:             make([]byte, field_params.MLDSA87SignatureLength),
+			PublicKey:           sk.PublicKey().Marshal(),
+			Amount:              1000,
+			WithdrawalRecipient: make([]byte, 64),
+			Signature:           make([]byte, field_params.MLDSA87SignatureLength),
 		},
 	}
 	sr, err := signing.ComputeSigningRoot(deposit.Data, bytesutil.ToBytes(3, 32))
@@ -376,8 +376,8 @@ func TestProcessDeposit_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) 
 			PublicKey: []byte{1, 2, 3},
 		},
 		{
-			PublicKey:             sk.PublicKey().Marshal(),
-			WithdrawalCredentials: []byte{1},
+			PublicKey:           sk.PublicKey().Marshal(),
+			WithdrawalRecipient: []byte{1},
 		},
 	}
 	balances := []uint64{0, 50}

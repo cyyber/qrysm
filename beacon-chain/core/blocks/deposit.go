@@ -140,7 +140,7 @@ func BatchVerifyDepositsSignatures(ctx context.Context, deposits []*qrysmpb.Depo
 //	    # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
 //	    deposit_message = DepositMessage(
 //	        pubkey=deposit.data.pubkey,
-//	        withdrawal_credentials=deposit.data.withdrawal_credentials,
+//	        withdrawal_recipient=deposit.data.withdrawal_recipient,
 //	        amount=deposit.data.amount,
 //	    )
 //	    domain = compute_domain(DOMAIN_DEPOSIT)  # Fork-agnostic domain since deposits are valid across forks
@@ -185,7 +185,7 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *qrysmpb.Deposit, ver
 		effectiveBalance := min(params.BeaconConfig().MaxEffectiveBalance, amount-(amount%params.BeaconConfig().EffectiveBalanceIncrement))
 		if err := beaconState.AppendValidator(&qrysmpb.Validator{
 			PublicKey:                  pubKey,
-			WithdrawalCredentials:      deposit.Data.WithdrawalCredentials,
+			WithdrawalRecipient:        deposit.Data.WithdrawalRecipient,
 			ActivationEligibilityEpoch: params.BeaconConfig().FarFutureEpoch,
 			ActivationEpoch:            params.BeaconConfig().FarFutureEpoch,
 			ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
@@ -261,9 +261,9 @@ func verifyDepositDataWithDomain(ctx context.Context, deps []*qrysmpb.Deposit, d
 		pks[i] = []ml_dsa_87.PublicKey{dpk}
 		sigs[i] = [][]byte{dep.Data.Signature}
 		depositMessage := &qrysmpb.DepositMessage{
-			PublicKey:             dep.Data.PublicKey,
-			WithdrawalCredentials: dep.Data.WithdrawalCredentials,
-			Amount:                dep.Data.Amount,
+			PublicKey:           dep.Data.PublicKey,
+			WithdrawalRecipient: dep.Data.WithdrawalRecipient,
+			Amount:              dep.Data.Amount,
 		}
 		sr, err := signing.ComputeSigningRoot(depositMessage, domain)
 		if err != nil {

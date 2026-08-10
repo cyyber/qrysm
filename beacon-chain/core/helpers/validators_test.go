@@ -748,10 +748,10 @@ func TestLastActivatedValidatorIndex_OK(t *testing.T) {
 	balances := make([]uint64, len(validators))
 	for i := range 4 {
 		validators[i] = &qrysmpb.Validator{
-			PublicKey:             make([]byte, field_params.MLDSA87PubkeyLength),
-			WithdrawalCredentials: make([]byte, 64),
-			EffectiveBalance:      32 * 1e9,
-			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+			PublicKey:           make([]byte, field_params.MLDSA87PubkeyLength),
+			WithdrawalRecipient: make([]byte, 64),
+			EffectiveBalance:    32 * 1e9,
+			ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
 		}
 		balances[i] = validators[i].EffectiveBalance
 	}

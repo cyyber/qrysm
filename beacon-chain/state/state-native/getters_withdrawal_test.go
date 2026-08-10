@@ -30,38 +30,38 @@ func TestNextWithdrawalValidatorIndex(t *testing.T) {
 	})
 }
 
-func TestHasExecutionWithdrawalCredentials(t *testing.T) {
-	creds := []byte{0xFA, 0xCC}
-	v := &qrysmpb.Validator{WithdrawalCredentials: creds}
-	require.Equal(t, false, hasExecutionWithdrawalCredential(v))
-	creds = make([]byte, 64)
-	v = &qrysmpb.Validator{WithdrawalCredentials: creds}
-	require.Equal(t, true, hasExecutionWithdrawalCredential(v))
-	// No Withdrawal cred
+func TestHasExecutionWithdrawalRecipient(t *testing.T) {
+	recipient := []byte{0xFA, 0xCC}
+	v := &qrysmpb.Validator{WithdrawalRecipient: recipient}
+	require.Equal(t, false, hasExecutionWithdrawalRecipient(v))
+	recipient = make([]byte, 64)
+	v = &qrysmpb.Validator{WithdrawalRecipient: recipient}
+	require.Equal(t, true, hasExecutionWithdrawalRecipient(v))
+	// No withdrawal recipient.
 	v = &qrysmpb.Validator{}
-	require.Equal(t, false, hasExecutionWithdrawalCredential(v))
+	require.Equal(t, false, hasExecutionWithdrawalRecipient(v))
 }
 
 func TestIsFullyWithdrawableValidator(t *testing.T) {
 	// Wrong credential length
-	creds := []byte{0xFA, 0xCC}
+	withdrawalRecipient := []byte{0xFA, 0xCC}
 	v := &qrysmpb.Validator{
-		WithdrawalCredentials: creds,
-		WithdrawableEpoch:     2,
+		WithdrawalRecipient: withdrawalRecipient,
+		WithdrawableEpoch:   2,
 	}
 	require.Equal(t, false, isFullyWithdrawableValidator(v, 3))
 	// Wrong withdrawable epoch
-	creds = make([]byte, 64)
+	withdrawalRecipient = make([]byte, 64)
 	v = &qrysmpb.Validator{
-		WithdrawalCredentials: creds,
-		WithdrawableEpoch:     2,
+		WithdrawalRecipient: withdrawalRecipient,
+		WithdrawableEpoch:   2,
 	}
 	require.Equal(t, false, isFullyWithdrawableValidator(v, 1))
 	// Fully withdrawable
-	creds = make([]byte, 64)
+	withdrawalRecipient = make([]byte, 64)
 	v = &qrysmpb.Validator{
-		WithdrawalCredentials: creds,
-		WithdrawableEpoch:     2,
+		WithdrawalRecipient: withdrawalRecipient,
+		WithdrawableEpoch:   2,
 	}
 	require.Equal(t, true, isFullyWithdrawableValidator(v, 3))
 }
@@ -76,9 +76,9 @@ func TestExpectedWithdrawals(t *testing.T) {
 		for i := range s.validators {
 			s.balances[i] = params.BeaconConfig().MaxEffectiveBalance
 			val := &qrysmpb.Validator{
-				WithdrawalCredentials: make([]byte, 64),
-				EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
-				WithdrawableEpoch:     primitives.Epoch(1),
+				WithdrawalRecipient: make([]byte, 64),
+				EffectiveBalance:    params.BeaconConfig().MaxEffectiveBalance,
+				WithdrawableEpoch:   primitives.Epoch(1),
 			}
 			s.validators[i] = val
 		}
@@ -96,9 +96,9 @@ func TestExpectedWithdrawals(t *testing.T) {
 		for i := range s.validators {
 			s.balances[i] = params.BeaconConfig().MaxEffectiveBalance
 			val := &qrysmpb.Validator{
-				WithdrawalCredentials: make([]byte, 64),
-				EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
-				WithdrawableEpoch:     primitives.Epoch(1),
+				WithdrawalRecipient: make([]byte, 64),
+				EffectiveBalance:    params.BeaconConfig().MaxEffectiveBalance,
+				WithdrawableEpoch:   primitives.Epoch(1),
 			}
 			s.validators[i] = val
 		}
@@ -109,7 +109,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		withdrawal := &enginev1.Withdrawal{
 			Index:          0,
 			ValidatorIndex: 3,
-			Address:        s.validators[3].WithdrawalCredentials,
+			Address:        s.validators[3].WithdrawalRecipient,
 			Amount:         s.balances[3],
 		}
 		require.DeepEqual(t, withdrawal, expected[0])
@@ -123,9 +123,9 @@ func TestExpectedWithdrawals(t *testing.T) {
 		for i := range s.validators {
 			s.balances[i] = params.BeaconConfig().MaxEffectiveBalance
 			val := &qrysmpb.Validator{
-				WithdrawalCredentials: make([]byte, 64),
-				EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
-				WithdrawableEpoch:     primitives.Epoch(1),
+				WithdrawalRecipient: make([]byte, 64),
+				EffectiveBalance:    params.BeaconConfig().MaxEffectiveBalance,
+				WithdrawableEpoch:   primitives.Epoch(1),
 			}
 			s.validators[i] = val
 		}
@@ -136,7 +136,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		withdrawal := &enginev1.Withdrawal{
 			Index:          0,
 			ValidatorIndex: 3,
-			Address:        s.validators[3].WithdrawalCredentials,
+			Address:        s.validators[3].WithdrawalRecipient,
 			Amount:         params.BeaconConfig().MinDepositAmount,
 		}
 		require.DeepEqual(t, withdrawal, expected[0])
@@ -150,11 +150,11 @@ func TestExpectedWithdrawals(t *testing.T) {
 		for i := range s.validators {
 			s.balances[i] = params.BeaconConfig().MaxEffectiveBalance
 			val := &qrysmpb.Validator{
-				WithdrawalCredentials: make([]byte, 64),
-				EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
-				WithdrawableEpoch:     primitives.Epoch(1),
+				WithdrawalRecipient: make([]byte, 64),
+				EffectiveBalance:    params.BeaconConfig().MaxEffectiveBalance,
+				WithdrawableEpoch:   primitives.Epoch(1),
 			}
-			val.WithdrawalCredentials[31] = byte(i)
+			val.WithdrawalRecipient[31] = byte(i)
 			s.validators[i] = val
 		}
 		s.balances[3] += params.BeaconConfig().MinDepositAmount
@@ -166,13 +166,13 @@ func TestExpectedWithdrawals(t *testing.T) {
 		withdrawalFull := &enginev1.Withdrawal{
 			Index:          1,
 			ValidatorIndex: 7,
-			Address:        s.validators[7].WithdrawalCredentials,
+			Address:        s.validators[7].WithdrawalRecipient,
 			Amount:         s.balances[7],
 		}
 		withdrawalPartial := &enginev1.Withdrawal{
 			Index:          0,
 			ValidatorIndex: 3,
-			Address:        s.validators[3].WithdrawalCredentials,
+			Address:        s.validators[3].WithdrawalRecipient,
 			Amount:         params.BeaconConfig().MinDepositAmount,
 		}
 		require.DeepEqual(t, withdrawalPartial, expected[0])
@@ -187,9 +187,9 @@ func TestExpectedWithdrawals(t *testing.T) {
 		for i := range s.validators {
 			s.balances[i] = params.BeaconConfig().MaxEffectiveBalance + 1
 			val := &qrysmpb.Validator{
-				WithdrawalCredentials: make([]byte, 64),
-				EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
-				WithdrawableEpoch:     primitives.Epoch(1),
+				WithdrawalRecipient: make([]byte, 64),
+				EffectiveBalance:    params.BeaconConfig().MaxEffectiveBalance,
+				WithdrawableEpoch:   primitives.Epoch(1),
 			}
 			s.validators[i] = val
 		}
@@ -199,7 +199,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		withdrawal := &enginev1.Withdrawal{
 			Index:          0,
 			ValidatorIndex: 0,
-			Address:        s.validators[0].WithdrawalCredentials,
+			Address:        s.validators[0].WithdrawalRecipient,
 			Amount:         1,
 		}
 		require.DeepEqual(t, withdrawal, expected[0])
@@ -213,9 +213,9 @@ func TestExpectedWithdrawals(t *testing.T) {
 		for i := range s.validators {
 			s.balances[i] = params.BeaconConfig().MaxEffectiveBalance
 			val := &qrysmpb.Validator{
-				WithdrawalCredentials: make([]byte, 64),
-				EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
-				WithdrawableEpoch:     primitives.Epoch(0),
+				WithdrawalRecipient: make([]byte, 64),
+				EffectiveBalance:    params.BeaconConfig().MaxEffectiveBalance,
+				WithdrawableEpoch:   primitives.Epoch(0),
 			}
 			s.validators[i] = val
 		}
@@ -225,7 +225,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		withdrawal := &enginev1.Withdrawal{
 			Index:          0,
 			ValidatorIndex: 0,
-			Address:        s.validators[0].WithdrawalCredentials,
+			Address:        s.validators[0].WithdrawalRecipient,
 			Amount:         params.BeaconConfig().MaxEffectiveBalance,
 		}
 		require.DeepEqual(t, withdrawal, expected[0])
@@ -239,9 +239,9 @@ func TestExpectedWithdrawals(t *testing.T) {
 		for i := range s.validators {
 			s.balances[i] = params.BeaconConfig().MaxEffectiveBalance + 1
 			val := &qrysmpb.Validator{
-				WithdrawalCredentials: make([]byte, 64),
-				EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
-				WithdrawableEpoch:     primitives.Epoch(0),
+				WithdrawalRecipient: make([]byte, 64),
+				EffectiveBalance:    params.BeaconConfig().MaxEffectiveBalance,
+				WithdrawableEpoch:   primitives.Epoch(0),
 			}
 			s.validators[i] = val
 		}
@@ -251,7 +251,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		withdrawal := &enginev1.Withdrawal{
 			Index:          0,
 			ValidatorIndex: 0,
-			Address:        s.validators[0].WithdrawalCredentials,
+			Address:        s.validators[0].WithdrawalRecipient,
 			Amount:         params.BeaconConfig().MaxEffectiveBalance + 1,
 		}
 		require.DeepEqual(t, withdrawal, expected[0])
@@ -266,9 +266,9 @@ func TestExpectedWithdrawals(t *testing.T) {
 		for i := range s.validators {
 			s.balances[i] = params.BeaconConfig().MaxEffectiveBalance
 			val := &qrysmpb.Validator{
-				WithdrawalCredentials: make([]byte, 64),
-				EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
-				WithdrawableEpoch:     primitives.Epoch(1),
+				WithdrawalRecipient: make([]byte, 64),
+				EffectiveBalance:    params.BeaconConfig().MaxEffectiveBalance,
+				WithdrawableEpoch:   primitives.Epoch(1),
 			}
 			s.validators[i] = val
 		}
@@ -287,9 +287,9 @@ func TestExpectedWithdrawals(t *testing.T) {
 		for i := range s.validators {
 			s.balances[i] = params.BeaconConfig().MaxEffectiveBalance
 			val := &qrysmpb.Validator{
-				WithdrawalCredentials: make([]byte, 64),
-				EffectiveBalance:      params.BeaconConfig().MaxEffectiveBalance,
-				WithdrawableEpoch:     primitives.Epoch(1),
+				WithdrawalRecipient: make([]byte, 64),
+				EffectiveBalance:    params.BeaconConfig().MaxEffectiveBalance,
+				WithdrawableEpoch:   primitives.Epoch(1),
 			}
 			s.validators[i] = val
 		}
@@ -303,7 +303,7 @@ func TestExpectedWithdrawals(t *testing.T) {
 		withdrawal := &enginev1.Withdrawal{
 			Index:          0,
 			ValidatorIndex: 3,
-			Address:        s.validators[3].WithdrawalCredentials,
+			Address:        s.validators[3].WithdrawalRecipient,
 			Amount:         params.BeaconConfig().MinDepositAmount,
 		}
 		require.DeepEqual(t, withdrawal, expected[0])

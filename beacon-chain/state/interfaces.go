@@ -105,7 +105,7 @@ type ReadOnlyValidator interface {
 	WithdrawableEpoch() primitives.Epoch
 	ExitEpoch() primitives.Epoch
 	PublicKey() [field_params.MLDSA87PubkeyLength]byte
-	WithdrawalCredentials() []byte
+	WithdrawalRecipient() []byte
 	Slashed() bool
 	IsNil() bool
 }
