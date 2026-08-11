@@ -31,7 +31,7 @@ type TransactionGenerator struct {
 	cancel   context.CancelFunc
 }
 
-const transactionGeneratorBatchSize = 250
+const transactionGeneratorBatchSize = 20
 
 func NewTransactionGenerator(keystore string, seed int64) *TransactionGenerator {
 	return &TransactionGenerator{keystore: keystore, seed: seed}
@@ -72,7 +72,7 @@ func (t *TransactionGenerator) Start(ctx context.Context) error {
 		return err
 	}
 	f := filler.NewFiller(rnd)
-	// Broadcast Transactions every 3 blocks
+	// Broadcast transactions every slot.
 	txPeriod := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 	ticker := time.NewTicker(txPeriod)
 	defer ticker.Stop()
