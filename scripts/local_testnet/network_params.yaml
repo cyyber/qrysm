@@ -15,8 +15,9 @@ participants:
     # local build
     # vc_image: theqrl-dev/qrysm-validator:latest
     count: 2
-    # use_remote_signer: true
-    # remote_signer_type: clef
+    use_remote_signer: true
+    remote_signer_type: clef
+    remote_signer_auto_approve: true
     # remote_signer_image: qrledger/go-qrl:alltools-stable
 network_params:
   preset: "mainnet"
