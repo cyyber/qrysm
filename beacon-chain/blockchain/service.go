@@ -244,6 +244,9 @@ func (s *Service) initializeHead(ctx context.Context, st state.BeaconState) erro
 	if err != nil {
 		return errors.Wrap(err, "could not get head block")
 	}
+	if err := blocks.BeaconBlockIsNil(blk); err != nil {
+		return errors.Wrapf(err, "head block %#x is not in the database", root)
+	}
 	if root != fRoot {
 		st, err = s.cfg.StateGen.StateByRoot(ctx, root)
 		if err != nil {
