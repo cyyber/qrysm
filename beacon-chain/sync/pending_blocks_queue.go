@@ -443,8 +443,15 @@ func (s *Service) insertBlockToPendingQueue(_ primitives.Slot, b interfaces.Read
 		return nil
 	}
 
-	if err := s.addPendingBlockToCache(b); err != nil {
+	stored, err := s.addPendingBlockToCache(b)
+	if err != nil {
 		return err
+	}
+	// Only mark seen when cached, so the seen root always has a cache entry
+	// whose eviction clears it. Marking a dropped block as seen would leak the
+	// map entry forever and permanently prevent the block from being processed.
+	if !stored {
+		return nil
 	}
 
 	s.seenPendingBlocks[r] = true
@@ -465,22 +472,24 @@ func (s *Service) pendingBlocksInCache(slot primitives.Slot) []interfaces.ReadOn
 	return blks
 }
 
-// This adds input signed beacon block to slotToPendingBlocks cache.
-func (s *Service) addPendingBlockToCache(b interfaces.ReadOnlySignedBeaconBlock) error {
+// This adds input signed beacon block to slotToPendingBlocks cache. It returns
+// whether the block was actually stored: a block is dropped without error when
+// the slot already holds maxBlocksPerSlot pending blocks.
+func (s *Service) addPendingBlockToCache(b interfaces.ReadOnlySignedBeaconBlock) (bool, error) {
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
-		return err
+		return false, err
 	}
 
 	blks := s.pendingBlocksInCache(b.Block().Slot())
 
 	if len(blks) >= maxBlocksPerSlot {
-		return nil
+		return false, nil
 	}
 
 	blks = append(blks, b)
 	k := slotToCacheKey(b.Block().Slot())
 	s.slotToPendingBlocks.Set(k, blks, pendingBlockExpTime)
-	return nil
+	return true, nil
 }
 
 // This converts input string to slot.

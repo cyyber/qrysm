@@ -13,6 +13,7 @@ import (
 	"github.com/theQRL/go-qrl/common"
 	gqrlTypes "github.com/theQRL/go-qrl/core/types"
 	mock "github.com/theQRL/qrysm/beacon-chain/blockchain/testing"
+	"github.com/theQRL/qrysm/beacon-chain/core/signing"
 	db "github.com/theQRL/qrysm/beacon-chain/db/testing"
 	mockExecution "github.com/theQRL/qrysm/beacon-chain/execution/testing"
 	"github.com/theQRL/qrysm/beacon-chain/p2p"
@@ -31,6 +32,7 @@ import (
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/testing/util"
+	"github.com/theQRL/qrysm/time/slots"
 )
 
 func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
@@ -249,9 +251,14 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	require.NoError(t, err)
 	blockBRoot, err := blockB.Block.HashTreeRoot()
 	require.NoError(t, err)
-	genesisState, _ := util.DeterministicGenesisStateZond(t, 1)
+	genesisState, keys := util.DeterministicGenesisStateZond(t, 64)
 	require.NoError(t, genesisState.SetSlot(111))
 	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), blockARoot))
+	// The by-root path verifies block signatures before queueing.
+	blockA.Signature, err = signing.ComputeDomainAndSign(genesisState, slots.ToEpoch(blockA.Block.Slot), blockA.Block, params.BeaconConfig().DomainBeaconProposer, keys[0])
+	require.NoError(t, err)
+	blockB.Signature, err = signing.ComputeDomainAndSign(genesisState, slots.ToEpoch(blockB.Block.Slot), blockB.Block, params.BeaconConfig().DomainBeaconProposer, keys[0])
+	require.NoError(t, err)
 	finalizedCheckpt := &qrysmpb.Checkpoint{
 		Epoch: 5,
 		Root:  blockBRoot[:],
@@ -391,6 +398,82 @@ func TestRecentBeaconBlocks_RPCRequestSent_IncorrectRoot(t *testing.T) {
 
 	p1.Connect(p2)
 	require.ErrorContains(t, "received unexpected block with root", r.sendRecentBeaconBlocksRequest(context.Background(), &expectedRoots, p2.PeerID()))
+
+	if util.WaitTimeout(&wg, 1*time.Second) {
+		t.Fatal("Did not receive stream within 1 sec")
+	}
+}
+
+// Regression test for the qrysm port of upstream PR #17172: a peer answering a
+// by-root request with a block whose root matches but whose signature is bogus
+// must not get the block into the pending queue - the block root does not
+// cover the signature.
+func TestRecentBeaconBlocks_RPCRequestSent_InvalidSignature(t *testing.T) {
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p1.DelaySend = true
+
+	blockA := util.NewBeaconBlockZond()
+	blockA.Block.Slot = 111
+	blockARoot, err := blockA.Block.HashTreeRoot()
+	require.NoError(t, err)
+	genesisState, keys := util.DeterministicGenesisStateZond(t, 64)
+	require.NoError(t, genesisState.SetSlot(111))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), blockARoot))
+	// Sign with a key that does not match the proposer index so the root
+	// matches but the signature is invalid.
+	blockA.Signature, err = signing.ComputeDomainAndSign(genesisState, slots.ToEpoch(blockA.Block.Slot), blockA.Block, params.BeaconConfig().DomainBeaconProposer, keys[blockA.Block.ProposerIndex+1])
+	require.NoError(t, err)
+
+	expectedRoots := p2pTypes.BeaconBlockByRootsReq{blockARoot}
+
+	chain := &mock.ChainService{
+		State: genesisState,
+		FinalizedCheckPoint: &qrysmpb.Checkpoint{
+			Epoch: 5,
+			Root:  make([]byte, 32),
+		},
+		Root:           blockARoot[:],
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{},
+	}
+	r := &Service{
+		cfg: &config{
+			p2p:   p1,
+			chain: chain,
+			clock: startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+		},
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+		ctx:                 context.Background(),
+		rateLimiter:         newRateLimiter(p1),
+	}
+	r.initCaches()
+
+	pcl := protocol.ID("/consensus/beacon_chain/req/beacon_blocks_by_root/2/ssz_snappy")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, time.Second, false)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer wg.Done()
+		out := new(p2pTypes.BeaconBlockByRootsReq)
+		assert.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, out))
+		_, err := stream.Write([]byte{responseCodeSuccess})
+		assert.NoError(t, err, "Could not write to stream")
+		vRoot := r.cfg.clock.GenesisValidatorsRoot()
+		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().GenesisEpoch, vRoot[:])
+		assert.NoError(t, err)
+		assert.NoError(t, writeContextToStream(digest[:], stream))
+		_, err = p2.Encoding().EncodeWithMaxLength(stream, blockA)
+		assert.NoError(t, err, "Could not send response back")
+		assert.NoError(t, stream.Close())
+	})
+
+	p1.Connect(p2)
+	require.ErrorContains(t, "verify block signature", r.sendRecentBeaconBlocksRequest(context.Background(), &expectedRoots, p2.PeerID()))
+	assert.Equal(t, 0, len(r.seenPendingBlocks), "Block with invalid signature should not be queued")
 
 	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
