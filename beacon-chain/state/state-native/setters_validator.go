@@ -39,6 +39,19 @@ func (b *BeaconState) SetValidators(val []*qrysmpb.Validator) error {
 // validator registry.
 func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *qrysmpb.Validator) (bool, *qrysmpb.Validator, error)) error {
 	var changedVals []uint64
+	// Mark the mutated indices dirty even when the callback or an update fails
+	// partway through: mutations applied before the error remain in the state,
+	// and a stale validators trie would otherwise produce a wrong hash tree
+	// root for them.
+	defer func() {
+		if len(changedVals) == 0 {
+			return
+		}
+		b.lock.Lock()
+		defer b.lock.Unlock()
+		b.markFieldAsDirty(types.Validators)
+		b.addDirtyIndices(types.Validators, changedVals)
+	}()
 	if features.Get().EnableExperimentalState {
 		l := b.validatorsMultiValue.Len(b)
 		for i := range l {
@@ -51,10 +64,10 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *qrysmpb.Validat
 				return err
 			}
 			if changed {
-				changedVals = append(changedVals, uint64(i))
 				if err = b.validatorsMultiValue.UpdateAt(b, uint64(i), newVal); err != nil {
 					return errors.Wrapf(err, "could not update validator at index %d", i)
 				}
+				changedVals = append(changedVals, uint64(i))
 			}
 		}
 	} else {
@@ -85,11 +98,6 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *qrysmpb.Validat
 		b.lock.Unlock()
 	}
 
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	b.markFieldAsDirty(types.Validators)
-	b.addDirtyIndices(types.Validators, changedVals)
 	return nil
 }
 
