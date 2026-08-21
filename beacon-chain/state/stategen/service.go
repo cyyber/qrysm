@@ -188,3 +188,17 @@ func (s *State) finalizedState() state.BeaconState {
 	defer s.finalizedInfo.lock.RUnlock()
 	return s.finalizedInfo.state.Copy()
 }
+
+// finalizedStateIfRoot returns a copy of the cached finalized state only if
+// the cached finalized root matches r at the moment of the read. The root
+// comparison and the state copy happen under a single lock acquisition so a
+// concurrent SaveFinalizedState cannot swap the finalized info in between and
+// make us return a state belonging to a different root than requested.
+func (s *State) finalizedStateIfRoot(r [32]byte) state.BeaconState {
+	s.finalizedInfo.lock.RLock()
+	defer s.finalizedInfo.lock.RUnlock()
+	if r != s.finalizedInfo.root || s.finalizedInfo.state == nil {
+		return nil
+	}
+	return s.finalizedInfo.state.Copy()
+}
