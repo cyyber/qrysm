@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"strings"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -191,9 +190,12 @@ func (s *Service) rejectIncorrectSyncCommittee(
 		format := p2p.GossipTypeMapping[reflect.TypeFor[*qrysmpb.SyncCommitteeMessage]()]
 		// Validate that the validator is in the correct committee.
 		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+		// Match the topic exactly, including the encoding suffix, so a subnet
+		// that merely shares a numeric prefix with the topic cannot pass.
+		suffix := s.cfg.p2p.Encoding().ProtocolSuffix()
 		for _, idx := range committeeIndices {
 			subnet := uint64(idx) / subCommitteeSize
-			if strings.HasPrefix(topic, fmt.Sprintf(format, digest, subnet)) {
+			if topic == fmt.Sprintf(format, digest, subnet)+suffix {
 				isValid = true
 				break
 			}

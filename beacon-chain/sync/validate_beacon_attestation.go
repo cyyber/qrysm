@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -186,7 +185,10 @@ func (s *Service) validateUnaggregatedAttTopic(ctx context.Context, a *qrysmpb.A
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
 	}
-	if !strings.HasPrefix(t, fmt.Sprintf(format, digest, subnet)) {
+	// Match the topic exactly, including the encoding suffix: a prefix match
+	// would let e.g. subnet 1 pass for the beacon_attestation_10..19 topics.
+	expected := fmt.Sprintf(format, digest, subnet) + s.cfg.p2p.Encoding().ProtocolSuffix()
+	if t != expected {
 		return pubsub.ValidationReject, errors.New("attestation's subnet does not match with pubsub topic")
 	}
 
