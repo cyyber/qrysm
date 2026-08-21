@@ -43,11 +43,19 @@ func main() {
 	}
 }
 
+func mustAddress(s string) common.Address {
+	addr, err := common.NewAddressFromString(s)
+	if err != nil {
+		panic(err) // lint:nopanic
+	}
+	return addr
+}
+
 func runit() error {
 	a := program.NewProgram()
 
-	aAddr, _ := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff0a")
-	bAddr, _ := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff0b")
+	aAddr := mustAddress("Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567000000000000000000000000000000000000ff0a")
+	bAddr := mustAddress("Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567000000000000000000000000000000000000ff0b")
 
 	// Callling contract : call contract B, modify storage, revert
 	a.DelegateCall(nil, 0xff0b, 0, 0, 0, 0)
@@ -81,7 +89,7 @@ func runit() error {
 	//----------
 	var (
 		statedb, _ = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
-		sender     = common.BytesToAddress([]byte("sender"))
+		sender     = mustAddress("Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567000000000000000000000000000000000000feed")
 	)
 	for addr, acc := range alloc {
 		statedb.CreateAccount(addr)
