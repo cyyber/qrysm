@@ -70,7 +70,7 @@ func builderActive(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) err
 			return errors.Errorf("block with slot %d was not built by the builder. It has an extra data of %s", b.Block().Slot(), string(execPayload.ExtraData()))
 		}
 		if execPayload.GasLimit() == 0 {
-			return errors.Errorf("block with slot %d has a gas limit of 0, when it should be in the 30M range", b.Block().Slot())
+			return errors.Errorf("block with slot %d has a gas limit of 0, when it should be in the 20M range", b.Block().Slot())
 		}
 	}
 	if lowestBound == currEpoch {

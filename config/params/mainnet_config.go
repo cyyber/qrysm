@@ -4,6 +4,7 @@ import (
 	"math"
 	"time"
 
+	qrlparams "github.com/theQRL/go-qrl/params"
 	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/encoding/bytesutil"
 )
@@ -201,8 +202,13 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Light client
 	MinSyncCommitteeParticipants: 1,
 
-	QRLBurnAddress:         "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-	DefaultBuilderGasLimit: uint64(30000000),
+	QRLBurnAddress: "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+	// Tied to go-qrl's execution-layer hard cap (20M), which is also go-qrl's own
+	// miner GasCeil default. The execution layer rejects any block above
+	// MaxGasLimit and the beacon node clamps the proposer's target to it, so a
+	// larger default could never take effect and would only advertise an invalid
+	// gas limit in validator registrations.
+	DefaultBuilderGasLimit: qrlparams.MaxGasLimit,
 
 	// Mevboost circuit breaker
 	MaxBuilderConsecutiveMissedSlots: 3,

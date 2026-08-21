@@ -174,7 +174,7 @@ type BeaconChainConfig struct {
 	// Bellatrix
 	DefaultFeeRecipient    common.Address // DefaultFeeRecipient where the transaction fee goes to.
 	QRLBurnAddress         string         // QRLBurnAddress is the constant qrl address to burn fees in that network. the default is Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-	DefaultBuilderGasLimit uint64         // DefaultBuilderGasLimit is the default used to set the gaslimit for the Builder APIs, typically at around 30M planck.
+	DefaultBuilderGasLimit uint64         // DefaultBuilderGasLimit is the default used to set the gaslimit for the Builder APIs. It must not exceed go-qrl's MaxGasLimit (20M gas), the execution-layer hard cap.
 
 	// Mev-boost circuit breaker
 	MaxBuilderConsecutiveMissedSlots primitives.Slot // MaxBuilderConsecutiveMissedSlots defines the number of consecutive skip slot to fallback from using relay/builder to local execution engine for block construction.
