@@ -77,7 +77,11 @@ func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch primitives.Epoch, 
 	if err != nil {
 		return nil, err
 	}
-	return key.Sign(sr[:]).Marshal(), nil
+	sig, err := key.Sign(sr[:])
+	if err != nil {
+		return nil, err
+	}
+	return sig.Marshal(), nil
 }
 
 // ComputeSigningRoot computes the root of the object by calculating the hash tree root of the signing data with the given domain.

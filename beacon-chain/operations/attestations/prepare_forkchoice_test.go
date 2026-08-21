@@ -28,7 +28,8 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 
 	priv, err := ml_dsa_87.RandKey()
 	require.NoError(t, err)
-	sig := priv.Sign([]byte("dummy_test_data"))
+	sig, err := priv.Sign([]byte("dummy_test_data"))
+	require.NoError(t, err)
 	var mockRoot [32]byte
 
 	unaggregatedAtts := []*qrysmpb.Attestation{
@@ -127,7 +128,8 @@ func TestBatchAttestations_Single(t *testing.T) {
 
 	priv, err := ml_dsa_87.RandKey()
 	require.NoError(t, err)
-	sig := priv.Sign([]byte("dummy_test_data"))
+	sig, err := priv.Sign([]byte("dummy_test_data"))
+	require.NoError(t, err)
 	var mockRoot [32]byte
 	d := &qrysmpb.AttestationData{
 		BeaconBlockRoot: mockRoot[:],
@@ -172,7 +174,8 @@ func TestAggregateAndSaveForkChoiceAtts_Single(t *testing.T) {
 
 	priv, err := ml_dsa_87.RandKey()
 	require.NoError(t, err)
-	sig := priv.Sign([]byte("dummy_test_data"))
+	sig, err := priv.Sign([]byte("dummy_test_data"))
+	require.NoError(t, err)
 	var mockRoot [32]byte
 	d := &qrysmpb.AttestationData{
 		BeaconBlockRoot: mockRoot[:],
@@ -196,7 +199,9 @@ func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 
 	priv, err := ml_dsa_87.RandKey()
 	require.NoError(t, err)
-	sig := priv.Sign([]byte("dummy_test_data")).Marshal()
+	lsig1, err := priv.Sign([]byte("dummy_test_data"))
+	require.NoError(t, err)
+	sig := lsig1.Marshal()
 	var mockRoot [32]byte
 	d := &qrysmpb.AttestationData{
 		BeaconBlockRoot: mockRoot[:],

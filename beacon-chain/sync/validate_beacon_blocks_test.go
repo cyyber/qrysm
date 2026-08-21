@@ -640,7 +640,9 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 	require.NoError(t, err)
 	msg := util.NewBeaconBlockZond()
 	msg.Block.ParentRoot = util.Random32Bytes(t)
-	msg.Signature = sk.Sign([]byte("data")).Marshal()
+	lsig1, err := sk.Sign([]byte("data"))
+	require.NoError(t, err)
+	msg.Signature = lsig1.Marshal()
 	chainService := &mock.ChainService{
 		Genesis: time.Now(),
 		FinalizedCheckPoint: &qrysmpb.Checkpoint{
@@ -751,7 +753,9 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	msg := util.NewBeaconBlockZond()
 	msg.Block.Slot = 10
 	msg.Block.ParentRoot = util.Random32Bytes(t)
-	msg.Signature = sk.Sign([]byte("data")).Marshal()
+	lsig2, err := sk.Sign([]byte("data"))
+	require.NoError(t, err)
+	msg.Signature = lsig2.Marshal()
 
 	chainService := &mock.ChainService{Genesis: time.Now()}
 	r := &Service{
@@ -799,7 +803,9 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	msg := util.NewBeaconBlockZond()
 	msg.Block.ParentRoot = util.Random32Bytes(t)
 	msg.Block.Slot = 10
-	msg.Signature = sk.Sign([]byte("data")).Marshal()
+	lsig3, err := sk.Sign([]byte("data"))
+	require.NoError(t, err)
+	msg.Signature = lsig3.Marshal()
 
 	genesisTime := time.Now()
 	chainService := &mock.ChainService{

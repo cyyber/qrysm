@@ -92,17 +92,21 @@ func TestBlockRewards(t *testing.T) {
 	require.NoError(t, err)
 	sigRoot2, err := signing.ComputeSigningRoot(attData2, domain)
 	require.NoError(t, err)
+	attSig1, err := secretKeys[0].Sign(sigRoot1[:])
+	require.NoError(t, err)
+	attSig2, err := secretKeys[0].Sign(sigRoot2[:])
+	require.NoError(t, err)
 	b.Block.Body.AttesterSlashings = []*qrysmpb.AttesterSlashing{
 		{
 			Attestation_1: &qrysmpb.IndexedAttestation{
 				AttestingIndices: []uint64{0},
 				Data:             attData1,
-				Signatures:       [][]byte{secretKeys[0].Sign(sigRoot1[:]).Marshal()},
+				Signatures:       [][]byte{attSig1.Marshal()},
 			},
 			Attestation_2: &qrysmpb.IndexedAttestation{
 				AttestingIndices: []uint64{0},
 				Data:             attData2,
-				Signatures:       [][]byte{secretKeys[0].Sign(sigRoot2[:]).Marshal()},
+				Signatures:       [][]byte{attSig2.Marshal()},
 			},
 		},
 	}
@@ -126,15 +130,19 @@ func TestBlockRewards(t *testing.T) {
 	require.NoError(t, err)
 	sigRoot2, err = signing.ComputeSigningRoot(header2, domain)
 	require.NoError(t, err)
+	hSig1, err := secretKeys[1].Sign(sigRoot1[:])
+	require.NoError(t, err)
+	hSig2, err := secretKeys[1].Sign(sigRoot2[:])
+	require.NoError(t, err)
 	b.Block.Body.ProposerSlashings = []*qrysmpb.ProposerSlashing{
 		{
 			Header_1: &qrysmpb.SignedBeaconBlockHeader{
 				Header:    header1,
-				Signature: secretKeys[1].Sign(sigRoot1[:]).Marshal(),
+				Signature: hSig1.Marshal(),
 			},
 			Header_2: &qrysmpb.SignedBeaconBlockHeader{
 				Header:    header2,
-				Signature: secretKeys[1].Sign(sigRoot2[:]).Marshal(),
+				Signature: hSig2.Marshal(),
 			},
 		},
 	}
@@ -148,8 +156,12 @@ func TestBlockRewards(t *testing.T) {
 	require.NoError(t, err)
 	// Bits set in sync committee bits determine which validators will be treated as participating in sync committee.
 	// These validators have to sign the message.
-	sig1 := secretKeys[149].Sign(r[:]).Marshal()
-	sig2 := secretKeys[48].Sign(r[:]).Marshal()
+	lsig5, err := secretKeys[149].Sign(r[:])
+	require.NoError(t, err)
+	sig1 := lsig5.Marshal()
+	lsig6, err := secretKeys[48].Sign(r[:])
+	require.NoError(t, err)
+	sig2 := lsig6.Marshal()
 	b.Block.Body.SyncAggregate = &qrysmpb.SyncAggregate{SyncCommitteeBits: scBits, SyncCommitteeSignatures: [][]byte{sig1, sig2}}
 
 	sbb, err := blocks.NewSignedBeaconBlock(b)
@@ -521,7 +533,9 @@ func TestSyncCommiteeRewards(t *testing.T) {
 	// These validators have to sign the message.
 	sigs := make([][]byte, fieldparams.SyncCommitteeLength-2)
 	for i := range sigs {
-		sigs[i] = secretKeys[i].Sign(r[:]).Marshal()
+		lsig7, err := secretKeys[i].Sign(r[:])
+		require.NoError(t, err)
+		sigs[i] = lsig7.Marshal()
 	}
 	b.Block.Body.SyncAggregate = &qrysmpb.SyncAggregate{SyncCommitteeBits: scBits, SyncCommitteeSignatures: sigs}
 	sbb, err := blocks.NewSignedBeaconBlock(b)

@@ -54,7 +54,9 @@ func TestVerifyBlockHeaderSignature(t *testing.T) {
 	require.NoError(t, err)
 
 	// Set the signature in the block header.
-	blockHeader.Signature = privKey.Sign(signingRoot[:]).Marshal()
+	lsig1, err := privKey.Sign(signingRoot[:])
+	require.NoError(t, err)
+	blockHeader.Signature = lsig1.Marshal()
 
 	// Sig should verify.
 	err = blocks.VerifyBlockHeaderSignature(beaconState, blockHeader)
@@ -79,7 +81,9 @@ func TestVerifyBlockSignatureUsingCurrentFork(t *testing.T) {
 	assert.NoError(t, err)
 	rt, err := signing.ComputeSigningRoot(blk.Block, domain)
 	assert.NoError(t, err)
-	sig := keys[0].Sign(rt[:]).Marshal()
+	lsig2, err := keys[0].Sign(rt[:])
+	require.NoError(t, err)
+	sig := lsig2.Marshal()
 	blk.Signature = sig
 	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
@@ -104,7 +108,9 @@ func TestVerifyBlockSignatureUsingCurrentFork_InvalidSignature(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Sign with the wrong key (proposer index is 0, but using key 1).
-	blk.Signature = keys[1].Sign(rt[:]).Marshal()
+	lsig3, err := keys[1].Sign(rt[:])
+	require.NoError(t, err)
+	blk.Signature = lsig3.Marshal()
 	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	blkRoot, err := blk.Block.HashTreeRoot()

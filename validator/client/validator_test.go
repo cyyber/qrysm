@@ -150,7 +150,10 @@ func (m *mockKeymanager) Sign(_ context.Context, req *validatorpb.SignRequest) (
 	if !ok {
 		return nil, errors.New("not found")
 	}
-	sig := privKey.Sign(req.SigningRoot)
+	sig, err := privKey.Sign(req.SigningRoot)
+	if err != nil {
+		return nil, err
+	}
 	return sig, nil
 }
 

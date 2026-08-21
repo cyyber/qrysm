@@ -26,9 +26,12 @@ func TestCopySignatureSet(t *testing.T) {
 		message2 := [32]byte{'E', 'F'}
 		message3 := [32]byte{'H', 'I'}
 
-		sig := key.Sign(message[:])
-		sig2 := key2.Sign(message2[:])
-		sig3 := key3.Sign(message3[:])
+		sig, err := key.Sign(message[:])
+		require.NoError(t, err)
+		sig2, err := key2.Sign(message2[:])
+		require.NoError(t, err)
+		sig3, err := key3.Sign(message3[:])
+		require.NoError(t, err)
 
 		set := &SignatureBatch{
 			Signatures:   [][][]byte{{sig.Marshal()}},
@@ -127,7 +130,8 @@ func TestSignatureBatch_RemoveDuplicates(t *testing.T) {
 				var pubs [][]PublicKey
 				var messages [][32]byte
 				for _, k := range chosenKeys {
-					s := k.Sign(msg[:])
+					s, err := k.Sign(msg[:])
+					require.NoError(t, err)
 					signatures = append(signatures, [][]byte{s.Marshal()})
 					messages = append(messages, msg)
 					pubs = append(pubs, []PublicKey{k.PublicKey()})
@@ -161,19 +165,22 @@ func TestSignatureBatch_RemoveDuplicates(t *testing.T) {
 				var messages [][32]byte
 				var pubs [][]PublicKey
 				for _, k := range chosenKeys[:10] {
-					s := k.Sign(msg[:])
+					s, err := k.Sign(msg[:])
+					require.NoError(t, err)
 					signatures = append(signatures, [][]byte{s.Marshal()})
 					messages = append(messages, msg)
 					pubs = append(pubs, []PublicKey{k.PublicKey()})
 				}
 				for _, k := range chosenKeys[10:20] {
-					s := k.Sign(msg1[:])
+					s, err := k.Sign(msg1[:])
+					require.NoError(t, err)
 					signatures = append(signatures, [][]byte{s.Marshal()})
 					messages = append(messages, msg1)
 					pubs = append(pubs, []PublicKey{k.PublicKey()})
 				}
 				for _, k := range chosenKeys[20:30] {
-					s := k.Sign(msg2[:])
+					s, err := k.Sign(msg2[:])
+					require.NoError(t, err)
 					signatures = append(signatures, [][]byte{s.Marshal()})
 					messages = append(messages, msg2)
 					pubs = append(pubs, []PublicKey{k.PublicKey()})
@@ -207,19 +214,22 @@ func TestSignatureBatch_RemoveDuplicates(t *testing.T) {
 				var messages [][32]byte
 				var pubs [][]PublicKey
 				for _, k := range chosenKeys[:10] {
-					s := k.Sign(msg[:])
+					s, err := k.Sign(msg[:])
+					require.NoError(t, err)
 					signatures = append(signatures, [][]byte{s.Marshal()})
 					messages = append(messages, msg)
 					pubs = append(pubs, []PublicKey{k.PublicKey()})
 				}
 				for _, k := range chosenKeys[10:20] {
-					s := k.Sign(msg1[:])
+					s, err := k.Sign(msg1[:])
+					require.NoError(t, err)
 					signatures = append(signatures, [][]byte{s.Marshal()})
 					messages = append(messages, msg1)
 					pubs = append(pubs, []PublicKey{k.PublicKey()})
 				}
 				for _, k := range chosenKeys[20:30] {
-					s := k.Sign(msg2[:])
+					s, err := k.Sign(msg2[:])
+					require.NoError(t, err)
 					signatures = append(signatures, [][]byte{s.Marshal()})
 					messages = append(messages, msg2)
 					pubs = append(pubs, []PublicKey{k.PublicKey()})
@@ -250,19 +260,22 @@ func TestSignatureBatch_RemoveDuplicates(t *testing.T) {
 				var messages [][32]byte
 				var pubs [][]PublicKey
 				for _, k := range chosenKeys[:10] {
-					s := k.Sign(msg[:])
+					s, err := k.Sign(msg[:])
+					require.NoError(t, err)
 					signatures = append(signatures, [][]byte{s.Marshal()})
 					messages = append(messages, msg)
 					pubs = append(pubs, []PublicKey{k.PublicKey()})
 				}
 				for _, k := range chosenKeys[10:20] {
-					s := k.Sign(msg1[:])
+					s, err := k.Sign(msg1[:])
+					require.NoError(t, err)
 					signatures = append(signatures, [][]byte{s.Marshal()})
 					messages = append(messages, msg1)
 					pubs = append(pubs, []PublicKey{k.PublicKey()})
 				}
 				for _, k := range chosenKeys[20:30] {
-					s := k.Sign(msg2[:])
+					s, err := k.Sign(msg2[:])
+					require.NoError(t, err)
 					signatures = append(signatures, [][]byte{s.Marshal()})
 					messages = append(messages, msg2)
 					pubs = append(pubs, []PublicKey{k.PublicKey()})
@@ -305,19 +318,22 @@ func TestSignatureBatch_RemoveDuplicates(t *testing.T) {
 				var messages [][32]byte
 				var pubs [][]PublicKey
 				for _, k := range chosenKeys[:10] {
-					s := k.Sign(msg[:])
+					s, err := k.Sign(msg[:])
+					require.NoError(t, err)
 					signatures = append(signatures, [][]byte{s.Marshal()})
 					messages = append(messages, msg)
 					pubs = append(pubs, []PublicKey{k.PublicKey()})
 				}
 				for _, k := range chosenKeys[10:20] {
-					s := k.Sign(msg1[:])
+					s, err := k.Sign(msg1[:])
+					require.NoError(t, err)
 					signatures = append(signatures, [][]byte{s.Marshal()})
 					messages = append(messages, msg1)
 					pubs = append(pubs, []PublicKey{k.PublicKey()})
 				}
 				for _, k := range chosenKeys[20:30] {
-					s := k.Sign(msg2[:])
+					s, err := k.Sign(msg2[:])
+					require.NoError(t, err)
 					signatures = append(signatures, [][]byte{s.Marshal()})
 					messages = append(messages, msg2)
 					pubs = append(pubs, []PublicKey{k.PublicKey()})
@@ -401,7 +417,9 @@ func NewValidSignatureSet(t *testing.T, msgBody string, num int) *SignatureBatch
 		require.NoError(t, err)
 		pubkey := priv.PublicKey()
 		msg := messageBytes(fmt.Sprintf("%s%d", msgBody, i))
-		sig := priv.Sign(msg[:]).Marshal()
+		lsig1, err := priv.Sign(msg[:])
+		require.NoError(t, err)
+		sig := lsig1.Marshal()
 		desc := fmt.Sprintf("signature of %s%d", msgBody, i)
 
 		set.Signatures[i] = [][]byte{sig}
@@ -431,7 +449,9 @@ func NewInvalidSignatureSet(t *testing.T, msgBody string, num int, throwErr bool
 			sig = make([]byte, fieldparams.MLDSA87SignatureLength)
 		} else {
 			badMsg := messageBytes("badmsg")
-			sig = priv.Sign(badMsg[:]).Marshal()
+			lsig2, err := priv.Sign(badMsg[:])
+			require.NoError(t, err)
+			sig = lsig2.Marshal()
 		}
 		desc := fmt.Sprintf("signature of %s%d", msgBody, i)
 

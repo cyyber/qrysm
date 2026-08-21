@@ -121,7 +121,9 @@ func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
 	}
 	secKey, err := ml_dsa_87.RandKey()
 	require.NoError(t, err)
-	sig := secKey.Sign([]byte{'A'}).Marshal()
+	lsig1, err := secKey.Sign([]byte{'A'})
+	require.NoError(t, err)
+	sig := lsig1.Marshal()
 	msg := &qrysmpb.SyncCommitteeMessage{
 		Slot:           1,
 		ValidatorIndex: 2,

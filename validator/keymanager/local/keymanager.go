@@ -218,7 +218,11 @@ func (*Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (ml_d
 	if !ok {
 		return nil, errors.New("no signing key found in keys cache")
 	}
-	return secretKey.Sign(req.SigningRoot), nil
+	sig, err := secretKey.Sign(req.SigningRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not sign signing root")
+	}
+	return sig, nil
 }
 
 func (km *Keymanager) initializeAccountKeystore(ctx context.Context) error {

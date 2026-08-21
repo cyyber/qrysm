@@ -368,7 +368,9 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 					PublicKey:            bytesutil.ToBytes2592(keys[chosenVal].PublicKey().Marshal()),
 				}
 
-				msg.Signature = keys[chosenVal].Sign(sigRoot[:]).Marshal()
+				lsig1, err := keys[chosenVal].Sign(sigRoot[:])
+				require.NoError(t, err)
+				msg.Signature = lsig1.Marshal()
 				msg.BlockRoot = headRoot[:]
 				msg.ValidatorIndex = primitives.ValidatorIndex(chosenVal)
 				msg.Slot = slots.PrevSlot(hState.Slot())

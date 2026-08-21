@@ -1930,7 +1930,9 @@ func TestProposer_FilterAttestation(t *testing.T) {
 					for i, indice := range attestingIndices {
 						hashTreeRoot, err := signing.ComputeSigningRoot(atts[i].Data, domain)
 						require.NoError(t, err)
-						sig := privKeys[indice].Sign(hashTreeRoot[:]).Marshal()
+						lsig1, err := privKeys[indice].Sign(hashTreeRoot[:])
+						require.NoError(t, err)
+						sig := lsig1.Marshal()
 						sigs[i] = sig
 					}
 					atts[i].Signatures = sigs
@@ -2067,7 +2069,9 @@ func TestProposer_DeleteAttsInPool_Aggregated(t *testing.T) {
 	}
 	priv, err := ml_dsa_87.RandKey()
 	require.NoError(t, err)
-	sig := priv.Sign([]byte("foo")).Marshal()
+	lsig2, err := priv.Sign([]byte("foo"))
+	require.NoError(t, err)
+	sig := lsig2.Marshal()
 	aggregatedAtts := []*qrysmpb.Attestation{
 		util.HydrateAttestation(&qrysmpb.Attestation{Data: &qrysmpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10101}, Signatures: [][]byte{sig, sig}}),
 		util.HydrateAttestation(&qrysmpb.Attestation{Data: &qrysmpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11010}, Signatures: [][]byte{sig, sig}})}
@@ -2098,7 +2102,9 @@ func TestProposer_GetSyncAggregate_OK(t *testing.T) {
 	sigsLen := 8
 	sigs := make([][]byte, 0, sigsLen)
 	for i := range sigsLen {
-		sigs = append(sigs, priv.Sign(fmt.Appendf(nil, "foo%d", i)).Marshal())
+		lsig3, err := priv.Sign(fmt.Appendf(nil, "foo%d", i))
+		require.NoError(t, err)
+		sigs = append(sigs, lsig3.Marshal())
 	}
 
 	r := params.BeaconConfig().ZeroHash

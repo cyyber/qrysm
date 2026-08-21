@@ -117,7 +117,9 @@ func TestVerifySelection_NotAnAggregator(t *testing.T) {
 
 	var sig []byte
 	for i := byte(0); ; i++ {
-		candidate := privKeys[0].Sign([]byte{i}).Marshal()
+		lsig1, err := privKeys[0].Sign([]byte{i})
+		require.NoError(t, err)
+		candidate := lsig1.Marshal()
 		committee, err := helpers.BeaconCommitteeFromState(ctx, beaconState, 0, 0)
 		require.NoError(t, err)
 		agg, err := helpers.IsAggregator(uint64(len(committee)), candidate)
@@ -373,7 +375,9 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	assert.NoError(t, err)
 	sigs := make([][]byte, len(attestingIndices))
 	for i, indice := range attestingIndices {
-		sig := privKeys[indice].Sign(hashTreeRoot[:]).Marshal()
+		lsig2, err := privKeys[indice].Sign(hashTreeRoot[:])
+		require.NoError(t, err)
+		sig := lsig2.Marshal()
 		sigs[i] = sig
 	}
 	att.Signatures = sigs
@@ -475,7 +479,9 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	assert.NoError(t, err)
 	sigs := make([][]byte, len(attestingIndices))
 	for i, indice := range attestingIndices {
-		sig := privKeys[indice].Sign(hashTreeRoot[:]).Marshal()
+		lsig3, err := privKeys[indice].Sign(hashTreeRoot[:])
+		require.NoError(t, err)
+		sig := lsig3.Marshal()
 		sigs[i] = sig
 	}
 	att.Signatures = sigs
@@ -592,7 +598,9 @@ func TestValidateAggregateAndProof_BadBlock(t *testing.T) {
 	assert.NoError(t, err)
 	sigs := make([][]byte, len(attestingIndices))
 	for i, indice := range attestingIndices {
-		sig := privKeys[indice].Sign(hashTreeRoot[:]).Marshal()
+		lsig4, err := privKeys[indice].Sign(hashTreeRoot[:])
+		require.NoError(t, err)
+		sig := lsig4.Marshal()
 		sigs[i] = sig
 	}
 	att.Signatures = sigs
@@ -682,7 +690,9 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	assert.NoError(t, err)
 	sigs := make([][]byte, len(attestingIndices))
 	for i, indice := range attestingIndices {
-		sig := privKeys[indice].Sign(hashTreeRoot[:]).Marshal()
+		lsig5, err := privKeys[indice].Sign(hashTreeRoot[:])
+		require.NoError(t, err)
+		sig := lsig5.Marshal()
 		sigs[i] = sig
 	}
 	att.Signatures = sigs

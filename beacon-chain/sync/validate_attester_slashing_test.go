@@ -44,8 +44,12 @@ func setupValidAttesterSlashing(t *testing.T) (*qrysmpb.AttesterSlashing, state.
 	require.NoError(t, err)
 	hashTreeRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
 	assert.NoError(t, err)
-	sig0 := privKeys[0].Sign(hashTreeRoot[:]).Marshal()
-	sig1 := privKeys[1].Sign(hashTreeRoot[:]).Marshal()
+	lsig1, err := privKeys[0].Sign(hashTreeRoot[:])
+	require.NoError(t, err)
+	sig0 := lsig1.Marshal()
+	lsig2, err := privKeys[1].Sign(hashTreeRoot[:])
+	require.NoError(t, err)
+	sig1 := lsig2.Marshal()
 	att1.Signatures = [][]byte{sig0, sig1}
 
 	att2 := util.HydrateIndexedAttestation(&qrysmpb.IndexedAttestation{
@@ -53,8 +57,12 @@ func setupValidAttesterSlashing(t *testing.T) (*qrysmpb.AttesterSlashing, state.
 	})
 	hashTreeRoot, err = signing.ComputeSigningRoot(att2.Data, domain)
 	assert.NoError(t, err)
-	sig0 = privKeys[0].Sign(hashTreeRoot[:]).Marshal()
-	sig1 = privKeys[1].Sign(hashTreeRoot[:]).Marshal()
+	lsig3, err := privKeys[0].Sign(hashTreeRoot[:])
+	require.NoError(t, err)
+	sig0 = lsig3.Marshal()
+	lsig4, err := privKeys[1].Sign(hashTreeRoot[:])
+	require.NoError(t, err)
+	sig1 = lsig4.Marshal()
 	att2.Signatures = [][]byte{sig0, sig1}
 
 	slashing := &qrysmpb.AttesterSlashing{

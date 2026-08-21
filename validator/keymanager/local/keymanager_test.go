@@ -6,8 +6,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/pkg/errors"
 	field_params "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
+	keymock "github.com/theQRL/qrysm/crypto/ml_dsa_87/common/mock"
 	"github.com/theQRL/qrysm/encoding/bytesutil"
 	keystorev1 "github.com/theQRL/qrysm/pkg/go-qrl-wallet-encryptor-keystore"
 	validatorpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1/validator-client"
@@ -193,4 +196,36 @@ func TestCreatePrintoutOfKeys(t *testing.T) {
 			assert.Equal(t, tt.want, CreatePrintoutOfKeys(tt.keys))
 		})
 	}
+}
+
+// Regression test: the hedged ML-DSA-87 signing scheme can fail (e.g. on
+// entropy exhaustion). The keymanager must surface that as an error instead of
+// returning a nil signature with a nil error, which callers would dereference
+// and crash the whole validator client.
+func TestLocalKeymanager_Sign_PropagatesSigningError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	pubKey := make([]byte, field_params.MLDSA87PubkeyLength)
+	pubKey[0] = 0xAA
+	signingErr := errors.New("entropy exhausted")
+	secretKey := keymock.NewMockSecretKey(ctrl)
+	secretKey.EXPECT().Sign(gomock.Any()).Return(nil, signingErr)
+
+	lock.Lock()
+	mlDSA87KeysCache[bytesutil.ToBytes2592(pubKey)] = secretKey
+	lock.Unlock()
+	defer func() {
+		lock.Lock()
+		delete(mlDSA87KeysCache, bytesutil.ToBytes2592(pubKey))
+		lock.Unlock()
+	}()
+
+	km := &Keymanager{}
+	sig, err := km.Sign(context.Background(), &validatorpb.SignRequest{
+		PublicKey:   pubKey,
+		SigningRoot: make([]byte, 32),
+	})
+	require.ErrorContains(t, "entropy exhausted", err)
+	require.Equal(t, true, sig == nil)
 }

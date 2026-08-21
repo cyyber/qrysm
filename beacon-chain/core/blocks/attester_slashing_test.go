@@ -111,8 +111,12 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusZond(t *testing.T) {
 	require.NoError(t, err)
 	signingRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
 	assert.NoError(t, err, "Could not get signing root of beacon block header")
-	sig0 := privKeys[0].Sign(signingRoot[:]).Marshal()
-	sig1 := privKeys[1].Sign(signingRoot[:]).Marshal()
+	lsig1, err := privKeys[0].Sign(signingRoot[:])
+	require.NoError(t, err)
+	sig0 := lsig1.Marshal()
+	lsig2, err := privKeys[1].Sign(signingRoot[:])
+	require.NoError(t, err)
+	sig1 := lsig2.Marshal()
 	att1.Signatures = [][]byte{sig0, sig1}
 
 	att2 := util.HydrateIndexedAttestation(&qrysmpb.IndexedAttestation{
@@ -120,8 +124,12 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusZond(t *testing.T) {
 	})
 	signingRoot, err = signing.ComputeSigningRoot(att2.Data, domain)
 	assert.NoError(t, err, "Could not get signing root of beacon block header")
-	sig0 = privKeys[0].Sign(signingRoot[:]).Marshal()
-	sig1 = privKeys[1].Sign(signingRoot[:]).Marshal()
+	lsig3, err := privKeys[0].Sign(signingRoot[:])
+	require.NoError(t, err)
+	sig0 = lsig3.Marshal()
+	lsig4, err := privKeys[1].Sign(signingRoot[:])
+	require.NoError(t, err)
+	sig1 = lsig4.Marshal()
 	att2.Signatures = [][]byte{sig0, sig1}
 
 	slashings := []*qrysmpb.AttesterSlashing{

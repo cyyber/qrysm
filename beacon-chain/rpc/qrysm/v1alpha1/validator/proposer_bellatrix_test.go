@@ -117,9 +117,11 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		sr, err := signing.ComputeSigningRoot(bid, domain)
 		require.NoError(t, err)
+		lsig1, err := sk.Sign(sr[:])
+		require.NoError(t, err)
 		sBid := &qrysmpb.SignedBuilderBidZond{
 			Message:   bid,
-			Signature: sk.Sign(sr[:]).Marshal(),
+			Signature: lsig1.Marshal(),
 		}
 		vs.BlockBuilder = &builderTest.MockBuilderService{
 			BidZond:       sBid,
@@ -180,9 +182,11 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		sr, err := signing.ComputeSigningRoot(bid, domain)
 		require.NoError(t, err)
+		lsig2, err := sk.Sign(sr[:])
+		require.NoError(t, err)
 		sBid := &qrysmpb.SignedBuilderBidZond{
 			Message:   bid,
-			Signature: sk.Sign(sr[:]).Marshal(),
+			Signature: lsig2.Marshal(),
 		}
 		vs.BlockBuilder = &builderTest.MockBuilderService{
 			BidZond:       sBid,
@@ -307,9 +311,11 @@ func TestServer_getPayloadHeader(t *testing.T) {
 	}
 	srZond, err := signing.ComputeSigningRoot(bidZond, domain)
 	require.NoError(t, err)
+	lsig3, err := sk.Sign(srZond[:])
+	require.NoError(t, err)
 	sBidZond := &qrysmpb.SignedBuilderBidZond{
 		Message:   bidZond,
-		Signature: sk.Sign(srZond[:]).Marshal(),
+		Signature: lsig3.Marshal(),
 	}
 
 	require.NoError(t, err)
@@ -523,9 +529,11 @@ func TestServer_validateBuilderSignature(t *testing.T) {
 	require.NoError(t, err)
 	sr, err := signing.ComputeSigningRoot(bid, domain)
 	require.NoError(t, err)
+	lsig4, err := sk.Sign(sr[:])
+	require.NoError(t, err)
 	pbBid := &qrysmpb.SignedBuilderBidZond{
 		Message:   bid,
-		Signature: sk.Sign(sr[:]).Marshal(),
+		Signature: lsig4.Marshal(),
 	}
 	sBid, err := builder.WrappedSignedBuilderBidZond(pbBid)
 	require.NoError(t, err)

@@ -16,7 +16,8 @@ func TestSignVerify(t *testing.T) {
 	require.NoError(t, err)
 	pub := priv.PublicKey()
 	msg := []byte("hello")
-	sig := priv.Sign(msg)
+	sig, err := priv.Sign(msg)
+	require.NoError(t, err)
 	assert.Equal(t, true, sig.Verify(pub, msg), "Signature did not verify")
 }
 
@@ -26,7 +27,9 @@ func TestVerifySingleSignature_InvalidSignature(t *testing.T) {
 	pub := priv.PublicKey()
 	msgA := [32]byte{'h', 'e', 'l', 'l', 'o'}
 	msgB := [32]byte{'o', 'l', 'l', 'e', 'h'}
-	sigA := priv.Sign(msgA[:]).Marshal()
+	lsig1, err := priv.Sign(msgA[:])
+	require.NoError(t, err)
+	sigA := lsig1.Marshal()
 	valid, err := VerifySignature(sigA, msgB, pub)
 	assert.NoError(t, err)
 	assert.Equal(t, false, valid, "Signature did verify")
@@ -37,7 +40,9 @@ func TestVerifySingleSignature_ValidSignature(t *testing.T) {
 	require.NoError(t, err)
 	pub := priv.PublicKey()
 	msg := [32]byte{'h', 'e', 'l', 'l', 'o'}
-	sig := priv.Sign(msg[:]).Marshal()
+	lsig2, err := priv.Sign(msg[:])
+	require.NoError(t, err)
+	sig := lsig2.Marshal()
 	valid, err := VerifySignature(sig, msg, pub)
 	assert.NoError(t, err)
 	assert.Equal(t, true, valid, "Signature did not verify")
@@ -52,7 +57,9 @@ func TestVerifyMultipleSignatures(t *testing.T) {
 		priv, err := RandKey()
 		require.NoError(t, err)
 		pub := priv.PublicKey()
-		sig := priv.Sign(msg[:]).Marshal()
+		lsig3, err := priv.Sign(msg[:])
+		require.NoError(t, err)
+		sig := lsig3.Marshal()
 		pubkeys[i] = []common.PublicKey{pub}
 		sigs[i] = [][]byte{sig}
 		msgs = append(msgs, msg)
@@ -68,7 +75,9 @@ func TestVerifyMultipleSignatures(t *testing.T) {
 		priv, err := RandKey()
 		require.NoError(t, err)
 		pub := priv.PublicKey()
-		sig := priv.Sign(msg1[:]).Marshal()
+		lsig4, err := priv.Sign(msg1[:])
+		require.NoError(t, err)
+		sig := lsig4.Marshal()
 		pubkeys1 = append(pubkeys1, pub)
 		sigs1 = append(sigs1, sig)
 	}

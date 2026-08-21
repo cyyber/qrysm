@@ -89,7 +89,9 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	hashTreeRoot, err := signing.ComputeSigningRoot(att.Data, attesterDomain)
 	assert.NoError(t, err)
 	for _, i := range attestingIndices {
-		att.Signatures = [][]byte{privKeys[i].Sign(hashTreeRoot[:]).Marshal()}
+		lsig1, err := privKeys[i].Sign(hashTreeRoot[:])
+		require.NoError(t, err)
+		att.Signatures = [][]byte{lsig1.Marshal()}
 	}
 
 	// Arbitrary aggregator index for testing purposes.
@@ -167,9 +169,11 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 
 	priv, err := ml_dsa_87.RandKey()
 	require.NoError(t, err)
+	fooSig, err := priv.Sign([]byte("foo"))
+	require.NoError(t, err)
 	a := &qrysmpb.AggregateAttestationAndProof{
 		Aggregate: &qrysmpb.Attestation{
-			Signatures:      [][]byte{priv.Sign([]byte("foo")).Marshal()},
+			Signatures:      [][]byte{fooSig.Marshal()},
 			AggregationBits: bitfield.Bitlist{0x02},
 			Data:            util.HydrateAttestationData(&qrysmpb.AttestationData{}),
 		},
@@ -212,7 +216,9 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	hashTreeRoot, err := signing.ComputeSigningRoot(att.Data, attesterDomain)
 	assert.NoError(t, err)
 	for _, i := range attestingIndices {
-		att.Signatures = [][]byte{privKeys[i].Sign(hashTreeRoot[:]).Marshal()}
+		lsig3, err := privKeys[i].Sign(hashTreeRoot[:])
+		require.NoError(t, err)
+		att.Signatures = [][]byte{lsig3.Marshal()}
 	}
 
 	// Arbitrary aggregator index for testing purposes.
@@ -293,7 +299,9 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	assert.NoError(t, err)
 	sigs := make([][]byte, len(attestingIndices))
 	for i, indice := range attestingIndices {
-		sig := privKeys[indice].Sign(hashTreeRoot[:]).Marshal()
+		lsig4, err := privKeys[indice].Sign(hashTreeRoot[:])
+		require.NoError(t, err)
+		sig := lsig4.Marshal()
 		sigs[i] = sig
 	}
 	att.Signatures = sigs

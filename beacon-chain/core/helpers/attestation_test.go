@@ -26,7 +26,8 @@ func TestAttestation_IsAggregator(t *testing.T) {
 		beaconState, privKeys := util.DeterministicGenesisStateZond(t, 100)
 		committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, 0, 0)
 		require.NoError(t, err)
-		sig := privKeys[0].Sign([]byte{'A'})
+		sig, err := privKeys[0].Sign([]byte{'A'})
+		require.NoError(t, err)
 		agg, err := helpers.IsAggregator(uint64(len(committee)), sig.Marshal())
 		require.NoError(t, err)
 		assert.Equal(t, true, agg, "Wanted aggregator true")
@@ -43,7 +44,9 @@ func TestAttestation_IsAggregator(t *testing.T) {
 		require.NoError(t, err)
 		var sig []byte
 		for i := 0; i < 256; i++ {
-			candidate := privKeys[0].Sign([]byte{byte(i)}).Marshal()
+			lsig1, err := privKeys[0].Sign([]byte{byte(i)})
+			require.NoError(t, err)
+			candidate := lsig1.Marshal()
 			agg, err := helpers.IsAggregator(uint64(len(committee)), candidate)
 			require.NoError(t, err)
 			if !agg {

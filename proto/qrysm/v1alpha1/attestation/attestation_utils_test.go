@@ -541,8 +541,12 @@ func TestVerifyIndexedAttestationSigs(t *testing.T) {
 		},
 	}, []byte("11111111111111111111111111111111")) // 32 bytes
 	require.NoError(t, err)
-	rawSig0 := sk0.Sign(signingRoot[:]).Marshal()
-	rawSig1 := sk1.Sign(signingRoot[:]).Marshal()
+	lsig1, err := sk0.Sign(signingRoot[:])
+	require.NoError(t, err)
+	rawSig0 := lsig1.Marshal()
+	lsig2, err := sk1.Sign(signingRoot[:])
+	require.NoError(t, err)
+	rawSig1 := lsig2.Marshal()
 
 	type args struct {
 		idxAtt  *qrysmpb.IndexedAttestation

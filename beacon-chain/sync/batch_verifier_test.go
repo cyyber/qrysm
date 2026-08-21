@@ -8,14 +8,17 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/core/signing"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
 	"github.com/theQRL/qrysm/testing/assert"
+	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/testing/util"
 )
 
 func TestValidateWithBatchVerifier(t *testing.T) {
 	_, keys, err := util.DeterministicDepositsAndKeys(10)
 	assert.NoError(t, err)
-	sig := keys[0].Sign(make([]byte, 32))
-	badSig := keys[1].Sign(make([]byte, 32))
+	sig, err := keys[0].Sign(make([]byte, 32))
+	require.NoError(t, err)
+	badSig, err := keys[1].Sign(make([]byte, 32))
+	require.NoError(t, err)
 	validSet := &ml_dsa_87.SignatureBatch{
 		Messages:     [][32]byte{{}},
 		PublicKeys:   [][]ml_dsa_87.PublicKey{{keys[0].PublicKey()}},

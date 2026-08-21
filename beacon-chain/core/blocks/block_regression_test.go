@@ -49,7 +49,9 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 	require.NoError(t, err, "Could not get signing root of beacon block header")
 	var sigs [][]byte
 	for _, index := range setA {
-		sig := privKeys[index].Sign(signingRoot[:]).Marshal()
+		lsig1, err := privKeys[index].Sign(signingRoot[:])
+		require.NoError(t, err)
+		sig := lsig1.Marshal()
 		sigs = append(sigs, sig)
 	}
 	att1.Signatures = sigs
@@ -66,7 +68,9 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 	assert.NoError(t, err, "Could not get signing root of beacon block header")
 	sigs = [][]byte{}
 	for _, index := range setB {
-		sig := privKeys[index].Sign(signingRoot[:]).Marshal()
+		lsig2, err := privKeys[index].Sign(signingRoot[:])
+		require.NoError(t, err)
+		sig := lsig2.Marshal()
 		sigs = append(sigs, sig)
 	}
 	att2.Signatures = sigs

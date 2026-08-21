@@ -108,7 +108,7 @@ func BlockSignature(
 	if err != nil {
 		return nil, err
 	}
-	return privKeys[proposerIdx].Sign(blockRoot[:]), nil
+	return privKeys[proposerIdx].Sign(blockRoot[:])
 }
 
 // Random32Bytes generates a random 32 byte slice.
