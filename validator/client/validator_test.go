@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dgraph-io/ristretto"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -2636,4 +2637,48 @@ func TestValidator_buildSignedRegReqs_TimestampBeforeGenesis(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, 0, len(actual))
+}
+
+// Regression test for the qrysm port of upstream PR #13263: domainData must
+// not hold an exclusive lock across the DomainData RPC. This exercises the
+// read-locked fast path and the double-checked write path under heavy
+// concurrency; run with -race to catch lock misuse.
+func TestDomainData_Concurrent(t *testing.T) {
+	v, m, validatorKey, finish := setup(t)
+	defer finish()
+	_ = validatorKey
+
+	cache, err := ristretto.NewCache(&ristretto.Config{
+		NumCounters: 1920,
+		MaxCost:     192,
+		BufferItems: 64,
+	})
+	require.NoError(t, err)
+	v.domainDataCache = cache
+
+	m.validatorClient.EXPECT().DomainData(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&qrysmpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil).AnyTimes()
+
+	var wg sync.WaitGroup
+	for i := 0; i < 16; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			for j := 0; j < 20; j++ {
+				// Mix a shared epoch (cache hits after warmup) with unique
+				// epochs (cache misses that go through the write lock).
+				epoch := primitives.Epoch(i % 4)
+				if j%2 == 0 {
+					epoch = primitives.Epoch(1000 + i*100 + j)
+				}
+				res, err := v.domainData(context.Background(), epoch, params.BeaconConfig().DomainBeaconAttester[:])
+				require.NoError(t, err)
+				require.NotNil(t, res)
+				require.Equal(t, 32, len(res.SignatureDomain))
+			}
+		}(i)
+	}
+	wg.Wait()
 }
