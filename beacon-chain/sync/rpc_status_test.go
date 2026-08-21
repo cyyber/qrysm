@@ -346,7 +346,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		out := &qrysmpb.Status{}
 		assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, out))
 		log.WithField("status", out).Warn("received status")
-		resp := &qrysmpb.Status{HeadSlot: 100, HeadRoot: make([]byte, 32), ForkDigest: p2.Digest[:],
+		resp := &qrysmpb.Status{HeadSlot: 0, HeadRoot: make([]byte, 32), ForkDigest: p2.Digest[:],
 			FinalizedRoot: finalizedRoot[:], FinalizedEpoch: 0}
 		_, err := stream.Write([]byte{responseCodeSuccess})
 		assert.NoError(t, err)
@@ -913,9 +913,49 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 		FinalizedRoot:  params.BeaconConfig().ZeroHash[:],
 		FinalizedEpoch: 0,
 		HeadRoot:       headRoot[:],
-		HeadSlot:       111,
+		HeadSlot:       0,
 	})
 	require.NoError(t, err)
+}
+
+// Regression test for the peer-scoring DoS: a status reporting a head slot far
+// beyond our current slot must be rejected as an invalid request, so a peer
+// cannot inflate the peer-status score denominator (upstream PR #16915).
+func TestStatusRPC_RejectsFutureHeadSlot(t *testing.T) {
+	ctx := context.Background()
+	chain := &mock.ChainService{
+		FinalizedCheckPoint: &qrysmpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]},
+		Fork: &qrysmpb.Fork{
+			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+		},
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{'A'},
+	}
+	r := &Service{
+		cfg: &config{
+			chain: chain,
+			clock: startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+		},
+		ctx: ctx,
+	}
+	digest, err := r.currentForkDigest()
+	require.NoError(t, err)
+
+	status := func(headSlot primitives.Slot) *qrysmpb.Status {
+		return &qrysmpb.Status{
+			ForkDigest:     digest[:],
+			FinalizedRoot:  params.BeaconConfig().ZeroHash[:],
+			FinalizedEpoch: 0,
+			HeadRoot:       make([]byte, 32),
+			HeadSlot:       headSlot,
+		}
+	}
+
+	// Within the allowance (currentSlot ~0, so slot 1 is accepted).
+	require.NoError(t, r.validateStatusMessage(r.ctx, status(1)))
+	// Beyond the allowance is rejected as an invalid request.
+	require.ErrorIs(t, r.validateStatusMessage(r.ctx, status(100)), p2ptypes.ErrInvalidRequest)
 }
 
 func TestShouldResync(t *testing.T) {

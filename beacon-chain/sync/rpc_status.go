@@ -25,6 +25,10 @@ import (
 	"github.com/theQRL/qrysm/time/slots"
 )
 
+// maxFutureStatusHeadSlot is the number of slots a peer's reported head slot may
+// lead our current slot before the status is rejected as invalid.
+const maxFutureStatusHeadSlot = 1
+
 // maintainPeerStatuses by infrequently polling peers for their latest status.
 func (s *Service) maintainPeerStatuses() {
 	// Run twice per epoch.
@@ -286,6 +290,9 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 }
 
 func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) error {
+	if msg.HeadSlot > s.cfg.clock.CurrentSlot()+maxFutureStatusHeadSlot {
+		return errors.Wrap(p2ptypes.ErrInvalidRequest, "head slot too far in the future")
+	}
 	forkDigest, err := s.currentForkDigest()
 	if err != nil {
 		return err
