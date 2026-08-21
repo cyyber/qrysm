@@ -41,20 +41,12 @@ func main() {
 	}
 }
 
-func mustAddress(s string) common.Address {
-	addr, err := common.NewAddressFromString(s)
-	if err != nil {
-		panic(err) // lint:nopanic
-	}
-	return addr
-}
-
 func runit() error {
 	a := program.NewProgram()
 	b := program.NewProgram()
 
-	aAddr := mustAddress("Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567000000000000000000000000000000000000ff0a")
-	bAddr := mustAddress("Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567000000000000000000000000000000000000ff0b")
+	aAddr := common.MustParseAddress("Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567000000000000000000000000000000000000ff0a")
+	bAddr := common.MustParseAddress("Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567000000000000000000000000000000000000ff0b")
 
 	dest := a.Jumpdest()
 	a.Call(nil, bAddr, nil, 0, 0, 0, 0)
@@ -93,7 +85,7 @@ func runit() error {
 	//----------
 	var (
 		statedb, _ = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
-		sender     = mustAddress("Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567000000000000000000000000000000000000feed")
+		sender     = common.MustParseAddress("Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567000000000000000000000000000000000000feed")
 	)
 	for addr, acc := range alloc {
 		statedb.CreateAccount(addr)

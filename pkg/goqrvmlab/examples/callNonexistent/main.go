@@ -42,14 +42,6 @@ func main() {
 	}
 }
 
-func mustAddress(s string) common.Address {
-	addr, err := common.NewAddressFromString(s)
-	if err != nil {
-		panic(err) // lint:nopanic
-	}
-	return addr
-}
-
 func staticCallAttack() []byte {
 	// Causes 13928 staticcalls
 	//30          39521949 ns/op // 39 ms
@@ -74,7 +66,7 @@ func staticCallAttack() []byte {
 func runit() error {
 	code := staticCallAttack()
 
-	aAddr := mustAddress("Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567000000000000000000000000000000000000ff0a")
+	aAddr := common.MustParseAddress("Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567000000000000000000000000000000000000ff0a")
 	alloc := make(core.GenesisAlloc)
 	alloc[aAddr] = core.GenesisAccount{
 		Nonce:   0,
@@ -84,7 +76,7 @@ func runit() error {
 	var err error
 	var (
 		statedb, _ = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
-		sender     = mustAddress("Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567000000000000000000000000000000000000feed")
+		sender     = common.MustParseAddress("Q0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567000000000000000000000000000000000000feed")
 	)
 	for addr, acc := range alloc {
 		statedb.CreateAccount(addr)
