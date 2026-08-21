@@ -624,6 +624,43 @@ func TestService_IsOptimisticForRoot_DB_non_canonical(t *testing.T) {
 
 }
 
+// Regression test for upstream PR #16969: when the validated checkpoint's
+// state summary is missing, recovery must use the checkpoint root, not the
+// queried root, so the optimism slot comparison is done against the correct
+// summary.
+func TestService_IsOptimisticForRoot_RecoverLastValidated(t *testing.T) {
+	beaconDB := testDB.SetupDB(t)
+	ctx := context.Background()
+	c := &Service{cfg: &config{BeaconDB: beaconDB, ForkChoiceStore: doublylinkedtree.New()}, head: &head{root: params.BeaconConfig().ZeroHash}}
+
+	cpBlock := util.NewBeaconBlockZond()
+	cpBlock.Block.Slot = 1
+	cpRoot, err := cpBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	util.SaveBlock(t, ctx, beaconDB, cpBlock)
+	// Save a full state (not a summary) for the checkpoint root so the
+	// checkpoint save below does not create a summary on its own — the summary
+	// must be absent at query time to exercise the recovery path.
+	st, err := util.NewBeaconStateZond()
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveState(ctx, st, cpRoot))
+	require.NoError(t, beaconDB.SaveLastValidatedCheckpoint(ctx, &qrysmpb.Checkpoint{Root: cpRoot[:]}))
+
+	// The queried block is canonical and one slot past the validated
+	// checkpoint, so it must be reported as optimistic.
+	qBlock := util.NewBeaconBlockZond()
+	qBlock.Block.Slot = 2
+	qRoot, err := qBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	util.SaveBlock(t, ctx, beaconDB, qBlock)
+	require.NoError(t, beaconDB.SaveStateSummary(ctx, &qrysmpb.StateSummary{Root: qRoot[:], Slot: 2}))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, qRoot))
+
+	optimistic, err := c.IsOptimisticForRoot(ctx, qRoot)
+	require.NoError(t, err)
+	require.Equal(t, true, optimistic)
+}
+
 func TestService_IsOptimisticForRoot_StateSummaryRecovered(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()
@@ -634,6 +671,9 @@ func TestService_IsOptimisticForRoot_StateSummaryRecovered(t *testing.T) {
 	br, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	util.SaveBlock(t, context.Background(), beaconDB, b)
+	cpRoot := [32]byte{'v'}
+	require.NoError(t, beaconDB.SaveStateSummary(ctx, &qrysmpb.StateSummary{Root: cpRoot[:], Slot: 0}))
+	require.NoError(t, beaconDB.SaveLastValidatedCheckpoint(ctx, &qrysmpb.Checkpoint{Root: cpRoot[:]}))
 	_, err = c.IsOptimisticForRoot(ctx, br)
 	assert.NoError(t, err)
 	summ, err := beaconDB.StateSummary(ctx, br)
