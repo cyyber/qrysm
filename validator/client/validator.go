@@ -498,7 +498,7 @@ func (v *validator) CheckDoppelGanger(ctx context.Context) error {
 			&qrysmpb.DoppelGangerRequest_ValidatorRequest{
 				PublicKey:  r.PubKey[:],
 				Epoch:      r.Target,
-				SignedRoot: r.SigningRoot[:],
+				SignedRoot: r.SigningRoot,
 			})
 	}
 	resp, err := v.validatorClient.CheckDoppelGanger(ctx, req)
