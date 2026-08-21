@@ -340,9 +340,10 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.Beacon
 		if err := helpers.UpdateCommitteeCache(slotCtx, st, ep+1); err != nil {
 			log.WithError(err).Warn("Could not update committee cache")
 		}
-		if err := helpers.UpdateProposerIndicesInCache(slotCtx, st, ep+1); err != nil {
-			log.WithError(err).Warn("Failed to cache next epoch proposers")
-		}
+		// The proposer-indices cache for epoch ep+1 is intentionally not warmed
+		// here: its key is the state root at the end of epoch ep, a future slot
+		// not yet recorded in this state, so precomputing it could only cache
+		// under the wrong key. It is populated on demand once that root exists.
 	}(e)
 	return nil
 }

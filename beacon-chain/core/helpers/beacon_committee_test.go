@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 	"github.com/theQRL/go-bitfield"
 	"github.com/theQRL/qrysm/beacon-chain/core/time"
 	state_native "github.com/theQRL/qrysm/beacon-chain/state/state-native"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/container/slice"
@@ -732,4 +734,71 @@ func TestPrecomputeProposerIndices_Ok(t *testing.T) {
 		wantedProposerIndices = append(wantedProposerIndices, index)
 	}
 	assert.DeepEqual(t, wantedProposerIndices, proposerIndices, "Did not precompute proposer indices correctly")
+}
+
+// TestUpdateProposerIndicesInCache_SkipsFutureEpoch is a regression test for
+// proposer-indices cache poisoning. Calling UpdateProposerIndicesInCache for an
+// epoch beyond the state's current epoch must not write proposer indices under
+// the stale, wrapped-around state root, which is a different epoch's canonical
+// cache key. Mirrors the intent of upstream PR #13385.
+func TestUpdateProposerIndicesInCache_SkipsFutureEpoch(t *testing.T) {
+	ClearCache()
+	defer ClearCache()
+
+	validators := make([]*qrysmpb.Validator, 256)
+	for i := range validators {
+		validators[i] = &qrysmpb.Validator{
+			ActivationEpoch:  0,
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+		}
+	}
+	// Populate every historical state root with a distinct non-zero value so the
+	// pre-fix wrapped-around lookup would return a real (stale) key rather than
+	// the zero hash, which the code already skips.
+	stateRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	for i := range stateRoots {
+		r := make([]byte, fieldparams.RootLength)
+		r[0] = byte(i%255 + 1)
+		r[1] = byte(i/255 + 1)
+		stateRoots[i] = r
+	}
+	mixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)
+	for i := range mixes {
+		mixes[i] = make([]byte, fieldparams.RootLength)
+	}
+	st, err := state_native.InitializeFromProtoZond(&qrysmpb.BeaconStateZond{
+		Validators:  validators,
+		StateRoots:  stateRoots,
+		BlockRoots:  make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot),
+		RandaoMixes: mixes,
+	})
+	require.NoError(t, err)
+
+	// Advance to the start of epoch 8 (slot 1024). For the next epoch (9) the key
+	// slot is EpochEnd(8)=1151, a future slot whose buffer index (1151%1024=127)
+	// still holds the stale root from slot 127.
+	stateEpoch := primitives.Epoch(8)
+	stateSlot, err := slots.EpochStart(stateEpoch)
+	require.NoError(t, err)
+	require.NoError(t, st.SetSlot(stateSlot))
+
+	futureEpoch := stateEpoch + 1
+	keySlot, err := slots.EpochEnd(futureEpoch - 1)
+	require.NoError(t, err)
+	staleKey, err := st.StateRootAtIndex(uint64(keySlot % params.BeaconConfig().SlotsPerHistoricalRoot))
+	require.NoError(t, err)
+	// Precondition: the wrapped lookup the pre-fix code used returns a real key.
+	require.Equal(t, false, bytes.Equal(staleKey, params.BeaconConfig().ZeroHash[:]))
+
+	// Caching a future epoch must be a no-op, not a poisoning write.
+	require.NoError(t, UpdateProposerIndicesInCache(context.Background(), st, futureEpoch))
+	has, err := proposerIndicesCache.HasProposerIndices(bytesutil.ToBytes32(staleKey))
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+	require.Equal(t, 0, proposerIndicesCache.Len())
+
+	// Sanity: caching the current epoch (whose key slot is in the past) still works.
+	require.NoError(t, UpdateProposerIndicesInCache(context.Background(), st, stateEpoch))
+	require.Equal(t, 1, proposerIndicesCache.Len())
 }

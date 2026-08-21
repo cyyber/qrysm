@@ -136,9 +136,9 @@ func TestFillForkChoiceMissingBlocks_CanSave(t *testing.T) {
 	// the parent of the last block inserted is the tree node.
 	fcp := &qrysmpb.Checkpoint{Epoch: 0, Root: service.originBlockRoot[:]}
 	r0 := bytesutil.ToBytes32(roots[0])
-	state, blkRoot, err := prepareForkchoiceState(ctx, 0, r0, service.originBlockRoot, [32]byte{}, fcp, fcp)
+	st, blkRoot, err := prepareForkchoiceState(ctx, 0, r0, service.originBlockRoot, [32]byte{}, fcp, fcp)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 	fcp2 := &forkchoicetypes.Checkpoint{Epoch: 0, Root: r0}
 	require.NoError(t, service.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(fcp2))
 
@@ -179,9 +179,9 @@ func TestFillForkChoiceMissingBlocks_RootsMatch(t *testing.T) {
 	// the parent of the last block inserted is the tree node.
 	fcp := &qrysmpb.Checkpoint{Epoch: 0, Root: service.originBlockRoot[:]}
 	r0 := bytesutil.ToBytes32(roots[0])
-	state, blkRoot, err := prepareForkchoiceState(ctx, 0, r0, service.originBlockRoot, [32]byte{}, fcp, fcp)
+	st, blkRoot, err := prepareForkchoiceState(ctx, 0, r0, service.originBlockRoot, [32]byte{}, fcp, fcp)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 	fcp2 := &forkchoicetypes.Checkpoint{Epoch: 0, Root: r0}
 	require.NoError(t, service.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(fcp2))
 
@@ -278,7 +278,7 @@ func TestFillForkChoiceMissingBlocks_FinalizedSibling(t *testing.T) {
 
 	err = service.fillInForkChoiceMissingBlocks(
 		context.Background(), wsb.Block(), beaconState.FinalizedCheckpoint(), beaconState.CurrentJustifiedCheckpoint())
-	require.Equal(t, ErrNotDescendantOfFinalized.Error(), err.Error())
+	require.ErrorIs(t, err, ErrNotDescendantOfFinalized)
 }
 
 // blockTree1 constructs the following tree:
@@ -1004,6 +1004,10 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 		var wg sync.WaitGroup
 		wg.Add(4)
+		// postBlockProcess requires its caller to hold the forkchoice lock, as
+		// ReceiveBlock does in production; the extra test-local mutex mirrors
+		// upstream and keeps the goroutine tails serialized.
+		var lock sync.Mutex
 		go func() {
 			preState, err := service.getBlockPreState(ctx, wsb1.Block())
 			require.NoError(t, err)
@@ -1011,7 +1015,11 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 			require.NoError(t, err)
 			roblock, err := consensusblocks.NewROBlockWithRoot(wsb1, r1)
 			require.NoError(t, err)
+			lock.Lock()
+			service.cfg.ForkChoiceStore.Lock()
 			require.NoError(t, service.postBlockProcess(ctx, roblock, postState, true))
+			service.cfg.ForkChoiceStore.Unlock()
+			lock.Unlock()
 			wg.Done()
 		}()
 		go func() {
@@ -1021,7 +1029,11 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 			require.NoError(t, err)
 			roblock, err := consensusblocks.NewROBlockWithRoot(wsb2, r2)
 			require.NoError(t, err)
+			lock.Lock()
+			service.cfg.ForkChoiceStore.Lock()
 			require.NoError(t, service.postBlockProcess(ctx, roblock, postState, true))
+			service.cfg.ForkChoiceStore.Unlock()
+			lock.Unlock()
 			wg.Done()
 		}()
 		go func() {
@@ -1031,7 +1043,11 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 			require.NoError(t, err)
 			roblock, err := consensusblocks.NewROBlockWithRoot(wsb3, r3)
 			require.NoError(t, err)
+			lock.Lock()
+			service.cfg.ForkChoiceStore.Lock()
 			require.NoError(t, service.postBlockProcess(ctx, roblock, postState, true))
+			service.cfg.ForkChoiceStore.Unlock()
+			lock.Unlock()
 			wg.Done()
 		}()
 		go func() {
@@ -1041,7 +1057,11 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 			require.NoError(t, err)
 			roblock, err := consensusblocks.NewROBlockWithRoot(wsb4, r4)
 			require.NoError(t, err)
+			lock.Lock()
+			service.cfg.ForkChoiceStore.Lock()
 			require.NoError(t, service.postBlockProcess(ctx, roblock, postState, true))
+			service.cfg.ForkChoiceStore.Unlock()
+			lock.Unlock()
 			wg.Done()
 		}()
 		wg.Wait()

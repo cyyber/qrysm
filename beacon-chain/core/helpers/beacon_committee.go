@@ -356,9 +356,17 @@ func UpdateProposerIndicesInCache(ctx context.Context, state state.ReadOnlyBeaco
 	if err != nil {
 		return err
 	}
-	r, err := state.StateRootAtIndex(uint64(s % params.BeaconConfig().SlotsPerHistoricalRoot))
+	// StateRootAtSlot is bounds-checked: it errors when s is at or beyond the
+	// state's own slot (i.e. a future epoch) rather than wrapping around the
+	// circular state_roots buffer and returning a stale root from
+	// SlotsPerHistoricalRoot slots earlier. That wraparound would cache these
+	// proposer indices under a different epoch's canonical key and corrupt
+	// later lookups. Using StateRootAtSlot keeps this write key consistent with
+	// the read path in BeaconProposerIndexAtSlot; an out-of-range epoch simply
+	// skips the cache update.
+	r, err := StateRootAtSlot(state, s)
 	if err != nil {
-		return err
+		return nil
 	}
 	// Skip cache update if we have an invalid key
 	if r == nil || bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
