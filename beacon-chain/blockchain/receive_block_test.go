@@ -8,11 +8,13 @@ import (
 
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	blockchainTesting "github.com/theQRL/qrysm/beacon-chain/blockchain/testing"
+	statefeed "github.com/theQRL/qrysm/beacon-chain/core/feed/state"
 	"github.com/theQRL/qrysm/beacon-chain/operations/voluntaryexits"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/blocks"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/encoding/bytesutil"
+	qrlpb "github.com/theQRL/qrysm/proto/qrl/v1"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
@@ -349,4 +351,72 @@ func TestCheckSaveHotStateDB_Overflow(t *testing.T) {
 
 	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
 	assert.LogsDoNotContain(t, hook, "Entering mode to save hot states in DB")
+}
+
+// Regression test (upstream prysm #13842): the finalized_checkpoint event must
+// carry the state root of the *finalized* block, not the state root of the
+// block whose processing triggered finalization.
+func Test_sendNewFinalizedEvent(t *testing.T) {
+	s, _ := minimalTestService(t)
+	notifier := &blockchainTesting.MockStateNotifier{RecordEvents: true}
+	s.cfg.StateNotifier = notifier
+
+	// The finalized block, stored in the DB, whose state root the event must report.
+	finalizedSt, err := util.NewBeaconStateZond()
+	require.NoError(t, err)
+	finalizedStRoot, err := finalizedSt.HashTreeRoot(s.ctx)
+	require.NoError(t, err)
+	b := util.NewBeaconBlockZond()
+	b.Block.StateRoot = finalizedStRoot[:]
+	sbb, err := blocks.NewSignedBeaconBlock(b)
+	require.NoError(t, err)
+	sbbRoot, err := sbb.Block().HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, s.cfg.BeaconDB.SaveBlock(s.ctx, sbb))
+
+	// The post state of the block that triggered finalization. It points at the
+	// finalized block via its finalized checkpoint but has a different state root.
+	st, err := util.NewBeaconStateZond()
+	require.NoError(t, err)
+	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*200))
+	require.NoError(t, st.SetFinalizedCheckpoint(&qrysmpb.Checkpoint{
+		Epoch: 123,
+		Root:  sbbRoot[:],
+	}))
+	triggeringStRoot, err := st.HashTreeRoot(s.ctx)
+	require.NoError(t, err)
+	require.NotEqual(t, finalizedStRoot, triggeringStRoot, "test setup: state roots must differ")
+
+	s.sendNewFinalizedEvent(s.ctx, st)
+
+	require.Equal(t, 1, len(notifier.ReceivedEvents()))
+	e := notifier.ReceivedEvents()[0]
+	assert.Equal(t, statefeed.FinalizedCheckpoint, int(e.Type))
+	fc, ok := e.Data.(*qrlpb.EventFinalizedCheckpoint)
+	require.Equal(t, true, ok, "event has wrong data type")
+	assert.Equal(t, primitives.Epoch(123), fc.Epoch)
+	assert.DeepEqual(t, sbbRoot[:], fc.Block)
+	assert.DeepEqual(t, finalizedStRoot[:], fc.State)
+	assert.Equal(t, false, fc.ExecutionOptimistic)
+}
+
+// If the finalized block cannot be found, no event is emitted (rather than
+// emitting one with a bogus state root).
+func Test_sendNewFinalizedEvent_UnknownFinalizedBlock(t *testing.T) {
+	hook := logTest.NewGlobal()
+	s, _ := minimalTestService(t)
+	notifier := &blockchainTesting.MockStateNotifier{RecordEvents: true}
+	s.cfg.StateNotifier = notifier
+
+	st, err := util.NewBeaconStateZond()
+	require.NoError(t, err)
+	require.NoError(t, st.SetFinalizedCheckpoint(&qrysmpb.Checkpoint{
+		Epoch: 123,
+		Root:  bytesutil.PadTo([]byte("missing"), 32),
+	}))
+
+	s.sendNewFinalizedEvent(s.ctx, st)
+
+	require.Equal(t, 0, len(notifier.ReceivedEvents()))
+	assert.LogsContain(t, hook, "Could not retrieve block for finalized checkpoint root")
 }

@@ -138,7 +138,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	// Send finalized events and finalized deposits in the background
 	if newFinalized {
 		finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
-		go s.sendNewFinalizedEvent(blockCopy, postState)
+		go s.sendNewFinalizedEvent(ctx, postState)
 		depCtx, cancel := context.WithTimeout(context.Background(), depositDeadline)
 		go func() {
 			s.insertFinalizedDeposits(depCtx, finalized.Root)
@@ -392,8 +392,12 @@ func (s *Service) reportEpochMetrics(postState state.BeaconState, prevEpoch prim
 }
 
 // sendNewFinalizedEvent sends a new finalization checkpoint event over the
-// event feed. It needs to be called on the background
-func (s *Service) sendNewFinalizedEvent(signed interfaces.ReadOnlySignedBeaconBlock, postState state.BeaconState) {
+// event feed. It needs to be called on the background.
+//
+// The event's state root must be the state root of the *finalized* block, not
+// of the block whose processing triggered finalization: consumers of the
+// finalized_checkpoint SSE use it to address the finalized state.
+func (s *Service) sendNewFinalizedEvent(ctx context.Context, postState state.BeaconState) {
 	isValidPayload := false
 	s.headLock.RLock()
 	if s.head != nil {
@@ -401,8 +405,16 @@ func (s *Service) sendNewFinalizedEvent(signed interfaces.ReadOnlySignedBeaconBl
 	}
 	s.headLock.RUnlock()
 
+	finalizedRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
+	blk, err := s.getBlock(ctx, finalizedRoot)
+	if err != nil {
+		log.WithError(err).WithField("root", fmt.Sprintf("%#x", finalizedRoot)).
+			Error("Could not retrieve block for finalized checkpoint root. Finalized event will not be emitted")
+		return
+	}
+	stateRoot := blk.Block().StateRoot()
+
 	// Send an event regarding the new finalized checkpoint over a common event feed.
-	stateRoot := signed.Block().StateRoot()
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.FinalizedCheckpoint,
 		Data: &qrlpb.EventFinalizedCheckpoint{
