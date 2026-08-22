@@ -12,6 +12,7 @@ import (
 	testDB "github.com/theQRL/qrysm/beacon-chain/db/testing"
 	doublylinkedtree "github.com/theQRL/qrysm/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/theQRL/qrysm/beacon-chain/forkchoice/types"
+	"github.com/theQRL/qrysm/beacon-chain/state"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/blocks"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
@@ -48,9 +49,9 @@ func TestSaveHead_Different(t *testing.T) {
 	require.NoError(t, err)
 	ojc := &qrysmpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &qrysmpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	state, blkRoot, err := prepareForkchoiceState(ctx, oldBlock.Block().Slot(), oldRoot, oldBlock.Block().ParentRoot(), [32]byte{}, ojc, ofc)
+	st, blkRoot, err := prepareForkchoiceState(ctx, oldBlock.Block().Slot(), oldRoot, oldBlock.Block().ParentRoot(), [32]byte{}, ojc, ofc)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 	service.head = &head{
 		root:  oldRoot,
 		block: oldBlock,
@@ -63,13 +64,13 @@ func TestSaveHead_Different(t *testing.T) {
 	wsb := util.SaveBlock(t, context.Background(), service.cfg.BeaconDB, newHeadSignedBlock)
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
-	state, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot()-1, wsb.Block().ParentRoot(), service.cfg.ForkChoiceStore.CachedHeadRoot(), [32]byte{}, ojc, ofc)
+	st, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot()-1, wsb.Block().ParentRoot(), service.cfg.ForkChoiceStore.CachedHeadRoot(), [32]byte{}, ojc, ofc)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 
-	state, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot(), newRoot, wsb.Block().ParentRoot(), [32]byte{}, ojc, ofc)
+	st, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot(), newRoot, wsb.Block().ParentRoot(), [32]byte{}, ojc, ofc)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 	headState, err := util.NewBeaconStateZond()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(1))
@@ -101,18 +102,18 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	require.NoError(t, err)
 	ojc := &qrysmpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &qrysmpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	state, blkRoot, err := prepareForkchoiceState(ctx, oldBlock.Block().Slot(), oldRoot, oldBlock.Block().ParentRoot(), [32]byte{}, ojc, ofc)
+	st, blkRoot, err := prepareForkchoiceState(ctx, oldBlock.Block().Slot(), oldRoot, oldBlock.Block().ParentRoot(), [32]byte{}, ojc, ofc)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 	service.head = &head{
 		root:  oldRoot,
 		block: oldBlock,
 	}
 
 	reorgChainParent := [32]byte{'B'}
-	state, blkRoot, err = prepareForkchoiceState(ctx, 0, reorgChainParent, oldRoot, oldBlock.Block().ParentRoot(), ojc, ofc)
+	st, blkRoot, err = prepareForkchoiceState(ctx, 0, reorgChainParent, oldRoot, oldBlock.Block().ParentRoot(), ojc, ofc)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 
 	newHeadSignedBlock := util.NewBeaconBlockZond()
 	newHeadSignedBlock.Block.Slot = 1
@@ -122,9 +123,9 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	wsb := util.SaveBlock(t, context.Background(), service.cfg.BeaconDB, newHeadSignedBlock)
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
-	state, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot(), newRoot, wsb.Block().ParentRoot(), [32]byte{}, ojc, ofc)
+	st, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot(), newRoot, wsb.Block().ParentRoot(), [32]byte{}, ojc, ofc)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 	headState, err := util.NewBeaconStateZond()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(1))
@@ -306,6 +307,95 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 		assert.DeepEqual(t, genesisRoot[:], eventHead.PreviousDutyDependentRoot)
 		assert.DeepEqual(t, genesisRoot[:], eventHead.CurrentDutyDependentRoot)
 	})
+	// Regression (upstream #17058): the genesis block has no parent, so the
+	// forkchoice parent-slot lookup cannot succeed. The head event must still
+	// be emitted, reporting an epoch transition, instead of failing with
+	// "could not obtain parent slot in forkchoice".
+	t.Run("zero_head_slot", func(t *testing.T) {
+		bState, _ := util.DeterministicGenesisStateZond(t, 10)
+		notifier := &mock.MockStateNotifier{RecordEvents: true}
+		srv := &Service{
+			cfg: &config{
+				StateNotifier:   notifier,
+				ForkChoiceStore: doublylinkedtree.New(),
+			},
+			originBlockRoot: [32]byte{1},
+		}
+		// Nothing is inserted into forkchoice: the genesis parent (zero root)
+		// is unknown to it.
+		newHeadStateRoot := [32]byte{2}
+		newHeadRoot := [32]byte{3}
+		require.NoError(t, srv.notifyNewHeadEvent(ctx, 0, bState, newHeadStateRoot[:], newHeadRoot[:]))
+		events := notifier.ReceivedEvents()
+		require.Equal(t, 1, len(events))
+
+		eventHead, ok := events[0].Data.(*qrlpb.EventHead)
+		require.Equal(t, true, ok)
+		wanted := &qrlpb.EventHead{
+			Slot:                      0,
+			Block:                     newHeadRoot[:],
+			State:                     newHeadStateRoot[:],
+			EpochTransition:           true,
+			PreviousDutyDependentRoot: srv.originBlockRoot[:],
+			CurrentDutyDependentRoot:  srv.originBlockRoot[:],
+		}
+		require.DeepSSZEqual(t, wanted, eventHead)
+	})
+	// Regression: when the head is the forkchoice tree root (finalized or
+	// checkpoint-sync origin block), its parent has been pruned from forkchoice.
+	// The head event must still be emitted, with EpochTransition derived from
+	// the head state's block roots.
+	t.Run("parent_pruned_from_forkchoice", func(t *testing.T) {
+		spe := params.BeaconConfig().SlotsPerEpoch
+		newHeadSlot := spe + 2
+		setup := func(t *testing.T, parentRoot, prevEpochLastRoot [32]byte) (*Service, *mock.MockStateNotifier, state.BeaconState) {
+			t.Helper()
+			bState, _ := util.DeterministicGenesisStateZond(t, 10)
+			notifier := &mock.MockStateNotifier{RecordEvents: true}
+			srv := &Service{
+				cfg: &config{
+					StateNotifier:   notifier,
+					ForkChoiceStore: doublylinkedtree.New(),
+				},
+				originBlockRoot: [32]byte{1},
+			}
+			// The parent is deliberately NOT inserted into forkchoice.
+			hdr := bState.LatestBlockHeader()
+			hdr.ParentRoot = parentRoot[:]
+			require.NoError(t, bState.SetLatestBlockHeader(hdr))
+			require.NoError(t, bState.SetSlot(newHeadSlot))
+			// Record the root of the last block before the head's epoch, as a
+			// real post-state would have it.
+			require.NoError(t, bState.UpdateBlockRootAtIndex(uint64(spe-1), prevEpochLastRoot))
+			return srv, notifier, bState
+		}
+		emit := func(t *testing.T, srv *Service, notifier *mock.MockStateNotifier, bState state.BeaconState) *qrlpb.EventHead {
+			t.Helper()
+			newHeadStateRoot := [32]byte{2}
+			newHeadRoot := [32]byte{3}
+			require.NoError(t, srv.notifyNewHeadEvent(ctx, newHeadSlot, bState, newHeadStateRoot[:], newHeadRoot[:]))
+			events := notifier.ReceivedEvents()
+			require.Equal(t, 1, len(events))
+			eventHead, ok := events[0].Data.(*qrlpb.EventHead)
+			require.Equal(t, true, ok)
+			return eventHead
+		}
+
+		t.Run("parent_in_previous_epoch", func(t *testing.T) {
+			// Parent is the last block of epoch 0 (slots spe..spe+1 skipped),
+			// so it is the block root recorded at slot spe-1.
+			parentRoot := [32]byte{0xAA}
+			srv, notifier, bState := setup(t, parentRoot, parentRoot)
+			require.Equal(t, true, emit(t, srv, notifier, bState).EpochTransition)
+		})
+		t.Run("parent_in_same_epoch", func(t *testing.T) {
+			// Parent is at slot spe+1 (same epoch as the head); the block at
+			// slot spe-1 is some earlier ancestor.
+			parentRoot := [32]byte{0xBB}
+			srv, notifier, bState := setup(t, parentRoot, [32]byte{0xCC})
+			require.Equal(t, false, emit(t, srv, notifier, bState).EpochTransition)
+		})
+	})
 }
 
 func TestRetrieveHead_ReadOnly(t *testing.T) {
@@ -330,13 +420,13 @@ func TestRetrieveHead_ReadOnly(t *testing.T) {
 	wsb := util.SaveBlock(t, context.Background(), service.cfg.BeaconDB, newHeadSignedBlock)
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
-	state, blkRoot, err := prepareForkchoiceState(ctx, wsb.Block().Slot()-1, wsb.Block().ParentRoot(), service.cfg.ForkChoiceStore.CachedHeadRoot(), [32]byte{}, ojc, ofc)
+	st, blkRoot, err := prepareForkchoiceState(ctx, wsb.Block().Slot()-1, wsb.Block().ParentRoot(), service.cfg.ForkChoiceStore.CachedHeadRoot(), [32]byte{}, ojc, ofc)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 
-	state, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot(), newRoot, wsb.Block().ParentRoot(), [32]byte{}, ojc, ofc)
+	st, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot(), newRoot, wsb.Block().ParentRoot(), [32]byte{}, ojc, ofc)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 	headState, err := util.NewBeaconStateZond()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(1))
@@ -396,9 +486,9 @@ func TestSaveOrphanedAtts(t *testing.T) {
 	for _, blk := range []*qrysmpb.SignedBeaconBlockZond{blkG, blk1, blk2, blk3, blk4} {
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
+		st, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
-		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
@@ -472,9 +562,9 @@ func TestSaveOrphanedOps(t *testing.T) {
 	for _, blk := range []*qrysmpb.SignedBeaconBlockZond{blkG, blk1, blk2, blk3, blk4} {
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
+		st, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
-		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
@@ -537,9 +627,9 @@ func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
 	for _, blk := range []*qrysmpb.SignedBeaconBlockZond{blkG, blk1, blk2, blk4} {
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
+		st, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
-		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
@@ -592,9 +682,9 @@ func TestSaveOrphanedAtts_DoublyLinkedTrie(t *testing.T) {
 	for _, blk := range []*qrysmpb.SignedBeaconBlockZond{blkG, blk1, blk2, blk3, blk4} {
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
+		st, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
-		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
@@ -652,9 +742,9 @@ func TestSaveOrphanedAtts_CanFilter_DoublyLinkedTrie(t *testing.T) {
 	for _, blk := range []*qrysmpb.SignedBeaconBlockZond{blkG, blk1, blk2, blk4} {
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
+		st, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
-		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 

@@ -364,17 +364,11 @@ func (s *Service) notifyNewHeadEvent(
 		return errors.Wrap(err, "could not check if node is optimistically synced")
 	}
 
-	// An epoch transition occurred when the new head's parent block sits in a
-	// strictly earlier epoch. Comparing parent vs new-head epochs (rather than
-	// checking IsEpochStart on the new head's slot) correctly handles skipped
-	// epoch-boundary slots, where the head lands several slots into the new
-	// epoch.
-	parentRoot := newHeadState.LatestBlockHeader().ParentRoot
-	parentSlot, err := s.RecentBlockSlot(bytesutil.ToBytes32(parentRoot))
+	parentRoot := bytesutil.ToBytes32(newHeadState.LatestBlockHeader().ParentRoot)
+	epochTransition, err := s.headEpochTransition(newHeadSlot, newHeadState, parentRoot)
 	if err != nil {
-		return errors.Wrap(err, "could not obtain parent slot in forkchoice")
+		return err
 	}
-	epochTransition := slots.ToEpoch(newHeadSlot) > slots.ToEpoch(parentSlot)
 
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.NewHead,
@@ -389,6 +383,42 @@ func (s *Service) notifyNewHeadEvent(
 		},
 	})
 	return nil
+}
+
+// headEpochTransition reports whether the head at newHeadSlot crossed an epoch
+// boundary relative to its parent block, i.e. whether the parent sits in a
+// strictly earlier epoch. Comparing parent vs head epochs (rather than checking
+// IsEpochStart on the head slot) correctly handles skipped epoch-boundary
+// slots, where the head lands several slots into the new epoch.
+func (s *Service) headEpochTransition(newHeadSlot primitives.Slot, newHeadState state.ReadOnlyBeaconState, parentRoot [32]byte) (bool, error) {
+	// The genesis block has no parent; consider it an epoch transition.
+	if newHeadSlot == 0 {
+		return true, nil
+	}
+	parentSlot, err := s.RecentBlockSlot(parentRoot)
+	if err == nil {
+		return slots.ToEpoch(newHeadSlot) > slots.ToEpoch(parentSlot), nil
+	}
+	// The parent is not in forkchoice. This happens when the head is the
+	// forkchoice tree root itself (the finalized or checkpoint-sync origin
+	// block, e.g. after reverting to it because its descendants were INVALID),
+	// whose parent was pruned at finalization. Rather than dropping the head
+	// event, fall back to the head state: every slot between the parent and
+	// the head is empty, so the parent sits in an earlier epoch iff its root
+	// is the block root recorded at the last slot of the previous epoch.
+	epochStart, err := slots.EpochStart(slots.ToEpoch(newHeadSlot))
+	if err != nil {
+		return false, errors.Wrap(err, "could not get epoch start slot")
+	}
+	if epochStart == 0 {
+		// Both the head and its parent are in epoch 0.
+		return false, nil
+	}
+	root, err := helpers.BlockRootAtSlot(newHeadState, epochStart-1)
+	if err != nil {
+		return false, errors.Wrap(err, "could not obtain parent slot in forkchoice or head state")
+	}
+	return bytes.Equal(root, parentRoot[:]), nil
 }
 
 // This saves the Attestations between `orphanedRoot` and the common ancestor root that is derived using `newHeadRoot`.
