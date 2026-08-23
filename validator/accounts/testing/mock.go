@@ -56,19 +56,23 @@ func (w *Wallet) Password() string {
 }
 
 // WriteFileAtPath --
-func (w *Wallet) WriteFileAtPath(_ context.Context, pathName, fileName string, data []byte) error {
+func (w *Wallet) WriteFileAtPath(_ context.Context, pathName, fileName string, data []byte) (bool, error) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 	if w.HasWriteFileError {
 		// reset the flag to not contaminate other tests
 		w.HasWriteFileError = false
-		return errors.New("could not write keystore file for accounts")
+		return false, errors.New("could not write keystore file for accounts")
+	}
+	if w.Files == nil {
+		w.Files = make(map[string]map[string][]byte)
 	}
 	if w.Files[pathName] == nil {
 		w.Files[pathName] = make(map[string][]byte)
 	}
+	_, existedPreviously := w.Files[pathName][fileName]
 	w.Files[pathName][fileName] = data
-	return nil
+	return existedPreviously, nil
 }
 
 // ReadFileAtPath --

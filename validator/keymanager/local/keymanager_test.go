@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
+	"github.com/theQRL/qrysm/async/event"
 	field_params "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
 	keymock "github.com/theQRL/qrysm/crypto/ml_dsa_87/common/mock"
@@ -50,6 +51,71 @@ func TestLocalKeymanager_FetchValidatingPublicKeys(t *testing.T) {
 	for i, key := range wantedPubKeys {
 		assert.Equal(t, key, publicKeys[i])
 	}
+}
+
+// Regression: when the validator client starts with a wallet that has no
+// accounts file yet, no file watcher is running (listenForAccountChanges
+// returns immediately for a missing file). The first keymanager-API import
+// creates the file and must notify accountsChangedFeed subscribers itself,
+// otherwise the running validator client never learns about the imported
+// keys. Writes to an already existing file are reported by the file watcher
+// and must not be reported a second time here.
+func TestLocalKeymanager_SaveStoreAndReInitialize_NotifiesOnFirstAccountsFileWrite(t *testing.T) {
+	ctx := context.Background()
+	wallet := &mock.Wallet{
+		Files:          make(map[string]map[string][]byte),
+		WalletPassword: password,
+	}
+	dr := &Keymanager{
+		wallet:              wallet,
+		accountsStore:       &accountStore{},
+		accountsChangedFeed: new(event.Feed),
+	}
+	accountsChangedChan := make(chan [][field_params.MLDSA87PubkeyLength]byte, 1)
+	sub := dr.SubscribeAccountChanges(accountsChangedChan)
+	defer sub.Unsubscribe()
+
+	newStore := func(t *testing.T, numKeys int) (*accountStore, [][field_params.MLDSA87PubkeyLength]byte) {
+		t.Helper()
+		store := &accountStore{}
+		pubKeys := make([][field_params.MLDSA87PubkeyLength]byte, 0, numKeys)
+		for range numKeys {
+			privKey, err := ml_dsa_87.RandKey()
+			require.NoError(t, err)
+			pubKey := bytesutil.ToBytes2592(privKey.PublicKey().Marshal())
+			pubKeys = append(pubKeys, pubKey)
+			store.PublicKeys = append(store.PublicKeys, pubKey[:])
+			store.Seeds = append(store.Seeds, privKey.Marshal())
+		}
+		return store, pubKeys
+	}
+
+	// First write creates the accounts file: subscribers must be notified
+	// with the full new key set and the caches must hold the keys.
+	store, wantKeys := newStore(t, 2)
+	require.NoError(t, dr.SaveStoreAndReInitialize(ctx, store))
+	select {
+	case got := <-accountsChangedChan:
+		require.DeepEqual(t, wantKeys, got)
+	default:
+		t.Fatal("expected accounts changed notification after the accounts file was first created")
+	}
+	pubKeys, err := dr.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	require.DeepEqual(t, wantKeys, pubKeys)
+
+	// Second write updates the existing file: the file watcher is responsible
+	// for notifying subscribers, so no direct notification is sent.
+	store, wantKeys = newStore(t, 3)
+	require.NoError(t, dr.SaveStoreAndReInitialize(ctx, store))
+	select {
+	case <-accountsChangedChan:
+		t.Fatal("unexpected direct notification for a write to an existing accounts file")
+	default:
+	}
+	pubKeys, err = dr.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	require.DeepEqual(t, wantKeys, pubKeys)
 }
 
 func TestLocalKeymanager_FetchValidatingSeeds(t *testing.T) {

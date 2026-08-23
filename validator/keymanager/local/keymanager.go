@@ -43,6 +43,11 @@ type Keymanager struct {
 	wallet              iface.Wallet
 	accountsStore       *accountStore
 	accountsChangedFeed *event.Feed
+	// ctx is the long-lived context the keymanager was created with. It bounds
+	// the accounts file watcher, including one started later by
+	// SaveStoreAndReInitialize when the accounts file is first created.
+	ctx              context.Context
+	listenForChanges bool
 }
 
 // SetupConfig includes configuration values for initializing
@@ -90,6 +95,8 @@ func NewKeymanager(ctx context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		wallet:              cfg.Wallet,
 		accountsStore:       &accountStore{},
 		accountsChangedFeed: new(event.Feed),
+		ctx:                 ctx,
+		listenForChanges:    cfg.ListenForChanges,
 	}
 
 	if err := k.initializeAccountKeystore(ctx); err != nil {
@@ -287,18 +294,44 @@ func (km *Keymanager) SaveStoreAndReInitialize(ctx context.Context, store *accou
 	if err != nil {
 		return err
 	}
-	if err := km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encodedAccounts); err != nil {
+	existedPreviously, err := km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encodedAccounts)
+	if err != nil {
 		return err
 	}
 
 	// Reinitialize account store and cache
 	// This will update the in-memory information instead of reading from the file itself for safety concerns
 	km.accountsStore = store
-	err = km.initializeKeysCachesFromKeystore()
-	if err != nil {
+	if err := km.initializeKeysCachesFromKeystore(); err != nil {
 		return errors.Wrap(err, "failed to initialize keys caches")
 	}
-	return err
+	if existedPreviously {
+		// The accounts file watcher started with the keymanager observes this
+		// write and notifies accountsChangedFeed subscribers.
+		return nil
+	}
+
+	// The accounts file did not exist when the keymanager was created, so no
+	// file watcher is running (listenForAccountChanges returns immediately for a
+	// missing file) and nothing would tell the running validator client about
+	// the keys that were just written. Notify subscribers directly and start
+	// watching the new file for subsequent changes. The watcher is bounded by
+	// the keymanager's own long-lived context rather than the request context
+	// of the keymanager API call that triggered this write.
+	pubKeys := make([][field_params.MLDSA87PubkeyLength]byte, len(store.PublicKeys))
+	for i, pubKey := range store.PublicKeys {
+		pubKeys[i] = bytesutil.ToBytes2592(pubKey)
+	}
+	log.Info(keymanager.KeysReloaded)
+	// Keymanagers built without NewKeymanager (e.g. CLI helpers and tests) may
+	// have no feed, in which case there is nobody to notify.
+	if km.accountsChangedFeed != nil {
+		km.accountsChangedFeed.Send(pubKeys)
+	}
+	if km.listenForChanges {
+		go km.listenForAccountChanges(km.ctx)
+	}
+	return nil
 }
 
 // CreateEmptyKeyStoreRepresentationForNewWallet creates a placeholder accounts keystore for a new Qrysm Local Wallet.
