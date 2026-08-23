@@ -159,7 +159,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			err = s.validateBeaconBlock(ctx, b, blkRoot)
 			switch {
-			case errors.Is(ErrOptimisticParent, err): // Ok to continue process block with parent that is an optimistic candidate.
+			case errors.Is(err, ErrOptimisticParent): // Ok to continue process block with parent that is an optimistic candidate.
 			case err != nil:
 				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not validate block")
 				tracing.AnnotateError(span, err)

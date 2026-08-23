@@ -85,8 +85,8 @@ func (s *PeerStatusScorer) isBadPeer(pid peer.ID) bool {
 		p2ptypes.ErrInvalidFinalizedRoot,
 		p2ptypes.ErrInvalidRequest,
 	}
-	for _, err := range terminalErrs {
-		if errors.Is(peerData.ChainStateValidationError, err) {
+	for _, terminalErr := range terminalErrs {
+		if errors.Is(peerData.ChainStateValidationError, terminalErr) {
 			return true
 		}
 	}
