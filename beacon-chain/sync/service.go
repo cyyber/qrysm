@@ -64,7 +64,7 @@ var (
 	// Seconds in one epoch.
 	pendingBlockExpTime = time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
 	// time to allow processing early blocks.
-	earlyBlockProcessingTolerance = slots.MultiplySlotBy(2)
+	earlyBlockProcessingTolerance = params.BeaconNetworkConfig().MaximumGossipClockDisparity
 	// time to allow processing early attestations.
 	earlyAttestationProcessingTolerance = params.BeaconNetworkConfig().MaximumGossipClockDisparity
 	errWrongMessage                     = errors.New("wrong pubsub message")

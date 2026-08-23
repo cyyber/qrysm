@@ -673,7 +673,11 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 	assert.Equal(t, res, pubsub.ValidationIgnore, "block is ignored until fully synced")
 }
 
-func TestValidateBeaconBlockPubSub_IgnoreAndQueueBlocksFromNearFuture(t *testing.T) {
+// Regression (upstream #17167): blocks arriving more than
+// MAXIMUM_GOSSIP_CLOCK_DISPARITY before their slot must be ignored outright, not
+// queued in the pending queue. Queueing them let a peer fill the queue with
+// blocks up to two slots ahead for free.
+func TestValidateBeaconBlockPubSub_IgnoreBlocksFromNearFuture(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
@@ -735,11 +739,11 @@ func TestValidateBeaconBlockPubSub_IgnoreAndQueueBlocksFromNearFuture(t *testing
 		},
 	}
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	require.ErrorContains(t, "early block, with current slot", err)
-	assert.Equal(t, res, pubsub.ValidationIgnore, "early block should be ignored and queued")
+	require.NoError(t, err)
+	assert.Equal(t, pubsub.ValidationIgnore, res, "early block should be ignored")
 
-	// check if the block is inserted in the Queue
-	assert.Equal(t, true, len(r.pendingBlocksInCache(msg.Block.Slot)) == 1)
+	// The block must not have been inserted into the pending queue.
+	assert.Equal(t, 0, len(r.pendingBlocksInCache(msg.Block.Slot)), "early block must not be queued")
 }
 
 func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
@@ -1249,9 +1253,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromBadParent(t *testing.T) {
 	perSlot := params.BeaconConfig().SecondsPerSlot
 	// current slot time
 	slotsSinceGenesis := primitives.Slot(1000)
-	// max uint, divided by slot time. But avoid losing precision too much.
-	overflowBase := (1 << 63) / (perSlot >> 1)
-	msg.Block.Slot = slotsSinceGenesis.Add(overflowBase)
+	msg.Block.Slot = slotsSinceGenesis
 
 	// valid block
 	msg.Block.ParentRoot = bRoot[:]
@@ -1313,22 +1315,6 @@ func TestService_setBadBlock_DoesntSetWithContextErr(t *testing.T) {
 	if s.hasBadBlock(root) {
 		t.Error("Set bad root with cancelled context")
 	}
-}
-
-func TestService_isBlockQueueable(t *testing.T) {
-	currentTime := time.Now().Round(time.Second)
-	genesisTime := uint64(currentTime.Unix() - int64(params.BeaconConfig().SecondsPerSlot))
-	blockSlot := primitives.Slot(1)
-
-	// slot time within MAXIMUM_GOSSIP_CLOCK_DISPARITY, so don't queue the block.
-	receivedTime := currentTime.Add(-400 * time.Millisecond)
-	result := isBlockQueueable(genesisTime, blockSlot, receivedTime)
-	assert.Equal(t, false, result)
-
-	// slot time just above MAXIMUM_GOSSIP_CLOCK_DISPARITY, so queue the block.
-	receivedTime = currentTime.Add(-600 * time.Millisecond)
-	result = isBlockQueueable(genesisTime, blockSlot, receivedTime)
-	assert.Equal(t, true, result)
 }
 
 func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {

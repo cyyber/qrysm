@@ -105,6 +105,16 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore, nil
 	}
 
+	// Ignore blocks from the future beyond MAXIMUM_GOSSIP_CLOCK_DISPARITY before
+	// doing any further work on them (such as computing the block root below).
+	// Such blocks are not queued for later processing: queueing them would let a
+	// peer fill the pending queue with blocks up to slots ahead for free.
+	genesisTime := uint64(s.cfg.clock.GenesisTime().Unix())
+	if err := slots.VerifyTime(genesisTime, blk.Block().Slot(), earlyBlockProcessingTolerance); err != nil {
+		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Ignored block: could not verify slot time")
+		return pubsub.ValidationIgnore, nil
+	}
+
 	blockRoot, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Ignored block")
@@ -128,15 +138,6 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 	s.pendingQueueLock.RUnlock()
 
-	// Be lenient in handling early blocks. Instead of discarding blocks arriving later than
-	// MAXIMUM_GOSSIP_CLOCK_DISPARITY in future, we tolerate blocks arriving at max two slots
-	// earlier (SECONDS_PER_SLOT * 2 seconds). Queue such blocks and process them at the right slot.
-	genesisTime := uint64(s.cfg.clock.GenesisTime().Unix())
-	if err := slots.VerifyTime(genesisTime, blk.Block().Slot(), earlyBlockProcessingTolerance); err != nil {
-		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Ignored block: could not verify slot time")
-		return pubsub.ValidationIgnore, nil
-	}
-
 	// Add metrics for block arrival time subtracts slot start time.
 	if err := captureArrivalTimeMetric(genesisTime, blk.Block().Slot()); err != nil {
 		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Ignored block: could not capture arrival time metric")
@@ -152,25 +153,6 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	if startSlot >= blk.Block().Slot() {
 		err := fmt.Errorf("finalized slot %d greater or equal to block slot %d", startSlot, blk.Block().Slot())
 		log.WithFields(getBlockFields(blk)).Debug(err)
-		return pubsub.ValidationIgnore, err
-	}
-
-	// Process the block if the clock jitter is less than MAXIMUM_GOSSIP_CLOCK_DISPARITY.
-	// Otherwise queue it for processing in the right slot.
-	if isBlockQueueable(genesisTime, blk.Block().Slot(), receivedTime) {
-		if res, err := s.verifyPendingBlockSignature(ctx, blk, blockRoot); err != nil {
-			log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not verify block signature")
-			return res, err
-		}
-		s.pendingQueueLock.Lock()
-		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blockRoot); err != nil {
-			s.pendingQueueLock.Unlock()
-			log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not insert block to pending queue")
-			return pubsub.ValidationIgnore, err
-		}
-		s.pendingQueueLock.Unlock()
-		err := fmt.Errorf("early block, with current slot %d < block slot %d", s.cfg.clock.CurrentSlot(), blk.Block().Slot())
-		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not process early block")
 		return pubsub.ValidationIgnore, err
 	}
 
@@ -416,20 +398,6 @@ func captureArrivalTimeMetric(genesisTime uint64, currentSlot primitives.Slot) e
 	arrivalBlockPropagationGauge.Set(float64(ms))
 
 	return nil
-}
-
-// isBlockQueueable checks if the slot_time in the block is greater than
-// current_time +  MAXIMUM_GOSSIP_CLOCK_DISPARITY. in short, this function
-// returns true if the corresponding block should be queued and false if
-// the block should be processed immediately.
-func isBlockQueueable(genesisTime uint64, slot primitives.Slot, receivedTime time.Time) bool {
-	slotTime, err := slots.ToTime(genesisTime, slot)
-	if err != nil {
-		return false
-	}
-
-	currentTimeWithDisparity := receivedTime.Add(params.BeaconNetworkConfig().MaximumGossipClockDisparity)
-	return currentTimeWithDisparity.Unix() < slotTime.Unix()
 }
 
 func getBlockFields(b interfaces.ReadOnlySignedBeaconBlock) logrus.Fields {
