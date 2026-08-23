@@ -32,6 +32,7 @@ import (
 var (
 	ErrOptimisticParent         = errors.New("parent of the block is optimistic")
 	ErrSlashingSignatureFailure = errors.New("proposer slashing signature verification failed")
+	errBlockSlotNotAfterParent  = errors.New("block slot is not higher than its parent slot")
 )
 
 // validateBeaconBlockPubSub checks that the incoming block has a valid BLS signature.
@@ -189,7 +190,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		// An out-of-range proposer index can never become valid: reject it (and
 		// let gossip downscore the peer) rather than ignore it. It is not added to
 		// the bad-block cache since the block root itself is not otherwise known bad.
-		if s.hasBadBlock(blockRoot) || errors.Is(err, blocks.ErrInvalidProposerIndex) {
+		if s.hasBadBlock(blockRoot) || errors.Is(err, blocks.ErrInvalidProposerIndex) || errors.Is(err, errBlockSlotNotAfterParent) {
 			log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not validate beacon block")
 			return pubsub.ValidationReject, err
 		}
@@ -239,6 +240,15 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 	if !s.cfg.chain.InForkchoice(blk.Block().ParentRoot()) {
 		s.setBadBlock(ctx, blockRoot)
 		return blockchain.ErrNotDescendantOfFinalized
+	}
+
+	// [REJECT] The block is from a higher slot than its parent.
+	parentSlot, err := s.cfg.chain.RecentBlockSlot(blk.Block().ParentRoot())
+	if err != nil {
+		return err
+	}
+	if parentSlot >= blk.Block().Slot() {
+		return errors.Wrapf(errBlockSlotNotAfterParent, "block slot %d, parent slot %d", blk.Block().Slot(), parentSlot)
 	}
 
 	parentState, err := s.cfg.stateGen.StateByRoot(ctx, blk.Block().ParentRoot())

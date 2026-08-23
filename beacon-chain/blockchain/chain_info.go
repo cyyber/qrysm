@@ -50,6 +50,7 @@ type ForkchoiceFetcher interface {
 	NewSlot(context.Context, primitives.Slot) error
 	ProposerBoost() [32]byte
 	ShouldIgnoreData(parentRoot [32]byte, dataSlot primitives.Slot) bool
+	RecentBlockSlot(root [32]byte) (primitives.Slot, error)
 }
 
 // TimeFetcher retrieves the QRL consensus data that's related to time.

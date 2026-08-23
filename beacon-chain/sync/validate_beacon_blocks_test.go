@@ -1362,6 +1362,87 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromBadParent(t *testing.T) {
 	assert.Equal(t, res, pubsub.ValidationReject)
 }
 
+// Regression (upstream #17352): the phase0 p2p spec's
+// "[REJECT] The block is from a higher slot than its parent" condition. A
+// block whose slot is lower than or equal to its parent's must be rejected
+// (not ignored), so the sender is downscored.
+func TestValidateBeaconBlockPubSub_RejectBlockSlotNotAfterParent(t *testing.T) {
+	tests := []struct {
+		name       string
+		parentSlot primitives.Slot
+		blockSlot  primitives.Slot
+	}{
+		{name: "block slot lower than parent slot", parentSlot: 5, blockSlot: 3},
+		{name: "block slot equal to parent slot", parentSlot: 5, blockSlot: 5},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := dbtest.SetupDB(t)
+			p := p2ptest.NewTestP2P(t)
+			ctx := context.Background()
+			beaconState, privKeys := util.DeterministicGenesisStateZond(t, 100)
+
+			parentBlock := util.NewBeaconBlockZond()
+			parentBlock.Block.Slot = tt.parentSlot
+			util.SaveBlock(t, ctx, db, parentBlock)
+			bRoot, err := parentBlock.Block.HashTreeRoot()
+			require.NoError(t, err)
+			require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
+			require.NoError(t, db.SaveStateSummary(ctx, &qrysmpb.StateSummary{Root: bRoot[:]}))
+
+			copied := beaconState.Copy()
+			require.NoError(t, copied.SetSlot(tt.blockSlot))
+			proposerIdx, err := helpers.BeaconProposerIndex(ctx, copied)
+			require.NoError(t, err)
+			msg := util.NewBeaconBlockZond()
+			msg.Block.ParentRoot = bRoot[:]
+			msg.Block.Slot = tt.blockSlot
+			msg.Block.ProposerIndex = proposerIdx
+			msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+			require.NoError(t, err)
+
+			chainService := &mock.ChainService{
+				Genesis:   time.Unix(time.Now().Unix()-8*int64(params.BeaconConfig().SecondsPerSlot), 0),
+				State:     beaconState,
+				Root:      bRoot[:],
+				BlockSlot: tt.parentSlot,
+				FinalizedCheckPoint: &qrysmpb.Checkpoint{
+					Epoch: 0,
+					Root:  make([]byte, 32),
+				},
+				DB: db,
+			}
+			r := &Service{
+				cfg: &config{
+					beaconDB:      db,
+					p2p:           p,
+					initialSync:   &mockSync.Sync{IsSyncing: false},
+					chain:         chainService,
+					clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
+					blockNotifier: chainService.BlockNotifier(),
+					stateGen:      stategen.New(db, doublylinkedtree.New()),
+				},
+				seenBlockCache:      lruwrpr.New(10),
+				badBlockCache:       lruwrpr.New(10),
+				slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+				seenPendingBlocks:   make(map[[32]byte]bool),
+			}
+
+			buf := new(bytes.Buffer)
+			_, err = p.Encoding().EncodeGossip(buf, msg)
+			require.NoError(t, err)
+			digest, err := r.currentForkDigest()
+			require.NoError(t, err)
+			topic := r.addDigestToTopic(p2p.GossipTypeMapping[reflect.TypeFor[*qrysmpb.SignedBeaconBlockZond]()], digest)
+			m := &pubsub.Message{Message: &pubsubpb.Message{Data: buf.Bytes(), Topic: &topic}}
+
+			res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+			require.ErrorIs(t, err, errBlockSlotNotAfterParent)
+			require.Equal(t, pubsub.ValidationReject, res)
+		})
+	}
+}
+
 func TestService_setBadBlock_DoesntSetWithContextErr(t *testing.T) {
 	s := Service{}
 	s.initCaches()
