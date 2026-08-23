@@ -83,26 +83,21 @@ func run(ctx context.Context, v iface.Validator) error {
 	v.SetTicker()
 
 	for {
-		_, cancel := context.WithCancel(runnerCtx)
 		ctx, span := trace.StartSpan(runnerCtx, "validator.processSlot")
 
 		select {
 		case <-ctx.Done():
 			log.Info("Context canceled, stopping validator")
 			span.End()
-			cancel()
-			//nolint:govet
 			return nil // Exit if context is canceled.
 		case blocksError := <-connectionErrorChannel:
 			span.End()
-			cancel()
 			if blocksError != nil {
 				log.WithError(blocksError).Warn("block stream interrupted")
 				return blocksError
 			}
 		case currentKeys := <-accountsChangedChan:
 			span.End()
-			cancel()
 			onAccountsChanged(ctx, v, currentKeys, accountsChangedChan)
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
@@ -140,10 +135,13 @@ func run(ctx context.Context, v iface.Validator) error {
 			// independent of slotCtx but bounded by the slot deadline, so the
 			// 8 RPC fetches self-terminate at the slot boundary instead of
 			// piling up across epochs under network stalls. (upstream PR
-			// #15268)
+			// #15268) The context is released as soon as the fetches finish.
 			if slots.IsEpochEnd(slot) {
-				domainCtx, _ := context.WithDeadline(ctx, deadline) //nolint:govet
-				go v.UpdateDomainDataCaches(domainCtx, slot+1)
+				domainCtx, domainCancel := context.WithDeadline(ctx, deadline)
+				go func() {
+					defer domainCancel()
+					v.UpdateDomainDataCaches(domainCtx, slot+1)
+				}()
 			}
 
 			var wg sync.WaitGroup
