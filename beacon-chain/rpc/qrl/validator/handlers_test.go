@@ -46,6 +46,7 @@ import (
 	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/testing/util"
 	"github.com/theQRL/qrysm/time/slots"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestGetAggregateAttestation(t *testing.T) {
@@ -408,6 +409,43 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 	})
+	// Regression: a failure while submitting one item must produce exactly one
+	// error response and stop processing. Previously the handler kept looping
+	// and wrote another error for the next item (superfluous WriteHeader and a
+	// body with two concatenated JSON objects).
+	t.Run("per-item submit error writes a single response and stops", func(t *testing.T) {
+		c.Broadcaster = &failingBroadcaster{err: errors.New("broadcast failed")}
+		c.SyncCommitteePool = synccommittee.NewStore()
+
+		var body bytes.Buffer
+		_, err := body.WriteString(multipleContributions)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.SubmitContributionAndProofs(writer, request)
+		assert.Equal(t, http.StatusInternalServerError, writer.Code)
+		// The body must be a single error object, not two concatenated ones.
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusInternalServerError, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "broadcast failed"))
+		// Processing stopped at the first item: only it reached the pool.
+		contributions, err := c.SyncCommitteePool.SyncCommitteeContributions(1)
+		require.NoError(t, err)
+		assert.Equal(t, 1, len(contributions))
+	})
+}
+
+// failingBroadcaster is a p2p broadcaster whose Broadcast always fails.
+type failingBroadcaster struct {
+	p2pmock.MockBroadcaster
+	err error
+}
+
+func (b *failingBroadcaster) Broadcast(_ context.Context, _ proto.Message) error {
+	return b.err
 }
 
 func TestSubmitAggregateAndProofs(t *testing.T) {
@@ -981,7 +1019,7 @@ func TestGetAttestationData(t *testing.T) {
 	})
 
 	t.Run("handles in progress request", func(t *testing.T) {
-		state, err := state_native.InitializeFromProtoZond(&qrysmpb.BeaconStateZond{Slot: 100})
+		st, err := state_native.InitializeFromProtoZond(&qrysmpb.BeaconStateZond{Slot: 100})
 		require.NoError(t, err)
 		ctx := context.Background()
 		slot := primitives.Slot(2)
@@ -989,7 +1027,7 @@ func TestGetAttestationData(t *testing.T) {
 		chain := &mockChain.ChainService{
 			Optimistic: false,
 			Genesis:    time.Now().Add(time.Duration(-1*offset) * time.Second),
-			State:      state,
+			State:      st,
 		}
 
 		s := &Server{

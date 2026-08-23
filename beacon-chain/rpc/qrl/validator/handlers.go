@@ -155,6 +155,10 @@ func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Requ
 		rpcError := s.CoreService.SubmitSignedContributionAndProof(ctx, consensusItem)
 		if rpcError != nil {
 			http2.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
+			// Stop at the first failure: continuing would write a second
+			// error response on top of the first one (superfluous WriteHeader,
+			// concatenated JSON bodies).
+			return
 		}
 	}
 }
