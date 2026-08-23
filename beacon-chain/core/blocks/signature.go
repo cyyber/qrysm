@@ -102,6 +102,10 @@ func VerifyBlockHeaderSignature(beaconState state.BeaconState, header *qrysmpb.S
 // fork resolution, etc.) so that only true signature failures mark the block as bad.
 var ErrInvalidSignature = errors.New("invalid signature")
 
+// ErrInvalidProposerIndex is returned when a block's proposer index is not in
+// the validator registry of the state it is verified against.
+var ErrInvalidProposerIndex = errors.New("invalid proposer index")
+
 // VerifyBlockSignatureUsingCurrentFork verifies the proposer signature of a beacon block. This differs
 // from the above method by not using fork data from the state and instead retrieving it
 // via the respective epoch.
@@ -115,7 +119,14 @@ func VerifyBlockSignatureUsingCurrentFork(beaconState state.ReadOnlyBeaconState,
 	if err != nil {
 		return err
 	}
-	proposer, err := beaconState.ValidatorAtIndex(blk.Block().ProposerIndex())
+	// A proposer index outside the validator registry can never be valid.
+	// Report it distinctly so gossip validation can reject (and downscore)
+	// instead of ignoring the block as a transient failure.
+	proposerIndex := blk.Block().ProposerIndex()
+	if numVals := beaconState.NumValidators(); uint64(proposerIndex) >= uint64(numVals) {
+		return errors.Wrapf(ErrInvalidProposerIndex, "proposer index %d out of range for %d validators", proposerIndex, numVals)
+	}
+	proposer, err := beaconState.ValidatorAtIndex(proposerIndex)
 	if err != nil {
 		return err
 	}

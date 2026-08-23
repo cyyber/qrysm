@@ -253,6 +253,64 @@ func TestValidateBeaconBlockPubSub_TransientVerifyError_DoesNotMarkBlockAsBad(t 
 	assert.Equal(t, false, r.hasBadBlock(blockRoot), "block must not be marked as bad on a transient error")
 }
 
+// Regression (upstream #16917): a block whose proposer index is outside the
+// validator registry can never be valid. It must be rejected (so gossip
+// downscores the sender) rather than ignored, without being added to the
+// bad-block cache.
+func TestValidateBeaconBlockPubSub_OutOfRangeProposerIndex(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+	beaconState, _ := util.DeterministicGenesisStateZond(t, 100)
+	parentBlock := util.NewBeaconBlockZond()
+	util.SaveBlock(t, ctx, db, parentBlock)
+	bRoot, err := parentBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
+	require.NoError(t, db.SaveStateSummary(ctx, &qrysmpb.StateSummary{Root: bRoot[:]}))
+
+	msg := util.NewBeaconBlockZond()
+	msg.Block.ParentRoot = bRoot[:]
+	msg.Block.Slot = 1
+	msg.Block.ProposerIndex = 1 << 40 // out of range for the 100-validator registry
+	blockRoot, err := msg.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
+		FinalizedCheckPoint: &qrysmpb.Checkpoint{Epoch: 0, Root: make([]byte, 32)},
+		DB:                  db,
+		State:               beaconState,
+		Root:                bRoot[:],
+	}
+	r := &Service{
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stategen.New(db, doublylinkedtree.New()),
+		},
+		seenBlockCache: lruwrpr.New(10),
+		badBlockCache:  lruwrpr.New(10),
+	}
+
+	buf := new(bytes.Buffer)
+	_, err = p.Encoding().EncodeGossip(buf, msg)
+	require.NoError(t, err)
+	digest, err := r.currentForkDigest()
+	require.NoError(t, err)
+	topic := r.addDigestToTopic(p2p.GossipTypeMapping[reflect.TypeFor[*qrysmpb.SignedBeaconBlockZond]()], digest)
+	m := &pubsub.Message{Message: &pubsubpb.Message{Data: buf.Bytes(), Topic: &topic}}
+
+	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	require.ErrorContains(t, "invalid proposer index", err)
+	assert.Equal(t, pubsub.ValidationReject, res)
+	// Rejected via gossip scoring, not the bad-block cache.
+	assert.Equal(t, false, r.hasBadBlock(blockRoot))
+}
+
 func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	ctx := context.Background()

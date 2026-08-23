@@ -119,3 +119,19 @@ func TestVerifyBlockSignatureUsingCurrentFork_InvalidSignature(t *testing.T) {
 	err = blocks.VerifyBlockSignatureUsingCurrentFork(bState, wsb, blkRoot)
 	require.ErrorIs(t, err, blocks.ErrInvalidSignature, "Expected ErrInvalidSignature for invalid signature")
 }
+
+func TestVerifyBlockSignatureUsingCurrentFork_OutOfRangeProposerIndex(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+
+	bState, _ := util.DeterministicGenesisStateZond(t, 100)
+	blk := util.NewBeaconBlockZond()
+	blk.Block.ProposerIndex = 100 // first index outside the 100-validator registry
+	blk.Block.Slot = params.BeaconConfig().SlotsPerEpoch * 100
+	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	blkRoot, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+
+	err = blocks.VerifyBlockSignatureUsingCurrentFork(bState, wsb, blkRoot)
+	require.ErrorIs(t, err, blocks.ErrInvalidProposerIndex, "Expected ErrInvalidProposerIndex for out-of-range proposer index")
+}
