@@ -533,6 +533,44 @@ func TestService_rejectIncorrectSyncCommittee(t *testing.T) {
 			},
 			want: pubsub.ValidationAccept,
 		},
+		{
+			// Regression (upstream #16872): the topic must match exactly. A
+			// message for subnet 1 must not be accepted on the subnet 10 topic,
+			// which merely shares the numeric prefix "…sync_committee_1".
+			name: "subnet prefix collision is rejected",
+			cfg: &config{
+				chain: &mockChain.ChainService{},
+				clock: startup.NewClock(time.Now(), [32]byte{1}),
+				p2p:   mockp2p.NewTestP2P(t),
+			},
+			// First committee index of subnet 1.
+			committeeIndices: []primitives.CommitteeIndex{primitives.CommitteeIndex(params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount)},
+			setupTopic: func(s *Service) string {
+				format := p2p.GossipTypeMapping[reflect.TypeFor[*qrysmpb.SyncCommitteeMessage]()]
+				genRoot := s.cfg.clock.GenesisValidatorsRoot()
+				digest, err := forks.ForkDigestFromEpoch(0, genRoot[:])
+				require.NoError(t, err)
+				return fmt.Sprintf(format, digest, 10 /* subnet 10 */) + s.cfg.p2p.Encoding().ProtocolSuffix()
+			},
+			want: pubsub.ValidationReject,
+		},
+		{
+			name: "missing protocol suffix is rejected",
+			cfg: &config{
+				chain: &mockChain.ChainService{},
+				clock: startup.NewClock(time.Now(), [32]byte{1}),
+				p2p:   mockp2p.NewTestP2P(t),
+			},
+			committeeIndices: []primitives.CommitteeIndex{0},
+			setupTopic: func(s *Service) string {
+				format := p2p.GossipTypeMapping[reflect.TypeFor[*qrysmpb.SyncCommitteeMessage]()]
+				genRoot := s.cfg.clock.GenesisValidatorsRoot()
+				digest, err := forks.ForkDigestFromEpoch(0, genRoot[:])
+				require.NoError(t, err)
+				return fmt.Sprintf(format, digest, 0)
+			},
+			want: pubsub.ValidationReject,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
