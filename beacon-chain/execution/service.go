@@ -317,6 +317,17 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*qrysmpb.Deposit
 	if err != nil {
 		return err
 	}
+	if genesisState == nil || genesisState.IsNil() {
+		// No genesis state exists yet (pre-genesis), so no deposit has been
+		// included in the chain: keep the containers in the deposit cache
+		// (inserted above) but do not add any to the pending cache. This is
+		// upstream's guard on ChainStartData.Chainstarted, a field qrysm no
+		// longer has; GenesisState returns (nil, nil) in that situation.
+		if s.preGenesisState != nil && !s.preGenesisState.IsNil() {
+			validDepositsCount.Add(float64(s.preGenesisState.ExecutionDepositIndex()))
+		}
+		return nil
+	}
 	// Default to all post-genesis deposits in
 	// the event we cannot find a finalized state.
 	currIndex := genesisState.ExecutionDepositIndex()

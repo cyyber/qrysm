@@ -308,6 +308,45 @@ func TestInitDepositCache_OK(t *testing.T) {
 	require.Equal(t, 3, len(s.cfg.depositCache.PendingContainers(context.Background(), nil)))
 }
 
+// Regression: before any genesis state is saved (pre-genesis), the DB's
+// GenesisState returns (nil, nil). initDepositCaches must not dereference it:
+// the containers still go into the deposit cache, but nothing is pending
+// because no deposit has been included in a chain yet (upstream's
+// Chainstarted guard).
+func TestInitDepositCache_NoGenesisState(t *testing.T) {
+	// Use a config name without an embedded genesis state so that the DB has
+	// no genesis state to fall back to.
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.ConfigName = "no-embedded-genesis"
+	params.OverrideBeaconConfig(cfg)
+
+	ctrs := []*qrysmpb.DepositContainer{
+		{Index: 0, ExecutionBlockHeight: 2, Deposit: &qrysmpb.Deposit{Proof: [][]byte{[]byte("A")}, Data: &qrysmpb.Deposit_Data{PublicKey: []byte{}}}},
+		{Index: 1, ExecutionBlockHeight: 4, Deposit: &qrysmpb.Deposit{Proof: [][]byte{[]byte("B")}, Data: &qrysmpb.Deposit_Data{PublicKey: []byte{}}}},
+		{Index: 2, ExecutionBlockHeight: 6, Deposit: &qrysmpb.Deposit{Proof: [][]byte{[]byte("c")}, Data: &qrysmpb.Deposit_Data{PublicKey: []byte{}}}},
+	}
+	gs, _ := util.DeterministicGenesisStateZond(t, 1)
+	beaconDB := dbutil.SetupDB(t)
+	s := &Service{
+		chainStartData:  &qrysmpb.ChainStartData{},
+		preGenesisState: gs,
+		cfg:             &config{beaconDB: beaconDB},
+	}
+	var err error
+	s.cfg.depositCache, err = depositcache.New()
+	require.NoError(t, err)
+
+	// No genesis block root or genesis state is saved in the DB.
+	genState, err := beaconDB.GenesisState(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, true, genState == nil || genState.IsNil(), "test setup: expected no genesis state")
+
+	require.NoError(t, s.initDepositCaches(context.Background(), ctrs))
+	require.Equal(t, 3, len(s.cfg.depositCache.AllDepositContainers(context.Background())))
+	require.Equal(t, 0, len(s.cfg.depositCache.PendingContainers(context.Background(), nil)))
+}
+
 func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 	ctrs := []*qrysmpb.DepositContainer{
 		{
