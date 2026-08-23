@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"io"
 	"testing"
 	"time"
 
@@ -98,6 +99,46 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 		errors.New("fails"),
 	).Return(resp, nil)
 	assert.NoError(t, v.WaitForActivation(context.Background(), nil))
+}
+
+// Regression: the beacon node only closes the activation stream right after
+// sending a response that contains an active validator, which the client
+// handles before calling Recv again. An EOF that reaches Recv therefore means
+// the stream ended before any validator was observed active. It must not be
+// reported as "activated"; the client has to reconnect and keep waiting until
+// a stream actually reports an active validator.
+func TestWaitForActivation_StreamEOFBeforeActivation_AttemptsReconnection(t *testing.T) {
+	hook := logTest.NewGlobal()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	validatorClient := validatormock.NewMockValidatorClient(ctrl)
+	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+	kp := randKeypair(t)
+	v := validator{
+		validatorClient: validatorClient,
+		keyManager:      newMockKeymanager(t, kp),
+		beaconClient:    beaconClient,
+	}
+	req := &qrysmpb.ValidatorActivationRequest{
+		PublicKeys: [][]byte{kp.pub[:]},
+	}
+	// The first stream is closed (EOF) without ever reporting an active
+	// validator; only the second, reconnected stream does.
+	closedStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	activeStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
+	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
+	resp.Statuses[0].Status.Status = qrysmpb.ValidatorStatus_ACTIVE
+	gomock.InOrder(
+		validatorClient.EXPECT().WaitForActivation(gomock.Any(), req).Return(closedStream, nil),
+		closedStream.EXPECT().Recv().Return(nil, io.EOF),
+		validatorClient.EXPECT().WaitForActivation(gomock.Any(), req).Return(activeStream, nil),
+		activeStream.EXPECT().Recv().Return(resp, nil),
+	)
+	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&qrysmpb.Validators{}, nil)
+
+	require.NoError(t, v.WaitForActivation(context.Background(), nil))
+	assert.LogsContain(t, hook, "Stream closed before any validator was activated")
+	assert.LogsContain(t, hook, "Validator activated")
 }
 
 func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {

@@ -43,7 +43,7 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan c
 // 2) Open a server side stream for activation events against the given keys.
 // 3) In another go routine, the key manager is monitored for updates and emits an update event on
 // the accountsChangedChan. When an event signal is received, restart the internalWaitForActivation routine.
-// 4) If the stream is reset in error, restart the routine.
+// 4) If the stream is reset in error, or closed before any validator is active, restart the routine.
 // 5) If the stream returns a response indicating one or more validators are active, exit the routine.
 func (v *validator) internalWaitForActivation(ctx context.Context, accountsChangedChan <-chan [][field_params.MLDSA87PubkeyLength]byte) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
@@ -108,10 +108,6 @@ func (v *validator) handleAccountsChanged(ctx context.Context, accountsChangedCh
 			return v.internalWaitForActivation(ctx, accountsChangedChan)
 		default:
 			res, err := (*stream).Recv()
-			// If the stream is closed, we stop the loop.
-			if errors.Is(err, io.EOF) {
-				break
-			}
 			// If context is canceled we return from the function.
 			if ctx.Err() == context.Canceled {
 				return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
@@ -119,8 +115,17 @@ func (v *validator) handleAccountsChanged(ctx context.Context, accountsChangedCh
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				attempts := streamAttempts(ctx)
-				log.WithError(err).WithField("attempts", attempts).
-					Error("Stream broken while waiting for activation. Reconnecting...")
+				msg := "Stream broken while waiting for activation. Reconnecting..."
+				if errors.Is(err, io.EOF) {
+					// The beacon node only closes the stream right after sending a
+					// response that contains an active validator, which is handled
+					// below before Recv is called again. Reaching EOF therefore means
+					// the stream ended before any validator was observed active (e.g.
+					// closed by an intermediary); it must not be reported as an
+					// activation. Reconnect and keep waiting instead.
+					msg = "Stream closed before any validator was activated. Reconnecting..."
+				}
+				log.WithError(err).WithField("attempts", attempts).Error(msg)
 				// Reconnection attempt backoff, up to 60s.
 				time.Sleep(time.Second * time.Duration(min(uint64(attempts), 60)))
 				return v.internalWaitForActivation(incrementRetries(ctx), accountsChangedChan)
