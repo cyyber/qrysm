@@ -469,6 +469,18 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	return !isCanonical, nil
 }
 
+// TargetRootForEpoch returns forkchoice's canonical target root for the given
+// epoch on the chain containing root. It acquires the forkchoice read lock, so
+// callers must not already hold it. This wrapper exists so that external
+// callers (e.g. gossip attestation validation running on pubsub goroutines)
+// do not read forkchoice's internal maps without synchronization while
+// block processing mutates them under the write lock.
+func (s *Service) TargetRootForEpoch(root [32]byte, epoch primitives.Epoch) ([32]byte, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.TargetRootForEpoch(root, epoch)
+}
+
 // Ancestor returns the block root of an ancestry block from the input block root.
 //
 // Spec pseudocode definition:

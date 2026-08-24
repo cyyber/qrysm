@@ -66,6 +66,63 @@ func TestVerifyLMDFFGConsistent(t *testing.T) {
 	require.NoError(t, err, "Could not verify LMD and FFG votes to be consistent")
 }
 
+// TestVerifyLMDFFGConsistent_ConcurrentForkchoiceMutation is a regression test
+// for the data race where VerifyLmdFfgConsistency read forkchoice's internal
+// nodeByRoot map without holding the forkchoice lock (it is called from gossip
+// attestation validation on pubsub goroutines, concurrently with block
+// processing that inserts/prunes forkchoice nodes under the write lock). Run
+// with -race: before the fix this reports a concurrent map read/write; after
+// the fix VerifyLmdFfgConsistency takes the forkchoice read lock via
+// Service.TargetRootForEpoch and the accesses are synchronized.
+func TestVerifyLMDFFGConsistent_ConcurrentForkchoiceMutation(t *testing.T) {
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
+	f := service.cfg.ForkChoiceStore
+	fc := &qrysmpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+
+	// Seed a base node the reader will look up.
+	state, roBase, err := prepareForkchoiceState(ctx, 128, [32]byte{'a'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, fc, fc)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, roBase))
+	rBase := roBase.Root()
+
+	a := util.NewAttestation()
+	a.Data.Target.Epoch = 1
+	a.Data.Target.Root = rBase[:]
+	a.Data.BeaconBlockRoot = rBase[:]
+
+	done := make(chan struct{})
+	// Writer: mutate forkchoice's nodeByRoot map under the write lock, the same
+	// way block processing does.
+	go func() {
+		defer close(done)
+		parent := rBase
+		for i := 0; i < 300; i++ {
+			st, ro, err := prepareForkchoiceState(ctx, primitives.Slot(129+i), [32]byte{byte(i), byte(i >> 8), 'w'}, parent, params.BeaconConfig().ZeroHash, fc, fc)
+			if err != nil {
+				return
+			}
+			f.Lock()
+			err = f.InsertNode(ctx, st, ro)
+			f.Unlock()
+			if err != nil {
+				return
+			}
+			parent = ro.Root()
+		}
+	}()
+
+	// Reader: exercise the previously-unlocked forkchoice map read.
+	for {
+		select {
+		case <-done:
+			return
+		default:
+			_ = service.VerifyLmdFfgConsistency(context.Background(), a)
+		}
+	}
+}
+
 // TestVerifyLMDFFGConsistent_TargetEpochExceedsBlockSlot is a regression test
 // for the FFG/LMD consistency bug that affected Prysm before PRs #13257 / #13258.
 //

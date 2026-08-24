@@ -60,7 +60,11 @@ func (s *Service) AttestationTargetState(ctx context.Context, target *qrysmpb.Ch
 // epoch-start slot may not be a finalized point of reference; forkchoice's
 // per-epoch target is authoritative.
 func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *qrysmpb.Attestation) error {
-	r, err := s.cfg.ForkChoiceStore.TargetRootForEpoch(bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
+	// Use the lock-acquiring wrapper: this method is called from gossip
+	// attestation/aggregate validation on pubsub goroutines with no forkchoice
+	// lock held, concurrently with block processing that mutates forkchoice's
+	// internal maps. Calling the store method directly here would race.
+	r, err := s.TargetRootForEpoch(bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
 	if err != nil {
 		return err
 	}
