@@ -718,6 +718,53 @@ func Test_reportInvalidBlock(t *testing.T) {
 	require.Equal(t, [32]byte{'B'}, invalidRoots[2])
 }
 
+// Test_pruneInvalidBlock_UnderForkchoiceLock is a regression test for the
+// self-deadlock where pruneInvalidBlock acquired the forkchoice write lock
+// (via the Service.SetOptimisticToInvalid wrapper) while the caller already
+// held it. ReceiveBlockBatch holds the forkchoice lock across onBlockBatch, so
+// an INVALID execution payload with a non-zero last-valid-hash reached
+// handleInvalidExecutionError -> pruneInvalidBlock -> a second Lock() on the
+// non-reentrant RWMutex, freezing the node until restart. pruneInvalidBlock now
+// calls the forkchoice store directly and requires the caller to hold the lock.
+func Test_pruneInvalidBlock_UnderForkchoiceLock(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	service, tr := minimalTestService(t)
+	ctx, fcs := tr.ctx, tr.fcs
+	jcp := &qrysmpb.Checkpoint{}
+	st, root, err := prepareForkchoiceState(ctx, 0, [32]byte{'A'}, [32]byte{}, [32]byte{'a'}, jcp, jcp)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, st, root))
+	st, root, err = prepareForkchoiceState(ctx, 1, [32]byte{'B'}, [32]byte{'A'}, [32]byte{'b'}, jcp, jcp)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, st, root))
+	st, root, err = prepareForkchoiceState(ctx, 2, [32]byte{'C'}, [32]byte{'B'}, [32]byte{'c'}, jcp, jcp)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, st, root))
+	st, root, err = prepareForkchoiceState(ctx, 3, [32]byte{'D'}, [32]byte{'C'}, [32]byte{'d'}, jcp, jcp)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, st, root))
+	require.NoError(t, fcs.SetOptimisticToValid(ctx, [32]byte{'A'}))
+
+	// Reproduce the ReceiveBlockBatch condition: the forkchoice lock is held
+	// across the call to pruneInvalidBlock.
+	done := make(chan error, 1)
+	go func() {
+		fcs.Lock()
+		defer fcs.Unlock()
+		done <- service.pruneInvalidBlock(ctx, [32]byte{'D'}, [32]byte{'C'}, [32]byte{'a'})
+	}()
+
+	select {
+	case err := <-done:
+		require.Equal(t, true, IsInvalidBlock(err))
+		require.Equal(t, [32]byte{'a'}, InvalidBlockLVH(err))
+		require.Equal(t, 3, len(InvalidAncestorRoots(err)))
+	case <-time.After(15 * time.Second):
+		t.Fatal("pruneInvalidBlock deadlocked while the forkchoice lock was held")
+	}
+}
+
 func Test_GetPayloadAttribute_PrepareAllPayloads(t *testing.T) {
 	hook := logTest.NewGlobal()
 	resetCfg := features.InitWithReset(&features.Flags{

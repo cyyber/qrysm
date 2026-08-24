@@ -242,9 +242,15 @@ func (s *Service) notifyNewPayload(ctx context.Context,
 }
 
 // reportInvalidBlock deals with the event that an invalid block was detected by the execution layer
+// pruneInvalidBlock marks the block and its invalid descendants in forkchoice
+// and removes them from the DB and state caches. The caller MUST hold the
+// forkchoice write lock: the forkchoice store method is called directly rather
+// than through a lock-acquiring wrapper, so that this works when invoked from
+// paths that already hold the lock (e.g. onBlockBatch under ReceiveBlockBatch),
+// which would otherwise self-deadlock on the non-reentrant lock.
 func (s *Service) pruneInvalidBlock(ctx context.Context, root, parentRoot, lvh [32]byte) error {
 	newPayloadInvalidNodeCount.Inc()
-	invalidRoots, err := s.SetOptimisticToInvalid(ctx, root, parentRoot, lvh)
+	invalidRoots, err := s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, root, parentRoot, lvh)
 	if err != nil {
 		return err
 	}
