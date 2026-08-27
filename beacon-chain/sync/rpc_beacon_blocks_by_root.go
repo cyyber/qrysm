@@ -35,7 +35,7 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, requests *t
 		}
 		// Verify the signature before queueing, matching the gossip path, since
 		// a matched root does not cover it.
-		if _, err := s.verifyPendingBlockSignature(ctx, blk, blkRoot); err != nil {
+		if _, err := s.verifyPendingBlockSignature(ctx, id, blk, blkRoot); err != nil {
 			return errors.Wrapf(err, "verify block signature for block with root %x", blkRoot)
 		}
 		s.pendingQueueLock.Lock()

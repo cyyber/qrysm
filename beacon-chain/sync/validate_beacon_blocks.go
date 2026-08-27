@@ -159,7 +159,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	// Handle block when the parent is unknown.
 	if !s.cfg.chain.HasBlock(ctx, blk.Block().ParentRoot()) {
-		if res, err := s.verifyPendingBlockSignature(ctx, blk, blockRoot); err != nil {
+		if res, err := s.verifyPendingBlockSignature(ctx, pid, blk, blockRoot); err != nil {
 			log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not verify block signature")
 			return res, err
 		}
@@ -187,6 +187,17 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	err = s.validateBeaconBlock(ctx, blk, blockRoot)
 	if err != nil {
+		// An invalid signature is a property of this message and its sender, not
+		// of the block root: the root is the hash tree root of the unsigned block,
+		// so a forged-signature copy of a legitimate block has the same root.
+		// Reject the message and downscore the peer, but never add the root to the
+		// bad-block cache, or an attacker could make us reject the real block
+		// (and all its descendants) by re-sending it with a garbage signature.
+		if errors.Is(err, blocks.ErrInvalidSignature) {
+			s.downscorePeer(pid, "invalidBlockSignature")
+			log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not validate beacon block")
+			return pubsub.ValidationReject, err
+		}
 		// An out-of-range proposer index can never become valid: reject it (and
 		// let gossip downscore the peer) rather than ignore it. It is not added to
 		// the bad-block cache since the block root itself is not otherwise known bad.
@@ -256,10 +267,11 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 		return err
 	}
 
+	// Deliberately not marking the block as bad on a signature failure: the
+	// block root does not cover the signature, so doing so would let anyone
+	// poison the bad-block cache for a legitimate block. The gossip caller
+	// rejects the message and downscores the sending peer instead.
 	if err := blocks.VerifyBlockSignatureUsingCurrentFork(parentState, blk, blockRoot); err != nil {
-		if errors.Is(err, blocks.ErrInvalidSignature) {
-			s.setBadBlock(ctx, blockRoot)
-		}
 		return err
 	}
 	// In the event the block is more than an epoch ahead from its
@@ -346,7 +358,13 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 // respect to the current head state. This is used to avoid enqueuing
 // unauthenticated blocks into the pending queue, which would otherwise let a
 // malicious peer flood the queue with arbitrary blocks.
-func (s *Service) verifyPendingBlockSignature(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) (pubsub.ValidationResult, error) {
+//
+// On an invalid signature the sending peer is downscored and the block is
+// rejected, but the block root is NOT added to the bad-block cache: the root is
+// the hash tree root of the unsigned block, so a forged-signature copy of a
+// legitimate block shares its root and caching it would let an attacker make
+// us reject the real block and all of its descendants (upstream #17052).
+func (s *Service) verifyPendingBlockSignature(ctx context.Context, pid peer.ID, blk interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) (pubsub.ValidationResult, error) {
 	roState, err := s.cfg.chain.HeadStateReadOnly(ctx)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
@@ -357,7 +375,7 @@ func (s *Service) verifyPendingBlockSignature(ctx context.Context, blk interface
 	}
 	if err := blocks.VerifyBlockSignatureUsingCurrentFork(roState, blk, blkRoot); err != nil {
 		if errors.Is(err, blocks.ErrInvalidSignature) {
-			s.setBadBlock(ctx, blkRoot)
+			s.downscorePeer(pid, "invalidBlockSignature")
 		}
 		return pubsub.ValidationReject, err
 	}

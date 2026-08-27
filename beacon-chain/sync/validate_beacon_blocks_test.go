@@ -110,9 +110,17 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	assert.Equal(t, true, result)
 }
 
-func TestValidateBeaconBlockPubSub_InvalidSignature_MarksBlockAsBad(t *testing.T) {
+// Regression test for the qrysm port of upstream PR #17052: the block root is
+// the hash tree root of the *unsigned* block, so a legitimate block re-sent with
+// a forged signature has the same root as the real one. An invalid signature
+// must therefore reject the message and downscore the sender, but must never
+// put the root in the bad-block cache - otherwise anyone could make us reject
+// the real block (and every descendant of it) by re-sending it with a garbage
+// signature. The genuine block must still be accepted afterwards.
+func TestValidateBeaconBlockPubSub_InvalidSignature_DownscoresPeerWithoutMarkingBlockBad(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
+	attacker := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	beaconState, privKeys := util.DeterministicGenesisStateZond(t, 100)
 	parentBlock := util.NewBeaconBlockZond()
@@ -125,16 +133,31 @@ func TestValidateBeaconBlockPubSub_InvalidSignature_MarksBlockAsBad(t *testing.T
 	require.NoError(t, copied.SetSlot(1))
 	proposerIdx, err := helpers.BeaconProposerIndex(ctx, copied)
 	require.NoError(t, err)
-	msg := util.NewBeaconBlockZond()
-	msg.Block.ParentRoot = bRoot[:]
-	msg.Block.Slot = 1
-	msg.Block.ProposerIndex = proposerIdx
-	badPrivKeyIdx := proposerIdx + 1 // We generate a valid signature from a wrong private key which fails to verify
-	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[badPrivKeyIdx])
+
+	// The genuine block, correctly signed by its proposer.
+	genuine := util.NewBeaconBlockZond()
+	genuine.Block.ParentRoot = bRoot[:]
+	genuine.Block.Slot = 1
+	genuine.Block.ProposerIndex = proposerIdx
+	genuine.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, genuine.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
+
+	// The attacker's copy: identical block, hence identical root, but signed with
+	// the wrong key so the signature fails to verify.
+	forged := util.NewBeaconBlockZond()
+	forged.Block = genuine.Block
+	forged.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, forged.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx+1])
+	require.NoError(t, err)
+
+	blockRoot, err := genuine.Block.HashTreeRoot()
+	require.NoError(t, err)
+	forgedRoot, err := forged.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.Equal(t, blockRoot, forgedRoot, "test premise: the signature is not covered by the block root")
 
 	stateGen := stategen.New(db, doublylinkedtree.New())
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
+		State: beaconState,
 		FinalizedCheckPoint: &qrysmpb.Checkpoint{
 			Epoch: 0,
 			Root:  make([]byte, 32),
@@ -151,35 +174,47 @@ func TestValidateBeaconBlockPubSub_InvalidSignature_MarksBlockAsBad(t *testing.T
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
-		seenBlockCache: lruwrpr.New(10),
-		badBlockCache:  lruwrpr.New(10),
+		seenBlockCache:      lruwrpr.New(10),
+		badBlockCache:       lruwrpr.New(10),
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
 
-	blockRoot, err := msg.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	// Block must not be in the bad-block cache before validation runs.
-	assert.Equal(t, false, r.hasBadBlock(blockRoot), "block should not be marked as bad initially")
-
-	buf := new(bytes.Buffer)
-	_, err = p.Encoding().EncodeGossip(buf, msg)
-	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeFor[*qrysmpb.SignedBeaconBlockZond]()]
 	digest, err := r.currentForkDigest()
 	assert.NoError(t, err)
 	topic = r.addDigestToTopic(topic, digest)
-	m := &pubsub.Message{
-		Message: &pubsubpb.Message{
-			Data:  buf.Bytes(),
-			Topic: &topic,
-		},
+	gossipMsg := func(blk *qrysmpb.SignedBeaconBlockZond) *pubsub.Message {
+		buf := new(bytes.Buffer)
+		_, err := p.Encoding().EncodeGossip(buf, blk)
+		require.NoError(t, err)
+		return &pubsub.Message{
+			Message: &pubsubpb.Message{
+				Data:  buf.Bytes(),
+				Topic: &topic,
+			},
+		}
 	}
-	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+
+	// Block must not be in the bad-block cache before validation runs.
+	assert.Equal(t, false, r.hasBadBlock(blockRoot), "block should not be marked as bad initially")
+
+	// The forged copy is rejected and the attacker is downscored...
+	res, err := r.validateBeaconBlockPubSub(ctx, attacker.PeerID(), gossipMsg(forged))
 	require.ErrorIs(t, err, coreblocks.ErrInvalidSignature)
 	assert.Equal(t, pubsub.ValidationReject, res)
+	count, err := p.Peers().Scorers().BadResponsesScorer().Count(attacker.PeerID())
+	require.NoError(t, err)
+	assert.Equal(t, 1, count, "attacker should be downscored on invalid signature")
 
-	// After a real signature failure the block must be cached as bad.
-	assert.Equal(t, true, r.hasBadBlock(blockRoot), "block should be marked as bad after invalid signature")
+	// ...but the block root, shared with the genuine block, must not be cached
+	// as bad.
+	assert.Equal(t, false, r.hasBadBlock(blockRoot), "block root must not be marked as bad after a forged signature")
+
+	// The genuine block must still be accepted.
+	res, err = r.validateBeaconBlockPubSub(ctx, "", gossipMsg(genuine))
+	require.NoError(t, err)
+	assert.Equal(t, pubsub.ValidationAccept, res, "genuine block must still be accepted after a forged-signature copy was seen")
 }
 
 func TestValidateBeaconBlockPubSub_TransientVerifyError_DoesNotMarkBlockAsBad(t *testing.T) {
@@ -1212,10 +1247,13 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 	r.cfg.chain = chainService
 	r.cfg.clock = startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)
 
+	// Upstream #17052: a signature failure must not bad-list the parent's root
+	// (the root does not cover the signature), so the child is treated as
+	// having an unknown parent and is ignored/queued rather than rejected.
+	assert.Equal(t, false, r.hasBadBlock(currBlockRoot), "parent root must not be marked as bad on a signature failure")
 	res, err = r.validateBeaconBlockPubSub(ctx, "", m)
-	require.ErrorContains(t, "has an invalid parent", err)
-	// Expect block with bad parent to fail too
-	assert.Equal(t, res, pubsub.ValidationReject, "block with invalid parent should be rejected")
+	require.ErrorContains(t, "unknown parent for block", err)
+	assert.Equal(t, res, pubsub.ValidationIgnore, "block with unknown parent should be ignored")
 }
 
 func TestValidateBeaconBlockPubSub_InsertValidPendingBlock(t *testing.T) {

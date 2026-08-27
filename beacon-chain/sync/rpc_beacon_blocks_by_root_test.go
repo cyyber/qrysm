@@ -474,6 +474,13 @@ func TestRecentBeaconBlocks_RPCRequestSent_InvalidSignature(t *testing.T) {
 	p1.Connect(p2)
 	require.ErrorContains(t, "verify block signature", r.sendRecentBeaconBlocksRequest(context.Background(), &expectedRoots, p2.PeerID()))
 	assert.Equal(t, 0, len(r.seenPendingBlocks), "Block with invalid signature should not be queued")
+	// Upstream #17052: the responding peer is downscored, but the block root
+	// (which does not cover the signature) must not be cached as bad, or a
+	// malicious peer could poison the cache for the legitimate block.
+	count, err := p1.Peers().Scorers().BadResponsesScorer().Count(p2.PeerID())
+	require.NoError(t, err)
+	assert.Equal(t, 1, count, "peer should be downscored on invalid signature")
+	assert.Equal(t, false, r.hasBadBlock(blockARoot), "block root must not be marked as bad on a forged signature")
 
 	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
