@@ -21,4 +21,9 @@ type Server struct {
 	HeadFetcher       blockchain.HeadFetcher
 	ChainInfoFetcher  blockchain.ChainInfoFetcher
 	BlockBuilder      builder.BlockBuilder
+	// EventFeedDepth is the buffer depth of the feed subscription channel and of
+	// the per-client outbox. Zero selects DefaultEventFeedDepth. A client that
+	// lets the outbox fill up is disconnected rather than allowed to block the
+	// event producers.
+	EventFeedDepth int
 }

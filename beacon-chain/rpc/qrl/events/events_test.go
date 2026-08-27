@@ -3,6 +3,7 @@ package events
 import (
 	"bytes"
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -27,10 +28,11 @@ import (
 	qrlpb "github.com/theQRL/qrysm/proto/qrl/v1"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/runtime/version"
-	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/mock"
 	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/testing/util"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -586,20 +588,6 @@ func TestStreamEvents_CommaSeparatedTopics(t *testing.T) {
 		Event: HeadTopic,
 		Data:  headGenericResponse,
 	}
-
-	assertFeedSendAndReceive(ctx, &assertFeedArgs{
-		t:             t,
-		srv:           srv,
-		topics:        []string{HeadTopic + "," + FinalizedCheckpointTopic},
-		stream:        mockStream,
-		shouldReceive: wantedHeadMessage,
-		itemToSend: &feed.Event{
-			Type: statefeed.NewHead,
-			Data: wantedHead,
-		},
-		feed: srv.StateNotifier.StateFeed(),
-	})
-
 	wantedCheckpoint := &qrlpb.EventFinalizedCheckpoint{
 		Block: make([]byte, 32),
 		State: make([]byte, 32),
@@ -612,18 +600,126 @@ func TestStreamEvents_CommaSeparatedTopics(t *testing.T) {
 		Data:  checkpointGenericResponse,
 	}
 
-	assertFeedSendAndReceive(ctx, &assertFeedArgs{
-		t:             t,
-		srv:           srv,
-		topics:        []string{HeadTopic + "," + FinalizedCheckpointTopic},
-		stream:        mockStream,
-		shouldReceive: wantedCheckpointMessage,
-		itemToSend: &feed.Event{
-			Type: statefeed.FinalizedCheckpoint,
-			Data: wantedCheckpoint,
-		},
-		feed: srv.StateNotifier.StateFeed(),
+	received := make(chan *gateway.EventSource, 2)
+	mockStream.EXPECT().Send(wantedHeadMessage).Do(func(arg0 any) {
+		received <- arg0.(*gateway.EventSource)
 	})
+	mockStream.EXPECT().Send(wantedCheckpointMessage).Do(func(arg0 any) {
+		received <- arg0.(*gateway.EventSource)
+	})
+
+	run := startStream(ctx, t, srv, []string{HeadTopic + "," + FinalizedCheckpointTopic}, mockStream)
+	f := srv.StateNotifier.StateFeed()
+	sendUntilSubscribed(f, &feed.Event{Type: statefeed.NewHead, Data: wantedHead})
+	require.Equal(t, HeadTopic, waitForEvent(t, received).Event)
+	require.Equal(t, 1, f.Send(&feed.Event{Type: statefeed.FinalizedCheckpoint, Data: wantedCheckpoint}))
+	require.Equal(t, FinalizedCheckpointTopic, waitForEvent(t, received).Event)
+
+	require.Equal(t, codes.Canceled, status.Code(run.stop(t)))
+}
+
+// Regression test for the qrysm port of upstream #13329/#14413: the event feeds
+// are written to synchronously from gossip validation and block import, and
+// event.Feed.Send blocks until every subscriber has accepted the value. A
+// client that stops reading the event stream must therefore be dropped by the
+// stream, never allowed to back-pressure the feed producers.
+func TestStreamEvents_SlowReaderIsShedWithoutBlockingProducers(t *testing.T) {
+	ctx := context.Background()
+	srv, ctrl, mockStream := setupServer(ctx, t)
+	defer ctrl.Finish()
+	const depth = 4
+	srv.EventFeedDepth = depth
+
+	// The client never reads: every Send blocks until the test releases it.
+	release := make(chan struct{})
+	mockStream.EXPECT().Send(gomock.Any()).DoAndReturn(func(any) error {
+		<-release
+		return nil
+	}).AnyTimes()
+
+	// Fetch the feed before starting the stream: the mock notifier's lazy
+	// initialization is not synchronized.
+	f := srv.StateNotifier.StateFeed()
+	run := startStream(ctx, t, srv, []string{FinalizedCheckpointTopic}, mockStream)
+	ev := &feed.Event{
+		Type: statefeed.FinalizedCheckpoint,
+		Data: &qrlpb.EventFinalizedCheckpoint{Block: make([]byte, 32), State: make([]byte, 32), Epoch: 1},
+	}
+	sendUntilSubscribed(f, ev)
+
+	// Far more events than the subscription buffer plus the outbox can hold.
+	// Before the fix the producer would block on the second event (buffer of
+	// one, reader stuck in Send). Now every Send must return promptly and the
+	// stream must shed the client once its outbox is full.
+	const numEvents = 4*depth + 8
+	producerDone := make(chan struct{})
+	go func() {
+		defer close(producerDone)
+		for range numEvents {
+			f.Send(ev)
+		}
+	}()
+	select {
+	case <-producerDone:
+	case <-time.After(10 * time.Second):
+		t.Fatal("feed producer blocked behind a stalled event stream client")
+	}
+
+	err := run.wait(t)
+	require.Equal(t, codes.ResourceExhausted, status.Code(err), "unexpected error: %v", err)
+	require.ErrorContains(t, "failed to read fast enough", err)
+	// The stream unsubscribed from the feed on the way out.
+	require.Equal(t, 0, f.Send(ev), "feed still has a subscriber after the slow client was shed")
+	close(release)
+}
+
+func TestStreamEvents_SubscribesOnlyToRequestedFeeds(t *testing.T) {
+	ctx := context.Background()
+	srv, ctrl, mockStream := setupServer(ctx, t)
+	defer ctrl.Finish()
+
+	wantedAttV1alpha1 := util.HydrateAttestation(&qrysmpb.Attestation{Data: &qrysmpb.AttestationData{Slot: 8}})
+	genericResponse, err := anypb.New(migration.V1Alpha1AttestationToV1(wantedAttV1alpha1))
+	require.NoError(t, err)
+	received := make(chan *gateway.EventSource, 1)
+	mockStream.EXPECT().Send(&gateway.EventSource{Event: AttestationTopic, Data: genericResponse}).Do(func(arg0 any) {
+		received <- arg0.(*gateway.EventSource)
+	})
+
+	opsFeed := srv.OperationNotifier.OperationFeed()
+	stateFeed := srv.StateNotifier.StateFeed()
+	run := startStream(ctx, t, srv, []string{AttestationTopic}, mockStream)
+	sendUntilSubscribed(opsFeed, &feed.Event{
+		Type: operation.UnaggregatedAttReceived,
+		Data: &operation.UnAggregatedAttReceivedData{Attestation: wantedAttV1alpha1},
+	})
+	waitForEvent(t, received)
+
+	// No state-feed topic was requested, so the stream must not be a subscriber
+	// of the state feed at all.
+	require.Equal(t, 0, stateFeed.Send(&feed.Event{Type: statefeed.NewHead, Data: &qrlpb.EventHead{}}))
+
+	require.Equal(t, codes.Canceled, status.Code(run.stop(t)))
+}
+
+func TestStreamEvents_SendErrorTerminatesStream(t *testing.T) {
+	ctx := context.Background()
+	srv, ctrl, mockStream := setupServer(ctx, t)
+	defer ctrl.Finish()
+
+	mockStream.EXPECT().Send(gomock.Any()).Return(errors.New("client went away"))
+
+	f := srv.StateNotifier.StateFeed()
+	run := startStream(ctx, t, srv, []string{FinalizedCheckpointTopic}, mockStream)
+	sendUntilSubscribed(f, &feed.Event{
+		Type: statefeed.FinalizedCheckpoint,
+		Data: &qrlpb.EventFinalizedCheckpoint{Block: make([]byte, 32), State: make([]byte, 32), Epoch: 1},
+	})
+
+	// The handler returns on its own once the sender reports the failure.
+	err := run.wait(t)
+	require.Equal(t, codes.Internal, status.Code(err), "unexpected error: %v", err)
+	require.ErrorContains(t, "client went away", err)
 }
 
 func setupServer(ctx context.Context, t testing.TB) (*Server, *gomock.Controller, *mock.MockEvents_StreamEventsServer) {
@@ -637,32 +733,79 @@ func setupServer(ctx context.Context, t testing.TB) (*Server, *gomock.Controller
 	return srv, ctrl, mockStream
 }
 
+// streamRun is a StreamEvents call running in the background.
+type streamRun struct {
+	cancel context.CancelFunc
+	errc   chan error
+}
+
+// startStream runs StreamEvents for the given topics against a cancellable
+// stream context.
+func startStream(ctx context.Context, t *testing.T, srv *Server, topics []string, stream *mock.MockEvents_StreamEventsServer) *streamRun {
+	ctx, cancel := context.WithCancel(ctx)
+	stream.EXPECT().Context().Return(ctx).AnyTimes()
+	run := &streamRun{cancel: cancel, errc: make(chan error, 1)}
+	go func() {
+		run.errc <- srv.StreamEvents(&qrlpb.StreamEventsRequest{Topics: topics}, stream)
+	}()
+	t.Cleanup(cancel)
+	return run
+}
+
+// wait blocks until StreamEvents returns and yields its error.
+func (r *streamRun) wait(t *testing.T) error {
+	select {
+	case err := <-r.errc:
+		return err
+	case <-time.After(10 * time.Second):
+		t.Fatal("StreamEvents did not return")
+		return nil
+	}
+}
+
+// stop cancels the stream context and waits for StreamEvents to return.
+func (r *streamRun) stop(t *testing.T) error {
+	r.cancel()
+	return r.wait(t)
+}
+
+// sendUntilSubscribed sends the event in a loop until the stream has subscribed
+// to the feed and accepted it.
+func sendUntilSubscribed(f *event.Feed, ev *feed.Event) {
+	for sent := 0; sent == 0; {
+		sent = f.Send(ev)
+	}
+}
+
+func waitForEvent(t *testing.T, received <-chan *gateway.EventSource) *gateway.EventSource {
+	select {
+	case ev := <-received:
+		return ev
+	case <-time.After(10 * time.Second):
+		t.Fatal("event was not streamed to the client")
+		return nil
+	}
+}
+
 type assertFeedArgs struct {
 	t             *testing.T
 	topics        []string
 	srv           *Server
 	stream        *mock.MockEvents_StreamEventsServer
-	shouldReceive any
+	shouldReceive *gateway.EventSource
 	itemToSend    *feed.Event
 	feed          *event.Feed
 }
 
 func assertFeedSendAndReceive(ctx context.Context, args *assertFeedArgs) {
-	exitRoutine := make(chan bool)
-	defer close(exitRoutine)
+	t := args.t
+	received := make(chan *gateway.EventSource, 1)
 	args.stream.EXPECT().Send(args.shouldReceive).Do(func(arg0 any) {
-		exitRoutine <- true
+		received <- arg0.(*gateway.EventSource)
 	})
-	args.stream.EXPECT().Context().Return(ctx).AnyTimes()
 
-	req := &qrlpb.StreamEventsRequest{Topics: args.topics}
-	go func(tt *testing.T) {
-		assert.NoError(tt, args.srv.StreamEvents(req, args.stream), "Could not call RPC method")
-	}(args.t)
-	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
-	for sent := 0; sent == 0; {
-		sent = args.feed.Send(args.itemToSend)
-	}
-
-	<-exitRoutine
+	run := startStream(ctx, t, args.srv, args.topics, args.stream)
+	sendUntilSubscribed(args.feed, args.itemToSend)
+	waitForEvent(t, received)
+	require.Equal(t, codes.Canceled, status.Code(run.stop(t)))
 }
