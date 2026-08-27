@@ -125,7 +125,11 @@ func cliActionNewSeed(cliCtx *cli.Context) error {
 
 	mnemonic := newSeedFlags.Mnemonic
 	if len(mnemonic) == 0 {
-		mnemonic = keyderivation.GetRandomMnemonic()
+		var err error
+		mnemonic, err = keyderivation.GetRandomMnemonic()
+		if err != nil {
+			return errors.Wrap(err, "could not generate mnemonic")
+		}
 	}
 
 	seed, err := goqrllib_misc.MnemonicToBin(mnemonic)

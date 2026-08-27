@@ -103,6 +103,7 @@
   "cryptorand": {
     "only_files": {
       "beacon-chain/.*": "",
+      "cmd/.*": "",
       "shared/.*": "",
       "slasher/.*": "",
       "validator/.*": ""
