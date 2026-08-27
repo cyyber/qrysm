@@ -433,6 +433,71 @@ func TestProcessSlashings_BadValue(t *testing.T) {
 	require.ErrorContains(t, "addition overflows", err)
 }
 
+// TestProcessSlashings_OverflowUnderQRLConstants is a regression test for the
+// uint64 overflow in the correlation (proportional) slashing penalty under QRL's
+// balance constants. The spec factors EFFECTIVE_BALANCE_INCREMENT out of the
+// penalty numerator "to avoid uint64 overflow", which is sufficient on Ethereum
+// where effective_balance/increment = 32. On QRL,
+// MaxEffectiveBalance/EffectiveBalanceIncrement = 40000, so
+//
+//	penalty_numerator = effective_balance/increment * adjusted_total_slashing
+//
+// overflows uint64 once adjusted_total_slashing exceeds ~461,168 QRL. Before the
+// fix the penalty here wrapped to 75 QRL; ProcessSlashings now computes it in
+// 128-bit arithmetic and must produce the spec-correct 1920 QRL.
+func TestProcessSlashings_OverflowUnderQRLConstants(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	helpers.ClearCache()
+	cfg := params.BeaconConfig()
+
+	// Test premise: QRL's EB/increment ratio is 40000 (Ethereum's is 32).
+	require.Equal(t, uint64(40000), cfg.MaxEffectiveBalance/cfg.EffectiveBalanceIncrement)
+
+	// 250 active validators of 40,000 QRL each => 10,000,000 QRL total active
+	// balance. validator[0] is the one slashed and penalized this epoch.
+	const numValidators = 250
+	vals := make([]*qrysmpb.Validator, numValidators)
+	bals := make([]uint64, numValidators)
+	for i := range vals {
+		vals[i] = &qrysmpb.Validator{
+			ExitEpoch:        cfg.FarFutureEpoch,
+			EffectiveBalance: cfg.MaxEffectiveBalance,
+		}
+		bals[i] = cfg.MaxEffectiveBalance
+	}
+	vals[0].Slashed = true
+	vals[0].WithdrawableEpoch = cfg.EpochsPerSlashingsVector / 2 // currentEpoch(0) + vector/2
+
+	// Slashings vector sums to 160,000 QRL (e.g. four 40,000-QRL validators
+	// slashed within EPOCHS_PER_SLASHINGS_VECTOR). With
+	// ProportionalSlashingMultiplier = 3, adjusted_total_slashing = 480,000 QRL,
+	// so penalty_numerator = 40000 * 480,000e9 = 1.92e19, which is > 2^64.
+	base := &qrysmpb.BeaconStateZond{
+		Slot:       0,
+		Validators: vals,
+		Balances:   bals,
+		Slashings:  []uint64{160000 * cfg.EffectiveBalanceIncrement},
+	}
+	s, err := state_native.InitializeFromProtoZond(base)
+	require.NoError(t, err)
+
+	newState, err := epoch.ProcessSlashings(s, cfg.ProportionalSlashingMultiplier)
+	require.NoError(t, err)
+
+	start := cfg.MaxEffectiveBalance // 40,000 QRL
+
+	// Spec-correct penalty, computed without overflow:
+	//   (effective_balance/increment * adjusted) / total_balance * increment
+	// = (40000 * 480,000e9) / 10,000,000e9 * 1e9 = 1920e9  (1,920 QRL)
+	// Before the fix the numerator 40000 * 480,000e9 = 1.92e19 wrapped uint64 and
+	// produced a 75 QRL penalty.
+	correctPenalty := uint64(1920) * cfg.EffectiveBalanceIncrement
+	got := newState.Balances()[0]
+	require.Equal(t, start-correctPenalty, got,
+		"correlation slashing penalty must be computed without uint64 overflow (1920 QRL)")
+}
+
 func TestProcessHistoricalDataUpdate(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -7,6 +7,7 @@ package epoch
 import (
 	"context"
 	"fmt"
+	"math/bits"
 	"slices"
 	"sort"
 
@@ -170,6 +171,12 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 //	          penalty_numerator = validator.effective_balance // increment * adjusted_total_slashing_balance
 //	          penalty = penalty_numerator // total_balance * increment
 //	          decrease_balance(state, ValidatorIndex(index), penalty)
+//
+// Note: the spec's "factor out increment" trick keeps penalty_numerator within
+// uint64 on Ethereum (effective_balance/increment = 32) but not on QRL, where
+// MaxEffectiveBalance/EffectiveBalanceIncrement = 40000. This implementation
+// computes penalty_numerator/total_balance in 128-bit arithmetic to match the
+// spec's exact (unbounded-integer) result without overflowing.
 func ProcessSlashings(state state.BeaconState, slashingMultiplier uint64) (state.BeaconState, error) {
 	currentEpoch := time.CurrentEpoch(state)
 	totalBalance, err := helpers.TotalActiveBalance(state)
@@ -193,12 +200,31 @@ func ProcessSlashings(state state.BeaconState, slashingMultiplier uint64) (state
 	// a callback is used here to apply the following actions to all validators
 	// below equally.
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
-	minSlashing := min(totalSlashing*slashingMultiplier, totalBalance)
+	// adjusted_total_slashing_balance = min(sum(slashings) * multiplier, total_balance).
+	// Use a checked multiply: if sum(slashings) * multiplier overflows uint64 the
+	// true product necessarily exceeds total_balance (a uint64), so the min is
+	// total_balance. Without this, the multiply could silently wrap to a small
+	// value and understate the penalty.
+	minSlashing := totalBalance
+	if adjusted, mErr := math.Mul64(totalSlashing, slashingMultiplier); mErr == nil {
+		minSlashing = min(adjusted, totalBalance)
+	}
 	err = state.ApplyToEveryValidator(func(idx int, val *qrysmpb.Validator) (bool, *qrysmpb.Validator, error) {
 		correctEpoch := (currentEpoch + exitLength/2) == val.WithdrawableEpoch
 		if val.Slashed && correctEpoch {
-			penaltyNumerator := val.EffectiveBalance / increment * minSlashing
-			penalty := penaltyNumerator / totalBalance * increment
+			// penalty = effective_balance/increment * minSlashing / total_balance * increment.
+			// The spec factors increment out of the numerator to avoid uint64
+			// overflow, which suffices on Ethereum (effective_balance/increment = 32)
+			// but not on QRL, where MaxEffectiveBalance/EffectiveBalanceIncrement =
+			// 40000, so effective_balance/increment * minSlashing (minSlashing up to
+			// total_balance) overflows uint64. Compute that product in 128 bits.
+			// bits.Div64 cannot panic here: hi = (effective_balance/increment *
+			// minSlashing) >> 64 < total_balance because effective_balance/increment
+			// <= 40000 < 2^64 and minSlashing <= total_balance, and total_balance >=
+			// EffectiveBalanceIncrement >= 1 (floored in TotalActiveBalance).
+			hi, lo := bits.Mul64(val.EffectiveBalance/increment, minSlashing)
+			quotient, _ := bits.Div64(hi, lo, totalBalance)
+			penalty := quotient * increment
 			if err := helpers.DecreaseBalance(state, primitives.ValidatorIndex(idx), penalty); err != nil {
 				return false, val, err
 			}

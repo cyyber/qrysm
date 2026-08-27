@@ -71,7 +71,15 @@ func TotalActiveBalance(s state.ReadOnlyBeaconState) (uint64, error) {
 	epoch := slots.ToEpoch(s.Slot())
 	if err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		if IsActiveValidatorUsingTrie(val, epoch) {
-			total += val.EffectiveBalance()
+			// Checked addition: total active balance feeds consensus-critical
+			// arithmetic (rewards, penalties, slashings). Rather than silently
+			// wrapping uint64 if the active stake ever exceeds it, surface an
+			// error so the epoch transition fails loudly.
+			var err error
+			total, err = mathutil.Add64(total, val.EffectiveBalance())
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	}); err != nil {
