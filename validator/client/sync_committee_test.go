@@ -514,10 +514,11 @@ func TestSubmitSignedContributionAndProof_OncePerPubkeyAndSubcommittee(t *testin
 		},
 	).Return(&qrysmpb.SyncSubcommitteeIndexResponse{Indices: aggregatorCommitteeIndices}, nil)
 
-	// Two selection proofs are computed (one per index).
+	// Both indices fall in subnet 0, so a single selection proof over
+	// (slot, subcommittee 0) is signed and reused for the second index: one
+	// DomainData call for the selection proofs.
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
-		Times(2).
 		Return(&qrysmpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
 	aggBits := bitfield.NewBitvector128()

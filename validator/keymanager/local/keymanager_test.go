@@ -14,6 +14,7 @@ import (
 	keymock "github.com/theQRL/qrysm/crypto/ml_dsa_87/common/mock"
 	"github.com/theQRL/qrysm/encoding/bytesutil"
 	keystorev1 "github.com/theQRL/qrysm/pkg/go-qrl-wallet-encryptor-keystore"
+	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	validatorpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1/validator-client"
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
@@ -151,7 +152,10 @@ func TestLocalKeymanager_FetchValidatingSeeds(t *testing.T) {
 	}
 }
 
-func TestLocalKeymanager_Sign(t *testing.T) {
+// newKeymanagerWithRandomAccounts imports numAccounts freshly generated
+// keystores into a keymanager and initializes its key caches from them,
+// returning the keymanager and the validating public keys it holds.
+func newKeymanagerWithRandomAccounts(t *testing.T, numAccounts int) (*Keymanager, [][field_params.MLDSA87PubkeyLength]byte) {
 	wallet := &mock.Wallet{
 		Files:            make(map[string]map[string][]byte),
 		AccountPasswords: make(map[string]string),
@@ -164,7 +168,6 @@ func TestLocalKeymanager_Sign(t *testing.T) {
 
 	// First, generate accounts and their keystore.json files.
 	ctx := context.Background()
-	numAccounts := 10
 	keystores := make([]*keymanager.Keystore, numAccounts)
 	passwords := make([]string, numAccounts)
 	for i := range numAccounts {
@@ -198,6 +201,12 @@ func TestLocalKeymanager_Sign(t *testing.T) {
 	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 	require.Equal(t, len(publicKeys), len(store.PublicKeys))
+	return dr, publicKeys
+}
+
+func TestLocalKeymanager_Sign(t *testing.T) {
+	ctx := context.Background()
+	dr, publicKeys := newKeymanagerWithRandomAccounts(t, 10)
 
 	// We prepare naive data to sign.
 	data := []byte("hello world")
@@ -216,6 +225,65 @@ func TestLocalKeymanager_Sign(t *testing.T) {
 	}
 	if sig.Verify(wrongPubKey, data) {
 		t.Fatalf("Expected sig not to verify for pubkey %#x and data %v", wrongPubKey.Marshal(), data)
+	}
+}
+
+// Regression test for the qrysm-specific fix of hedged ML-DSA-87 signing
+// breaking aggregator selection: signatures the protocol hashes as
+// pseudo-random values (selection proofs, RANDAO reveal) must be reproducible,
+// while everything else keeps the (randomized) hedged mode.
+func TestLocalKeymanager_Sign_DeterministicForSelectionProofsAndRandao(t *testing.T) {
+	ctx := context.Background()
+	dr, publicKeys := newKeymanagerWithRandomAccounts(t, 1)
+	pubKey, err := ml_dsa_87.PublicKeyFromBytes(publicKeys[0][:])
+	require.NoError(t, err)
+	root := bytesutil.PadTo([]byte("signing root"), 32)
+
+	signTwice := func(t *testing.T, newReq func() *validatorpb.SignRequest) ([]byte, []byte) {
+		first, err := dr.Sign(ctx, newReq())
+		require.NoError(t, err)
+		second, err := dr.Sign(ctx, newReq())
+		require.NoError(t, err)
+		require.Equal(t, true, first.Verify(pubKey, root))
+		require.Equal(t, true, second.Verify(pubKey, root))
+		return first.Marshal(), second.Marshal()
+	}
+
+	deterministic := map[string]func() *validatorpb.SignRequest{
+		"selection proof (slot)": func() *validatorpb.SignRequest {
+			return &validatorpb.SignRequest{PublicKey: publicKeys[0][:], SigningRoot: root, Object: &validatorpb.SignRequest_Slot{Slot: 7}}
+		},
+		"sync committee selection proof": func() *validatorpb.SignRequest {
+			return &validatorpb.SignRequest{PublicKey: publicKeys[0][:], SigningRoot: root, Object: &validatorpb.SignRequest_SyncAggregatorSelectionData{
+				SyncAggregatorSelectionData: &qrysmpb.SyncAggregatorSelectionData{Slot: 7, SubcommitteeIndex: 1},
+			}}
+		},
+		"randao reveal (epoch)": func() *validatorpb.SignRequest {
+			return &validatorpb.SignRequest{PublicKey: publicKeys[0][:], SigningRoot: root, Object: &validatorpb.SignRequest_Epoch{Epoch: 3}}
+		},
+	}
+	for name, newReq := range deterministic {
+		t.Run(name, func(t *testing.T) {
+			first, second := signTwice(t, newReq)
+			require.DeepEqual(t, first, second, "%s must be signed deterministically", name)
+		})
+	}
+
+	hedged := map[string]func() *validatorpb.SignRequest{
+		"no object": func() *validatorpb.SignRequest {
+			return &validatorpb.SignRequest{PublicKey: publicKeys[0][:], SigningRoot: root}
+		},
+		"attestation data": func() *validatorpb.SignRequest {
+			return &validatorpb.SignRequest{PublicKey: publicKeys[0][:], SigningRoot: root, Object: &validatorpb.SignRequest_AttestationData{
+				AttestationData: &qrysmpb.AttestationData{},
+			}}
+		},
+	}
+	for name, newReq := range hedged {
+		t.Run(name, func(t *testing.T) {
+			first, second := signTwice(t, newReq)
+			require.DeepNotEqual(t, first, second, "%s must keep hedged (randomized) signing", name)
+		})
 	}
 }
 

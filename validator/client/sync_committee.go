@@ -211,8 +211,22 @@ func (v *validator) selectionProofs(ctx context.Context, slot primitives.Slot, p
 	return selectionProofs, nil
 }
 
-// Signs input slot with domain sync committee selection proof. This is used to create the signature for sync committee selection.
+// signSyncSelectionData returns the validator's sync committee selection proof
+// for the slot and subcommittee index: the SyncAggregatorSelectionData signed
+// under the sync committee selection proof domain, used both to decide
+// sync aggregator eligibility (RolesAt) and as the proof submitted with the
+// contribution. It is signed once per (pubkey, slot, index) and reused; see
+// selectionProof for why the same bytes must be used throughout the slot.
 func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [field_params.MLDSA87PubkeyLength]byte, index uint64, slot primitives.Slot) (signature []byte, err error) {
+	return v.selectionProof(selectionProofKey{pubKey: pubKey, slot: slot, sync: true, subnet: index}, func() ([]byte, error) {
+		return v.newSyncSelectionProof(ctx, pubKey, index, slot)
+	})
+}
+
+// newSyncSelectionProof signs the SyncAggregatorSelectionData under the sync
+// committee selection proof domain. Callers should use signSyncSelectionData,
+// which caches the result per slot and subcommittee.
+func (v *validator) newSyncSelectionProof(ctx context.Context, pubKey [field_params.MLDSA87PubkeyLength]byte, index uint64, slot primitives.Slot) (signature []byte, err error) {
 	domain, err := v.domainData(ctx, slots.ToEpoch(slot), params.BeaconConfig().DomainSyncCommitteeSelectionProof[:])
 	if err != nil {
 		return nil, err

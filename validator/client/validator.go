@@ -74,6 +74,7 @@ type validator struct {
 	domainDataLock                     sync.RWMutex
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
+	selectionProofsLock                sync.Mutex
 	highestValidSlotLock               sync.Mutex
 	prevBalanceLock                    sync.RWMutex
 	slashableKeysLock                  sync.RWMutex
@@ -92,6 +93,7 @@ type validator struct {
 	signedValidatorRegistrations       map[[fieldparams.MLDSA87PubkeyLength]byte]*qrysmpb.SignedValidatorRegistrationV1
 	graffitiOrderedIndex               uint64
 	aggregatedSlotCommitteeIDCache     *lru.Cache
+	selectionProofCache                map[selectionProofKey][]byte
 	domainDataCache                    *ristretto.Cache
 	highestValidSlot                   primitives.Slot
 	genesisTime                        uint64
@@ -775,6 +777,7 @@ func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fie
 	if v.duties == nil {
 		return nil, errors.New("duties are not initialized")
 	}
+	v.pruneSelectionProofs(slot)
 	rolesAt := make(map[[fieldparams.MLDSA87PubkeyLength]byte][]iface.ValidatorRole)
 	for validator, duty := range v.duties.CurrentEpochDuties {
 		var roles []iface.ValidatorRole
@@ -849,6 +852,68 @@ func (v *validator) Keymanager() (keymanager.IKeymanager, error) {
 		return nil, errors.New("keymanager is not initialized")
 	}
 	return v.keyManager, nil
+}
+
+// selectionProofKey identifies one aggregator selection proof: the attestation
+// selection proof over (pubkey, slot) when sync is false, or the sync committee
+// selection proof over (pubkey, slot, subnet) when sync is true.
+type selectionProofKey struct {
+	pubKey [fieldparams.MLDSA87PubkeyLength]byte
+	slot   primitives.Slot
+	sync   bool
+	subnet uint64
+}
+
+// selectionProof returns the selection proof for key, signing it with sign on
+// the first request and reusing the cached bytes afterwards.
+//
+// The spec derives aggregator eligibility from hash(selection_proof), so the
+// proof that decided the role in RolesAt must be the very same proof that is
+// later submitted to the beacon node, which re-derives eligibility from it.
+// ML-DSA-87 signing is hedged (randomized): re-signing the same message yields
+// a different, equally valid signature with an independent is_aggregator
+// outcome, so without this cache the beacon node would reject most aggregation
+// duties ("Validator is not an aggregator") and sync contributions would be
+// silently skipped.
+func (v *validator) selectionProof(key selectionProofKey, sign func() ([]byte, error)) ([]byte, error) {
+	v.selectionProofsLock.Lock()
+	if proof, ok := v.selectionProofCache[key]; ok {
+		v.selectionProofsLock.Unlock()
+		return proof, nil
+	}
+	v.selectionProofsLock.Unlock()
+
+	// Sign outside the lock: signing is slow and independent per key.
+	proof, err := sign()
+	if err != nil {
+		return nil, err
+	}
+
+	v.selectionProofsLock.Lock()
+	defer v.selectionProofsLock.Unlock()
+	// A concurrent caller may have signed the same proof meanwhile; the first
+	// proof stored wins so every reader observes one proof per key.
+	if cached, ok := v.selectionProofCache[key]; ok {
+		return cached, nil
+	}
+	if v.selectionProofCache == nil {
+		v.selectionProofCache = make(map[selectionProofKey][]byte)
+	}
+	v.selectionProofCache[key] = proof
+	return proof, nil
+}
+
+// pruneSelectionProofs drops cached selection proofs for slots before slot.
+// Proofs for the current and future slots (e.g. signed ahead of time by
+// subscribeToSubnets for next-epoch duties) are kept.
+func (v *validator) pruneSelectionProofs(slot primitives.Slot) {
+	v.selectionProofsLock.Lock()
+	defer v.selectionProofsLock.Unlock()
+	for key := range v.selectionProofCache {
+		if key.slot < slot {
+			delete(v.selectionProofCache, key)
+		}
+	}
 }
 
 // isAggregator checks if a validator is an aggregator of a given slot and committee,

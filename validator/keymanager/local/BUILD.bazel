@@ -63,6 +63,7 @@ go_test(
         "//encoding/bytesutil",
         "//pkg/go-qrl-wallet-encryptor-keystore",
         "//proto/qrl/service",
+        "//proto/qrysm/v1alpha1",
         "//proto/qrysm/v1alpha1/validator-client",
         "//testing/assert",
         "//testing/require",

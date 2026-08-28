@@ -214,6 +214,20 @@ func (km *Keymanager) FetchValidatingSeeds(ctx context.Context) ([][field_params
 }
 
 // Sign signs a message using a validator key.
+//
+// ML-DSA-87 signing is hedged by default (FIPS 204 §3.4): every signature mixes
+// in fresh randomness, so signing the same message twice yields two different,
+// equally valid signatures. Objects whose signature the protocol consumes as a
+// pseudo-random value are signed in FIPS 204 deterministic mode instead, so
+// that re-signing them reproduces the same bytes:
+//   - the aggregator selection proof (signed slot), whose hash decides
+//     is_aggregator;
+//   - the sync committee selection proof (SyncAggregatorSelectionData), whose
+//     hash decides is_sync_committee_aggregator;
+//   - the RANDAO reveal (signed epoch), which is mixed into the beacon chain's
+//     randomness.
+//
+// Everything else (blocks, attestations, exits, ...) keeps hedged signing.
 func (*Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (ml_dsa_87.Signature, error) {
 	publicKey := req.PublicKey
 	if publicKey == nil {
@@ -225,11 +239,31 @@ func (*Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (ml_d
 	if !ok {
 		return nil, errors.New("no signing key found in keys cache")
 	}
-	sig, err := secretKey.Sign(req.SigningRoot)
+	var sig ml_dsa_87.Signature
+	var err error
+	if requiresDeterministicSignature(req) {
+		sig, err = secretKey.SignDeterministic(req.SigningRoot)
+	} else {
+		sig, err = secretKey.Sign(req.SigningRoot)
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "could not sign signing root")
 	}
 	return sig, nil
+}
+
+// requiresDeterministicSignature reports whether the signed object is one whose
+// signature the protocol hashes as a pseudo-random value (selection proofs and
+// the RANDAO reveal) and must therefore be reproducible.
+func requiresDeterministicSignature(req *validatorpb.SignRequest) bool {
+	switch req.Object.(type) {
+	case *validatorpb.SignRequest_Slot,
+		*validatorpb.SignRequest_SyncAggregatorSelectionData,
+		*validatorpb.SignRequest_Epoch:
+		return true
+	default:
+		return false
+	}
 }
 
 func (km *Keymanager) initializeAccountKeystore(ctx context.Context) error {
