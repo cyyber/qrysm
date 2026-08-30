@@ -241,86 +241,8 @@ func TestStreamEvents_StateEvents(t *testing.T) {
 
 	t.Run(PayloadAttributesTopic+"_zond", func(t *testing.T) {
 		ctx := context.Background()
-		beaconState, _ := util.DeterministicGenesisStateZond(t, 1)
-		err := beaconState.SetSlot(2)
-		require.NoError(t, err, "Count not set slot")
-		err = beaconState.SetNextWithdrawalValidatorIndex(0)
-		require.NoError(t, err, "Could not set withdrawal index")
-		err = beaconState.SetBalances([]uint64{41000000000000})
-		require.NoError(t, err, "Could not set validator balance")
-		stateRoot, err := beaconState.HashTreeRoot(ctx)
-		require.NoError(t, err, "Could not hash genesis state")
-
-		genesis := blocks.NewGenesisBlock(stateRoot[:])
-
-		parentRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err, "Could not get signing root")
-
-		withdrawals, err := beaconState.ExpectedWithdrawals()
-		require.NoError(t, err, "Could get expected withdrawals")
-		require.NotEqual(t, len(withdrawals), 0)
-		var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
-		blk := &qrysmpb.SignedBeaconBlockZond{
-			Block: &qrysmpb.BeaconBlockZond{
-				ProposerIndex: 0,
-				Slot:          1,
-				ParentRoot:    parentRoot[:],
-				StateRoot:     genesis.Block.StateRoot,
-				Body: &qrysmpb.BeaconBlockBodyZond{
-					RandaoReveal:  genesis.Block.Body.RandaoReveal,
-					Graffiti:      genesis.Block.Body.Graffiti,
-					ExecutionData: genesis.Block.Body.ExecutionData,
-					SyncAggregate: &qrysmpb.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignatures: [][]byte{}},
-					ExecutionPayload: &enginev1.ExecutionPayloadZond{
-						BlockNumber:   1,
-						ParentHash:    make([]byte, fieldparams.RootLength),
-						FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-						StateRoot:     make([]byte, fieldparams.RootLength),
-						ReceiptsRoot:  make([]byte, fieldparams.RootLength),
-						LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-						PrevRandao:    make([]byte, fieldparams.RootLength),
-						BaseFeePerGas: make([]byte, fieldparams.RootLength),
-						BlockHash:     make([]byte, fieldparams.RootLength),
-						Withdrawals:   withdrawals,
-					},
-				},
-			},
-			Signature: genesis.Signature,
-		}
-		signedBlk, err := consensusBlocks.NewSignedBeaconBlock(blk)
-		require.NoError(t, err)
-		srv, ctrl, mockStream := setupServer(ctx, t)
+		srv, ctrl, mockStream, wantedPayload := payloadAttributesFixture(ctx, t)
 		defer ctrl.Finish()
-		fetcher := &mockChain.ChainService{
-			Genesis:        time.Now(),
-			State:          beaconState,
-			Block:          signedBlk,
-			Root:           make([]byte, 32),
-			ValidatorsRoot: [32]byte{},
-		}
-
-		srv.HeadFetcher = fetcher
-		srv.ChainInfoFetcher = fetcher
-
-		prevRando, err := helpers.RandaoMix(beaconState, qrysmtime.CurrentEpoch(beaconState))
-		require.NoError(t, err)
-
-		wantedPayload := &qrlpb.EventPayloadAttributeV2{
-			Version: version.String(version.Zond),
-			Data: &qrlpb.EventPayloadAttributeV2_BasePayloadAttribute{
-				ProposerIndex:     0,
-				ProposalSlot:      2,
-				ParentBlockNumber: 1,
-				ParentBlockRoot:   make([]byte, 32),
-				ParentBlockHash:   make([]byte, 32),
-				PayloadAttributes: &enginev1.PayloadAttributesV2{
-					Timestamp:             120,
-					PrevRandao:            prevRando,
-					SuggestedFeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
-					Withdrawals:           withdrawals,
-				},
-			},
-		}
 		genericResponse, err := anypb.New(wantedPayload)
 		require.NoError(t, err)
 		wantedMessage := &gateway.EventSource{
@@ -808,4 +730,128 @@ func assertFeedSendAndReceive(ctx context.Context, args *assertFeedArgs) {
 	sendUntilSubscribed(args.feed, args.itemToSend)
 	waitForEvent(t, received)
 	require.Equal(t, codes.Canceled, status.Code(run.stop(t)))
+}
+
+// TestStreamEvents_HeadAndPayloadAttributesBothSent is a regression test for
+// the state event handler returning after the head message, so a client
+// subscribed to both "head" and "payload_attributes" (the usual relay /
+// builder subscription) never received payload attributes for slots with a
+// block.
+func TestStreamEvents_HeadAndPayloadAttributesBothSent(t *testing.T) {
+	ctx := context.Background()
+	srv, ctrl, mockStream, wantedPayload := payloadAttributesFixture(ctx, t)
+	defer ctrl.Finish()
+
+	head := &qrlpb.EventHead{
+		Slot:                      1,
+		Block:                     make([]byte, 32),
+		State:                     make([]byte, 32),
+		EpochTransition:           false,
+		PreviousDutyDependentRoot: make([]byte, 32),
+		CurrentDutyDependentRoot:  make([]byte, 32),
+	}
+	wantedHead, err := anypb.New(head)
+	require.NoError(t, err)
+	wantedAttributes, err := anypb.New(wantedPayload)
+	require.NoError(t, err)
+
+	received := make(chan *gateway.EventSource, 2)
+	record := func(arg0 any) { received <- arg0.(*gateway.EventSource) }
+	gomock.InOrder(
+		mockStream.EXPECT().Send(&gateway.EventSource{Event: HeadTopic, Data: wantedHead}).Do(record),
+		mockStream.EXPECT().Send(&gateway.EventSource{Event: PayloadAttributesTopic, Data: wantedAttributes}).Do(record),
+	)
+
+	run := startStream(ctx, t, srv, []string{HeadTopic, PayloadAttributesTopic}, mockStream)
+	sendUntilSubscribed(srv.StateNotifier.StateFeed(), &feed.Event{Type: statefeed.NewHead, Data: head})
+	require.Equal(t, HeadTopic, waitForEvent(t, received).Event)
+	require.Equal(t, PayloadAttributesTopic, waitForEvent(t, received).Event)
+	require.Equal(t, codes.Canceled, status.Code(run.stop(t)))
+}
+
+// payloadAttributesFixture returns a server whose head has an execution
+// payload and expected withdrawals, together with the payload_attributes
+// event it must emit for the next proposal.
+func payloadAttributesFixture(ctx context.Context, t *testing.T) (*Server, *gomock.Controller, *mock.MockEvents_StreamEventsServer, *qrlpb.EventPayloadAttributeV2) {
+	beaconState, _ := util.DeterministicGenesisStateZond(t, 1)
+	err := beaconState.SetSlot(2)
+	require.NoError(t, err, "Count not set slot")
+	err = beaconState.SetNextWithdrawalValidatorIndex(0)
+	require.NoError(t, err, "Could not set withdrawal index")
+	err = beaconState.SetBalances([]uint64{41000000000000})
+	require.NoError(t, err, "Could not set validator balance")
+	stateRoot, err := beaconState.HashTreeRoot(ctx)
+	require.NoError(t, err, "Could not hash genesis state")
+
+	genesis := blocks.NewGenesisBlock(stateRoot[:])
+
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+
+	withdrawals, err := beaconState.ExpectedWithdrawals()
+	require.NoError(t, err, "Could get expected withdrawals")
+	require.NotEqual(t, len(withdrawals), 0)
+	var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
+	blk := &qrysmpb.SignedBeaconBlockZond{
+		Block: &qrysmpb.BeaconBlockZond{
+			ProposerIndex: 0,
+			Slot:          1,
+			ParentRoot:    parentRoot[:],
+			StateRoot:     genesis.Block.StateRoot,
+			Body: &qrysmpb.BeaconBlockBodyZond{
+				RandaoReveal:  genesis.Block.Body.RandaoReveal,
+				Graffiti:      genesis.Block.Body.Graffiti,
+				ExecutionData: genesis.Block.Body.ExecutionData,
+				SyncAggregate: &qrysmpb.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignatures: [][]byte{}},
+				ExecutionPayload: &enginev1.ExecutionPayloadZond{
+					BlockNumber:   1,
+					ParentHash:    make([]byte, fieldparams.RootLength),
+					FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+					StateRoot:     make([]byte, fieldparams.RootLength),
+					ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+					LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+					PrevRandao:    make([]byte, fieldparams.RootLength),
+					BaseFeePerGas: make([]byte, fieldparams.RootLength),
+					BlockHash:     make([]byte, fieldparams.RootLength),
+					Withdrawals:   withdrawals,
+				},
+			},
+		},
+		Signature: genesis.Signature,
+	}
+	signedBlk, err := consensusBlocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	srv, ctrl, mockStream := setupServer(ctx, t)
+	defer ctrl.Finish()
+	fetcher := &mockChain.ChainService{
+		Genesis:        time.Now(),
+		State:          beaconState,
+		Block:          signedBlk,
+		Root:           make([]byte, 32),
+		ValidatorsRoot: [32]byte{},
+	}
+
+	srv.HeadFetcher = fetcher
+	srv.ChainInfoFetcher = fetcher
+
+	prevRando, err := helpers.RandaoMix(beaconState, qrysmtime.CurrentEpoch(beaconState))
+	require.NoError(t, err)
+
+	wantedPayload := &qrlpb.EventPayloadAttributeV2{
+		Version: version.String(version.Zond),
+		Data: &qrlpb.EventPayloadAttributeV2_BasePayloadAttribute{
+			ProposerIndex:     0,
+			ProposalSlot:      2,
+			ParentBlockNumber: 1,
+			ParentBlockRoot:   make([]byte, 32),
+			ParentBlockHash:   make([]byte, 32),
+			PayloadAttributes: &enginev1.PayloadAttributesV2{
+				Timestamp:             120,
+				PrevRandao:            prevRando,
+				SuggestedFeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
+				Withdrawals:           withdrawals,
+			},
+		},
+	}
+	return srv, ctrl, mockStream, wantedPayload
 }

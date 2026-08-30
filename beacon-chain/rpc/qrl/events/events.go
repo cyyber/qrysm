@@ -206,12 +206,14 @@ func (s *Server) StreamEvents(
 				return err
 			}
 		case event := <-stateChan:
-			msg, err := s.stateEventMessage(topics, event)
+			msgs, err := s.stateEventMessages(topics, event)
 			if err != nil {
 				return status.Errorf(codes.Internal, "Could not handle state event: %v", err)
 			}
-			if err := enqueue(msg); err != nil {
-				return err
+			for _, msg := range msgs {
+				if err := enqueue(msg); err != nil {
+					return err
+				}
 			}
 		case err := <-sendErr:
 			return status.Errorf(codes.Internal, "Could not send event: %v", err)
@@ -276,28 +278,42 @@ func blockOperationEventMessage(topics *topicRequest, event *feed.Event) (*gwpb.
 	}
 }
 
-// stateEventMessage converts a state feed event into the message to stream to
-// the client. It returns (nil, nil) for events whose topic was not requested or
-// whose payload is not of the expected type.
-func (s *Server) stateEventMessage(topics *topicRequest, event *feed.Event) (*gwpb.EventSource, error) {
+// stateEventMessages converts a state feed event into the messages to stream to
+// the client, in the order they must be sent. It returns (nil, nil) for events
+// whose topic was not requested or whose payload is not of the expected type.
+func (s *Server) stateEventMessages(topics *topicRequest, event *feed.Event) ([]*gwpb.EventSource, error) {
 	switch event.Type {
 	case statefeed.NewHead:
+		// A new head serves two topics: the head itself and the payload
+		// attributes for the next proposal. Both must be emitted when both
+		// are subscribed - returning after the head message used to leave
+		// relays and builders subscribed to both topics without payload
+		// attributes for every slot that had a block.
+		var msgs []*gwpb.EventSource
 		if topics.requested(HeadTopic) {
-			head, ok := event.Data.(*qrlpb.EventHead)
-			if !ok {
-				return nil, nil
+			if head, ok := event.Data.(*qrlpb.EventHead); ok {
+				msg, err := newEventMessage(HeadTopic, head)
+				if err != nil {
+					return nil, err
+				}
+				msgs = append(msgs, msg)
 			}
-			return newEventMessage(HeadTopic, head)
 		}
 		if topics.requested(PayloadAttributesTopic) {
-			return s.payloadAttributesMessage()
+			msg, err := s.payloadAttributesMessage()
+			if err != nil {
+				return nil, err
+			}
+			if msg != nil {
+				msgs = append(msgs, msg)
+			}
 		}
-		return nil, nil
+		return msgs, nil
 	case statefeed.MissedSlot:
-		if topics.requested(PayloadAttributesTopic) {
-			return s.payloadAttributesMessage()
+		if !topics.requested(PayloadAttributesTopic) {
+			return nil, nil
 		}
-		return nil, nil
+		return singleEventMessage(s.payloadAttributesMessage())
 	case statefeed.FinalizedCheckpoint:
 		if !topics.requested(FinalizedCheckpointTopic) {
 			return nil, nil
@@ -306,7 +322,7 @@ func (s *Server) stateEventMessage(topics *topicRequest, event *feed.Event) (*gw
 		if !ok {
 			return nil, nil
 		}
-		return newEventMessage(FinalizedCheckpointTopic, finalizedCheckpoint)
+		return singleEventMessage(newEventMessage(FinalizedCheckpointTopic, finalizedCheckpoint))
 	case statefeed.Reorg:
 		if !topics.requested(ChainReorgTopic) {
 			return nil, nil
@@ -315,7 +331,7 @@ func (s *Server) stateEventMessage(topics *topicRequest, event *feed.Event) (*gw
 		if !ok {
 			return nil, nil
 		}
-		return newEventMessage(ChainReorgTopic, reorg)
+		return singleEventMessage(newEventMessage(ChainReorgTopic, reorg))
 	case statefeed.BlockProcessed:
 		if !topics.requested(BlockTopic) {
 			return nil, nil
@@ -332,14 +348,23 @@ func (s *Server) stateEventMessage(topics *topicRequest, event *feed.Event) (*gw
 		if err != nil {
 			return nil, errors.Wrap(err, "could not hash tree root block")
 		}
-		return newEventMessage(BlockTopic, &qrlpb.EventBlock{
+		return singleEventMessage(newEventMessage(BlockTopic, &qrlpb.EventBlock{
 			Slot:                blkData.Slot,
 			Block:               item[:],
 			ExecutionOptimistic: blkData.Optimistic,
-		})
+		}))
 	default:
 		return nil, nil
 	}
+}
+
+// singleEventMessage wraps a single converted message (or its error) into the
+// slice form used by stateEventMessages.
+func singleEventMessage(msg *gwpb.EventSource, err error) ([]*gwpb.EventSource, error) {
+	if err != nil || msg == nil {
+		return nil, err
+	}
+	return []*gwpb.EventSource{msg}, nil
 }
 
 // payloadAttributesMessage builds the payload_attributes event on a new head or
