@@ -967,3 +967,86 @@ func TestErrorMessage_non200Err(t *testing.T) {
 		})
 	}
 }
+
+// TestBuilderResponses_MissingFieldsReturnErrors covers relay responses that
+// omit pointers or numeric fields. Each of these used to panic inside ToProto
+// (nil *BuilderBidZond / *ExecutionPayloadHeaderZond dereference, or big.Int
+// methods on a nil Uint256), which unwinds through GetBeaconBlock and costs
+// the proposal; they must surface as errors so the proposer can fall back to
+// its local payload.
+func TestBuilderResponses_MissingFieldsReturnErrors(t *testing.T) {
+	headerCases := []struct {
+		name string
+		json string
+		want string
+	}{
+		{
+			name: "null message",
+			json: `{"version":"zond","data":{"signature":"0x00","message":null}}`,
+			want: "no message",
+		},
+		{
+			name: "missing header",
+			json: `{"version":"zond","data":{"signature":"0x00","message":{"value":"1","pubkey":"0x00"}}}`,
+			want: "no header",
+		},
+		{
+			name: "missing value",
+			json: `{"version":"zond","data":{"signature":"0x00","message":{"header":{"base_fee_per_gas":"1"},"pubkey":"0x00"}}}`,
+			want: "no value",
+		},
+		{
+			name: "missing base fee",
+			json: `{"version":"zond","data":{"signature":"0x00","message":{"header":{},"value":"1","pubkey":"0x00"}}}`,
+			want: "base_fee_per_gas",
+		},
+	}
+	for _, tc := range headerCases {
+		t.Run("header "+tc.name, func(t *testing.T) {
+			// The header's UnmarshalJSON already runs ToProto, so the
+			// error may surface at either stage; either way it must be an
+			// error and not a panic.
+			hr := &ExecHeaderResponseZond{}
+			err := json.Unmarshal([]byte(tc.json), hr)
+			if err == nil {
+				var p *qrysmpb.SignedBuilderBidZond
+				p, err = hr.ToProto()
+				require.Equal(t, (*qrysmpb.SignedBuilderBidZond)(nil), p)
+			}
+			require.ErrorContains(t, tc.want, err)
+		})
+	}
+
+	payloadCases := []struct {
+		name string
+		json string
+		want string
+	}{
+		{
+			name: "missing base fee",
+			json: `{"version":"zond","data":{"transactions":[],"withdrawals":[]}}`,
+			want: "base_fee_per_gas",
+		},
+		{
+			name: "withdrawal missing amount",
+			json: `{"version":"zond","data":{"base_fee_per_gas":"1","transactions":[],"withdrawals":[{"index":"1","validator_index":"2"}]}}`,
+			want: "withdrawal 0 is missing",
+		},
+	}
+	for _, tc := range payloadCases {
+		t.Run("payload "+tc.name, func(t *testing.T) {
+			ep := &ExecPayloadResponseZond{}
+			require.NoError(t, json.Unmarshal([]byte(tc.json), ep))
+			p, err := ep.ToProto()
+			require.ErrorContains(t, tc.want, err)
+			require.Equal(t, (*enginepb.ExecutionPayloadZond)(nil), p)
+		})
+	}
+
+	// The Uint256 helpers themselves tolerate an unset value.
+	var unset Uint256
+	require.Equal(t, 0, len(unset.SSZBytes()))
+	_, err := unset.MarshalText()
+	require.NotNil(t, err)
+	require.Equal(t, false, math.IsValidUint256(nil))
+}
