@@ -147,6 +147,20 @@ func (c *AttestationCache) Put(_ context.Context, req *qrysmpb.AttestationDataRe
 	return nil
 }
 
+// Clear evicts every cached response. It is called when the head changes:
+// entries are keyed by slot only, so a response produced against the previous
+// head would otherwise keep being served for the rest of the slot after a
+// block for that slot has been imported. Requests in progress are left alone
+// and complete normally.
+func (c *AttestationCache) Clear() {
+	for _, item := range c.cache.List() {
+		// Delete only fails when the key function does, which cannot happen
+		// for items that were accepted by AddIfNotPresent.
+		_ = c.cache.Delete(item)
+	}
+	attestationCacheSize.Set(float64(len(c.cache.List())))
+}
+
 func wrapperToKey(i any) (string, error) {
 	w, ok := i.(*attestationReqResWrapper)
 	if !ok {

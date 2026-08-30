@@ -96,6 +96,7 @@ type BeaconNode struct {
 	syncCommitteePool       synccommittee.Pool
 	depositCache            cache.DepositCache
 	proposerIdsCache        *cache.ProposerPayloadIDsCache
+	attestationCache        *cache.AttestationCache
 	stateFeed               *event.Feed
 	blockFeed               *event.Feed
 	opFeed                  *event.Feed
@@ -192,6 +193,7 @@ func New(cliCtx *cli.Context, optFuncs []func(*cli.Context) (Option, error), opt
 		slasherAttestationsFeed: new(event.Feed),
 		serviceFlagOpts:         &serviceFlagOpts{},
 		proposerIdsCache:        cache.NewProposerPayloadIDsCache(),
+		attestationCache:        cache.NewAttestationCache(),
 	}
 
 	beacon.initialSyncComplete = make(chan struct{})
@@ -394,6 +396,22 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 	if err != nil {
 		return err
 	}
+	// If anything below fails the node will not start, and nothing else holds
+	// this handle: close it so that the database file and its lock are released
+	// instead of leaking until the process exits.
+	started := false
+	openDB := d
+	defer func() {
+		if started || openDB == nil {
+			return
+		}
+		if err := openDB.Close(); err != nil {
+			log.WithError(err).Error("Could not close database after failed startup")
+		}
+		if b.db == openDB {
+			b.db = nil
+		}
+	}()
 	clearDBConfirmed := false
 	if clearDB && !forceClearDB {
 		actionText := "This will delete your beacon chain database stored in your data directory. " +
@@ -409,6 +427,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 		if err := d.Close(); err != nil {
 			return errors.Wrap(err, "could not close db prior to clearing")
 		}
+		openDB = nil
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
@@ -416,6 +435,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")
 		}
+		openDB = d
 	}
 
 	if err := d.RunMigrations(b.ctx); err != nil {
@@ -477,6 +497,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 			knownContract, addr)
 	}
 	log.Infof("Deposit contract: %#x", addr)
+	started = true
 	return nil
 }
 
@@ -500,6 +521,22 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	// If anything below fails the node will not start, and nothing else holds
+	// this handle: close it so that the database file and its lock are released
+	// instead of leaking until the process exits.
+	started := false
+	openDB := d
+	defer func() {
+		if started || openDB == nil {
+			return
+		}
+		if err := openDB.Close(); err != nil {
+			log.WithError(err).Error("Could not close database after failed startup")
+		}
+		if b.slasherDB == openDB {
+			b.slasherDB = nil
+		}
+	}()
 	clearDBConfirmed := false
 	if clearDB && !forceClearDB {
 		actionText := "This will delete your beacon chain database stored in your data directory. " +
@@ -515,6 +552,7 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 		if err := d.Close(); err != nil {
 			return errors.Wrap(err, "could not close db prior to clearing")
 		}
+		openDB = nil
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
@@ -522,9 +560,11 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")
 		}
+		openDB = d
 	}
 
 	b.slasherDB = d
+	started = true
 	return nil
 }
 
@@ -671,6 +711,7 @@ func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs *st
 		blockchain.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		blockchain.WithFinalizedStateAtStartUp(b.finalizedStateAtStartUp),
 		blockchain.WithProposerIdsCache(b.proposerIdsCache),
+		blockchain.WithAttestationCache(b.attestationCache),
 		blockchain.WithClockSynchronizer(gs),
 		blockchain.WithSyncComplete(syncComplete),
 	)
@@ -900,6 +941,7 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 		EnableDebugRPCEndpoints:       enableDebugRPCEndpoints,
 		MaxMsgSize:                    maxMsgSize,
 		ProposerIdsCache:              b.proposerIdsCache,
+		AttestationCache:              b.attestationCache,
 		BlockBuilder:                  b.fetchBuilderService(),
 		Router:                        router,
 		ClockWaiter:                   b.clockWaiter,

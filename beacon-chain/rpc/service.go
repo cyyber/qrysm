@@ -121,6 +121,7 @@ type Config struct {
 	MaxMsgSize                    int
 	ExecutionEngineCaller         execution.EngineCaller
 	ProposerIdsCache              *cache.ProposerPayloadIDsCache
+	AttestationCache              *cache.AttestationCache
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
 	BlockBuilder                  builder.BlockBuilder
 	Router                        *mux.Router
@@ -226,6 +227,12 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	}
 	s.cfg.Router.HandleFunc("/qrl/v1/builder/states/{state_id}/expected_withdrawals", builderServer.ExpectedWithdrawals).Methods(http.MethodGet)
 
+	// The attestation data cache is shared with the blockchain service, which
+	// clears it whenever the head changes.
+	attestationCache := s.cfg.AttestationCache
+	if attestationCache == nil {
+		attestationCache = cache.NewAttestationCache()
+	}
 	coreService := &core.Service{
 		HeadFetcher:           s.cfg.HeadFetcher,
 		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
@@ -233,7 +240,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		Broadcaster:           s.cfg.Broadcaster,
 		SyncCommitteePool:     s.cfg.SyncCommitteeObjectPool,
 		OperationNotifier:     s.cfg.OperationNotifier,
-		AttestationCache:      cache.NewAttestationCache(),
+		AttestationCache:      attestationCache,
 		StateGen:              s.cfg.StateGen,
 		P2P:                   s.cfg.Broadcaster,
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,

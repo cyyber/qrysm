@@ -9,6 +9,7 @@ import (
 
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	mock "github.com/theQRL/qrysm/beacon-chain/blockchain/testing"
+	"github.com/theQRL/qrysm/beacon-chain/cache"
 	testDB "github.com/theQRL/qrysm/beacon-chain/db/testing"
 	doublylinkedtree "github.com/theQRL/qrysm/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/theQRL/qrysm/beacon-chain/forkchoice/types"
@@ -76,9 +77,19 @@ func TestSaveHead_Different(t *testing.T) {
 	require.NoError(t, headState.SetSlot(1))
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &qrysmpb.StateSummary{Slot: 1, Root: newRoot[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), headState, newRoot))
+
+	// Attestation data cached against the old head must not survive the head change.
+	attCache := cache.NewAttestationCache()
+	attReq := &qrysmpb.AttestationDataRequest{Slot: 1}
+	require.NoError(t, attCache.Put(ctx, attReq, &qrysmpb.AttestationData{Slot: 1, BeaconBlockRoot: oldRoot[:]}))
+	service.cfg.AttestationCache = attCache
+
 	require.NoError(t, service.saveHead(context.Background(), newRoot, wsb, headState))
 
 	assert.Equal(t, primitives.Slot(1), service.HeadSlot(), "Head did not change")
+	stale, err := attCache.Get(ctx, attReq)
+	require.NoError(t, err)
+	assert.Equal(t, (*qrysmpb.AttestationData)(nil), stale, "attestation data cache was not cleared on head change")
 
 	cachedRoot, err := service.HeadRoot(context.Background())
 	require.NoError(t, err)

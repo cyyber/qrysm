@@ -14,6 +14,8 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/blockchain"
 	"github.com/theQRL/qrysm/beacon-chain/builder"
 	statefeed "github.com/theQRL/qrysm/beacon-chain/core/feed/state"
+	"github.com/theQRL/qrysm/beacon-chain/db"
+	"github.com/theQRL/qrysm/beacon-chain/db/kv"
 	"github.com/theQRL/qrysm/beacon-chain/execution"
 	mockExecution "github.com/theQRL/qrysm/beacon-chain/execution/testing"
 	"github.com/theQRL/qrysm/beacon-chain/monitor"
@@ -159,11 +161,16 @@ func TestClearDB(t *testing.T) {
 	set.Bool(cmd.ForceClearDB.Name, true, "force clear db")
 	set.String("suggested-fee-recipient", "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89A", "fee recipient")
 	require.NoError(t, set.Set("suggested-fee-recipient", "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89A"))
-	context := cli.NewContext(&app, set, nil)
-	_, err = New(context, nil, WithExecutionChainOptions([]execution.Option{
+	cliCtx := cli.NewContext(&app, set, nil)
+	node, err := New(cliCtx, nil, WithExecutionChainOptions([]execution.Option{
 		execution.WithHttpEndpoint(endpoint),
 	}))
 	require.NoError(t, err)
+	// Release the database: bolt registers a process-wide metrics collector
+	// per open store, so a leaked handle breaks later tests that open one.
+	t.Cleanup(func() {
+		require.NoError(t, node.db.Close())
+	})
 
 	require.LogsContain(t, hook, "Removing database")
 }
@@ -244,4 +251,37 @@ func TestParseIPNetStrings(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestStartDB_ClosesDatabaseOnFailure checks that a database opened by
+// startDB is closed again when startup fails after the open: otherwise the
+// bolt file stays locked (and the handle leaks) until the process exits, and
+// a subsequent open of the same data directory times out on the lock.
+func TestStartDB_ClosesDatabaseOnFailure(t *testing.T) {
+	ctx := context.Background()
+	tmp := t.TempDir()
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(cmd.DataDirFlag.Name, tmp, "node data directory")
+	cliCtx := cli.NewContext(&app, set, nil)
+
+	const contractA = "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89A"
+	const contractB = "Q00000000000000000000000000000000000000000000000000000000000000000000000000000000000000006e35733c5af9B61374A128e6F85f553aF09ff89B"
+
+	// A first start records contract A in the database.
+	first := &BeaconNode{ctx: ctx, cliCtx: cliCtx}
+	require.NoError(t, first.startDB(cliCtx, contractA))
+	require.NoError(t, first.db.Close())
+
+	// Starting again with a different contract fails after the database was
+	// opened; the handle must not be kept.
+	second := &BeaconNode{ctx: ctx, cliCtx: cliCtx}
+	err := second.startDB(cliCtx, contractB)
+	require.ErrorContains(t, "database contract is", err)
+	require.Equal(t, true, second.db == nil, "failed startDB left a database handle on the node")
+
+	// The data directory can be opened again without waiting on the bolt lock.
+	d, err := db.NewDB(ctx, filepath.Join(tmp, kv.BeaconNodeDbDirName))
+	require.NoError(t, err, "database was still locked after a failed startDB")
+	require.NoError(t, d.Close())
 }

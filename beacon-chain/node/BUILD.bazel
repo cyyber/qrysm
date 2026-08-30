@@ -81,6 +81,8 @@ go_test(
     ],
     embed = [":node"],
     deps = [
+        "//beacon-chain/db",
+        "//beacon-chain/db/kv",
         "//beacon-chain/blockchain",
         "//beacon-chain/builder",
         "//beacon-chain/core/feed/state",

@@ -128,6 +128,7 @@ go_test(
     embed = [":blockchain"],
     gotags = ["develop"],
     deps = [
+        "//beacon-chain/cache",
         "//async/event",
         "//beacon-chain/blockchain/testing",
         "//beacon-chain/cache/depositcache",
