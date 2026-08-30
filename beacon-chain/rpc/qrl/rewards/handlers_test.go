@@ -236,7 +236,14 @@ func TestAttestationRewards(t *testing.T) {
 	attBlkRoot, err := st.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
 	currentSlot := params.BeaconConfig().SlotsPerEpoch * 3
-	mockChainService := &mock.ChainService{OptimisticRoots: map[[32]byte]bool{attBlkRoot: true}, Slot: &currentSlot}
+	headRoot := [32]byte{'h'}
+	mockChainService := &mock.ChainService{
+		Optimistic:      true,
+		OptimisticRoots: map[[32]byte]bool{attBlkRoot: true},
+		Slot:            &currentSlot,
+		Root:            headRoot[:],
+		Ancestors:       map[[32]byte][32]byte{headRoot: attBlkRoot},
+	}
 	s := &Server{
 		Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
 			params.BeaconConfig().SlotsPerEpoch*3 - 1: st,
@@ -244,6 +251,8 @@ func TestAttestationRewards(t *testing.T) {
 		TimeFetcher:           mockChainService,
 		OptimisticModeFetcher: mockChainService,
 		FinalizationFetcher:   mockChainService,
+		HeadFetcher:           mockChainService,
+		ForkchoiceFetcher:     mockChainService,
 	}
 
 	t.Run("ok - ideal rewards", func(t *testing.T) {
@@ -355,7 +364,13 @@ func TestAttestationRewards(t *testing.T) {
 		subBlkRoot, err := st.LatestBlockHeader().HashTreeRoot()
 		require.NoError(t, err)
 		currentSlot := params.BeaconConfig().SlotsPerEpoch * 3
-		mockChainService := &mock.ChainService{OptimisticRoots: map[[32]byte]bool{subBlkRoot: true}, Slot: &currentSlot}
+		mockChainService := &mock.ChainService{
+			Optimistic:      true,
+			OptimisticRoots: map[[32]byte]bool{subBlkRoot: true},
+			Slot:            &currentSlot,
+			Root:            headRoot[:],
+			Ancestors:       map[[32]byte][32]byte{headRoot: subBlkRoot},
+		}
 		s := &Server{
 			Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
 				params.BeaconConfig().SlotsPerEpoch*3 - 1: st,
@@ -363,6 +378,8 @@ func TestAttestationRewards(t *testing.T) {
 			TimeFetcher:           mockChainService,
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
+			HeadFetcher:           mockChainService,
+			ForkchoiceFetcher:     mockChainService,
 		}
 
 		url := "http://only.the.epoch.number.at.the.end.is.important/1"
@@ -382,6 +399,81 @@ func TestAttestationRewards(t *testing.T) {
 		assert.Equal(t, "0", resp.Data.TotalRewards[0].Head)
 		assert.Equal(t, "-496943261", resp.Data.TotalRewards[0].Source)
 		assert.Equal(t, "-922894628", resp.Data.TotalRewards[0].Target)
+	})
+	t.Run("zero state root (state at skipped slot) uses ancestor root", func(t *testing.T) {
+		// A state replayed past the last block of the epoch carries a header
+		// whose state root is zero; its hash tree root is not a stored block
+		// root, so looking it up used to fail with "could not find block in
+		// DB" (500). The root must come from fork choice instead. (upstream #17112)
+		st := st.Copy()
+		header := st.LatestBlockHeader()
+		header.StateRoot = params.BeaconConfig().ZeroHash[:]
+		require.NoError(t, st.SetLatestBlockHeader(header))
+		headerRoot, err := header.HashTreeRoot()
+		require.NoError(t, err)
+		ancestorRoot := [32]byte{'a'}
+		require.NotEqual(t, ancestorRoot, headerRoot)
+
+		chain := &mock.ChainService{
+			Optimistic:      true,
+			OptimisticRoots: map[[32]byte]bool{ancestorRoot: true},
+			Slot:            &currentSlot,
+			Root:            headRoot[:],
+			Ancestors:       map[[32]byte][32]byte{headRoot: ancestorRoot},
+		}
+		server := &Server{
+			Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
+				params.BeaconConfig().SlotsPerEpoch*3 - 1: st,
+			}},
+			TimeFetcher:           chain,
+			OptimisticModeFetcher: chain,
+			FinalizationFetcher:   chain,
+			HeadFetcher:           chain,
+			ForkchoiceFetcher:     chain,
+		}
+
+		url := "http://only.the.epoch.number.at.the.end.is.important/1"
+		request := httptest.NewRequest("POST", url, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		server.AttestationRewards(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &AttestationRewardsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+		assert.Equal(t, ancestorRoot, chain.OptimisticCheckRootReceived)
+	})
+	t.Run("node not optimistic skips per-root lookup", func(t *testing.T) {
+		chain := &mock.ChainService{
+			Optimistic:      false,
+			OptimisticRoots: map[[32]byte]bool{attBlkRoot: true},
+			Slot:            &currentSlot,
+			Root:            headRoot[:],
+			Ancestors:       map[[32]byte][32]byte{headRoot: attBlkRoot},
+		}
+		server := &Server{
+			Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
+				params.BeaconConfig().SlotsPerEpoch*3 - 1: st,
+			}},
+			TimeFetcher:           chain,
+			OptimisticModeFetcher: chain,
+			FinalizationFetcher:   chain,
+			HeadFetcher:           chain,
+			ForkchoiceFetcher:     chain,
+		}
+
+		url := "http://only.the.epoch.number.at.the.end.is.important/1"
+		request := httptest.NewRequest("POST", url, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		server.AttestationRewards(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &AttestationRewardsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, false, resp.ExecutionOptimistic)
+		assert.Equal(t, [32]byte{}, chain.OptimisticCheckRootReceived)
 	})
 	t.Run("invalid validator index/pubkey", func(t *testing.T) {
 		url := "http://only.the.epoch.number.at.the.end.is.important/1"

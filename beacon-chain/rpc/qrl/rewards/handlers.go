@@ -137,15 +137,34 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	blkRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	// The state served here is replayed to the last slot of the epoch, so its
+	// latest block header may carry a zero state root and hash to a root that
+	// was never stored (a skipped slot, or the header of the block whose post
+	// state this is). Resolve the block root through fork choice from the head
+	// instead, which always yields a root that exists in the DB. (upstream #17112)
+	headRoot, err := s.HeadFetcher.HeadRoot(r.Context())
+	if err != nil {
+		http2.HandleError(w, "Could not get head root: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	ancestor, err := s.ForkchoiceFetcher.Ancestor(r.Context(), headRoot, st.Slot())
 	if err != nil {
 		http2.HandleError(w, "Could not get block root: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	optimistic, err := s.OptimisticModeFetcher.IsOptimisticForRoot(r.Context(), blkRoot)
+	blkRoot := bytesutil2.ToBytes32(ancestor)
+
+	optimistic, err := s.OptimisticModeFetcher.IsOptimistic(r.Context())
 	if err != nil {
 		http2.HandleError(w, "Could not get optimistic mode info: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+	if optimistic {
+		optimistic, err = s.OptimisticModeFetcher.IsOptimisticForRoot(r.Context(), blkRoot)
+		if err != nil {
+			http2.HandleError(w, "Could not get optimistic mode info: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	resp := &AttestationRewardsResponse{

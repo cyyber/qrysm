@@ -69,13 +69,22 @@ type ChainService struct {
 	ForkChoiceStore             forkchoice.ForkChoicer
 	ReceiveBlockMockErr         error
 	OptimisticCheckRootReceived [32]byte
-	FinalizedRoots              map[[32]byte]bool
-	OptimisticRoots             map[[32]byte]bool
-	BlockSlot                   primitives.Slot
-	SyncingRoot                 [32]byte
+	// Ancestors, when set, answers Ancestor by root instead of using ForkChoiceStore.
+	Ancestors       map[[32]byte][32]byte
+	FinalizedRoots  map[[32]byte]bool
+	OptimisticRoots map[[32]byte]bool
+	BlockSlot       primitives.Slot
+	SyncingRoot     [32]byte
 }
 
 func (s *ChainService) Ancestor(ctx context.Context, root []byte, slot primitives.Slot) ([]byte, error) {
+	if s.Ancestors != nil {
+		r, ok := s.Ancestors[bytesutil.ToBytes32(root)]
+		if !ok {
+			return nil, errors.New("ancestor not found")
+		}
+		return r[:], nil
+	}
 	r, err := s.ForkChoiceStore.AncestorRoot(ctx, bytesutil.ToBytes32(root), slot)
 	return r[:], err
 }

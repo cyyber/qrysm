@@ -207,6 +207,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	}
 
 	rewardsServer := &rewards.Server{
+		ForkchoiceFetcher:     s.cfg.ForkchoiceFetcher,
 		Blocker:               blocker,
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,
