@@ -431,7 +431,12 @@ func (q *blocksQueue) onProcessSkippedEvent(ctx context.Context) eventHandlerFn 
 
 		// All machines are skipped, FSMs need reset.
 		startSlot := q.chain.HeadSlot() + 1
-		if q.mode == modeNonConstrained && startSlot > bestFinalizedSlot {
+		// Explore alternative forks when the reset keeps landing on the same
+		// stale epoch. This must also happen in modeStopOnFinalizedEpoch: a
+		// head on an orphaned branch below the network's finalized slot can
+		// never be extended with head+1, so without a fork search the queue
+		// refetches the same blocks forever. (upstream #17324)
+		if q.mode == modeStopOnFinalizedEpoch || startSlot > bestFinalizedSlot {
 			q.staleEpochs[slots.ToEpoch(startSlot)]++
 			// If FSMs have been reset enough times, try to explore alternative forks.
 			if q.staleEpochs[slots.ToEpoch(startSlot)] >= maxResetAttempts {
