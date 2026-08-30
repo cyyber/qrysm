@@ -134,6 +134,28 @@ func OptimizedGenesisBeaconStateZond(genesisTime uint64, preState state.BeaconSt
 	if scoresMissing > 0 {
 		scores = append(scores, make([]uint64, scoresMissing)...)
 	}
+	// The pre-genesis deposits are processed with the phase0 deposit logic,
+	// which grows the validator registry but not the per-validator
+	// participation arrays. The epoch transition and attestation processing
+	// index those arrays by validator index, so they must be sized like the
+	// registry here; otherwise the first attestation-carrying block on an
+	// interop / deterministic genesis fails with "index >= len(epochParticipation)".
+	// (upstream #14139 achieves the same by processing pre-genesis deposits
+	// with the altair logic.)
+	prevParticipation, err := preState.PreviousEpochParticipation()
+	if err != nil {
+		return nil, err
+	}
+	if missing := len(preState.Validators()) - len(prevParticipation); missing > 0 {
+		prevParticipation = append(prevParticipation, make([]byte, missing)...)
+	}
+	currParticipation, err := preState.CurrentEpochParticipation()
+	if err != nil {
+		return nil, err
+	}
+	if missing := len(preState.Validators()) - len(currParticipation); missing > 0 {
+		currParticipation = append(currParticipation, make([]byte, missing)...)
+	}
 	wep, err := blocks.WrappedExecutionPayloadZond(ep, 0)
 	if err != nil {
 		return nil, err
@@ -187,6 +209,8 @@ func OptimizedGenesisBeaconStateZond(genesisTime uint64, preState state.BeaconSt
 		ExecutionDepositIndex:        preState.ExecutionDepositIndex(),
 		LatestExecutionPayloadHeader: eph,
 		InactivityScores:             scores,
+		PreviousEpochParticipation:   prevParticipation,
+		CurrentEpochParticipation:    currParticipation,
 	}
 
 	bodyRoot, err := (&qrysmpb.BeaconBlockBodyZond{

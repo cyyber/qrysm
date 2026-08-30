@@ -53,6 +53,17 @@ func TestGenesisBeaconState_OK(t *testing.T) {
 
 	// Validator registry fields checks.
 	assert.Equal(t, depositsForChainStart, len(newState.Validators()), "Validators was not correctly initialized")
+	// Per-validator arrays must be sized like the registry: attestation
+	// processing indexes them by validator index.
+	prevParticipation, err := newState.PreviousEpochParticipation()
+	require.NoError(t, err)
+	assert.Equal(t, depositsForChainStart, len(prevParticipation), "PreviousEpochParticipation was not sized to the validator registry")
+	currParticipation, err := newState.CurrentEpochParticipation()
+	require.NoError(t, err)
+	assert.Equal(t, depositsForChainStart, len(currParticipation), "CurrentEpochParticipation was not sized to the validator registry")
+	scores, err := newState.InactivityScores()
+	require.NoError(t, err)
+	assert.Equal(t, depositsForChainStart, len(scores), "InactivityScores was not sized to the validator registry")
 	v, err := newState.ValidatorAtIndex(0)
 	require.NoError(t, err)
 	assert.Equal(t, primitives.Epoch(0), v.ActivationEpoch, "Validators was not correctly initialized")

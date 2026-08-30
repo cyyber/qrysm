@@ -42,6 +42,13 @@ func TestGenerateGenesisStateZond(t *testing.T) {
 	}
 	g, _, err := GenerateGenesisStateZond(context.Background(), 0, params.BeaconConfig().MinGenesisActiveValidatorCount, ep, e1d)
 	require.NoError(t, err)
+	// The interop genesis must carry participation arrays sized to the
+	// validator registry, or the first attestation-bearing block fails to
+	// process (index >= len(epochParticipation)).
+	require.Equal(t, int(params.BeaconConfig().MinGenesisActiveValidatorCount), len(g.Validators))
+	require.Equal(t, len(g.Validators), len(g.PreviousEpochParticipation), "PreviousEpochParticipation not sized to the validator registry")
+	require.Equal(t, len(g.Validators), len(g.CurrentEpochParticipation), "CurrentEpochParticipation not sized to the validator registry")
+	require.Equal(t, len(g.Validators), len(g.InactivityScores))
 
 	tr, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
