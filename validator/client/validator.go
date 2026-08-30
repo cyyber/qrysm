@@ -71,6 +71,7 @@ var newSlotTicker = func(genesisTime time.Time, secondsPerSlot uint64) slots.Tic
 type validator struct {
 	logValidatorBalances               bool
 	emitAccountMetrics                 bool
+	dutyDependentRootProbeFailed       bool
 	domainDataLock                     sync.RWMutex
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
@@ -110,6 +111,7 @@ type validator struct {
 	ticker                             slots.Ticker
 	validatorClient                    iface.ValidatorClient
 	dutyDependentRootProvider          dutyDependentRootProvider
+	dutyDependentRootProbeFailedEpoch  primitives.Epoch
 	graffiti                           []byte
 	voteStats                          voteStats
 	syncCommitteeStats                 syncCommitteeStats
@@ -560,7 +562,11 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 	if slot%params.BeaconConfig().SlotsPerEpoch != 0 && v.duties != nil {
 		refresh, err := v.dutiesRefreshRequired(ctx, slot)
 		if err != nil {
-			log.WithError(err).Debug("Could not validate duty dependent roots, refreshing duties")
+			// A failed probe says nothing about the duties themselves: keep
+			// the cached ones (they are refreshed at the next epoch start
+			// regardless) rather than re-fetching and re-signing every
+			// selection proof on every slot while the endpoint is down.
+			log.WithError(err).Warn("Could not check duty dependent roots, keeping cached duties until the next epoch")
 		}
 		if !refresh {
 			return nil
@@ -661,21 +667,53 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 	return nil
 }
 
+// dutiesRefreshRequired reports whether the cached duties must be refreshed
+// mid-epoch because the duty dependent roots changed (i.e. a reorg past the
+// epoch boundary). It only ever answers true on positive evidence: when the
+// roots cannot be fetched, the cached duties are kept and the probe is not
+// retried until the next epoch, so an unreachable REST endpoint costs at most
+// one failed probe (and one warning) per epoch instead of a full duties
+// refresh - and up to a couple of seconds of delay - on every slot.
 func (v *validator) dutiesRefreshRequired(ctx context.Context, slot primitives.Slot) (bool, error) {
 	previousCachedRoot, currentCachedRoot := v.cachedDutyDependentRoots()
 	if len(previousCachedRoot) == 0 || len(currentCachedRoot) == 0 {
 		return true, nil
 	}
+	if v.dutyDependentRootProvider == nil {
+		return false, nil
+	}
 
-	previousRoot, currentRoot, err := v.fetchDutyDependentRoots(ctx, slots.ToEpoch(slot))
+	epoch := slots.ToEpoch(slot)
+	if v.dutyDependentRootProbeFailedIn(epoch) {
+		return false, nil
+	}
+	previousRoot, currentRoot, err := v.fetchDutyDependentRoots(ctx, epoch)
 	if err != nil {
-		return true, err
+		v.setDutyDependentRootProbeFailed(epoch)
+		return false, err
 	}
 	if len(previousRoot) == 0 || len(currentRoot) == 0 {
-		return true, nil
+		return false, nil
 	}
 
 	return !bytes.Equal(previousCachedRoot, previousRoot) || !bytes.Equal(currentCachedRoot, currentRoot), nil
+}
+
+// dutyDependentRootProbeFailedIn reports whether the duty dependent root probe
+// already failed in the given epoch (dutyDependentRootProbeFailed and
+// dutyDependentRootProbeFailedEpoch, both guarded by dutiesLock), in which case
+// it is not retried until the next epoch.
+func (v *validator) dutyDependentRootProbeFailedIn(epoch primitives.Epoch) bool {
+	v.dutiesLock.RLock()
+	defer v.dutiesLock.RUnlock()
+	return v.dutyDependentRootProbeFailed && v.dutyDependentRootProbeFailedEpoch == epoch
+}
+
+func (v *validator) setDutyDependentRootProbeFailed(epoch primitives.Epoch) {
+	v.dutiesLock.Lock()
+	defer v.dutiesLock.Unlock()
+	v.dutyDependentRootProbeFailed = true
+	v.dutyDependentRootProbeFailedEpoch = epoch
 }
 
 func (v *validator) fetchDutyDependentRoots(ctx context.Context, epoch primitives.Epoch) ([]byte, []byte, error) {

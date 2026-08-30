@@ -125,3 +125,29 @@ func TestValidateValidateIsExecutionAddress(t *testing.T) {
 		require.ErrorContains(t, "no default address entered", err)
 	})
 }
+
+// TestProposerSettingsCommand_RegistersWithBuilderFlag guards against
+// --with-builder being consumed by getProposerSettings and advertised in the
+// help text without being registered on the command, which made
+// `qrysmctl validator proposer-settings --with-builder` fail with
+// "flag provided but not defined".
+func TestProposerSettingsCommand_RegistersWithBuilderFlag(t *testing.T) {
+	var proposerSettings *cli.Command
+	for _, c := range Commands {
+		for _, sub := range c.Subcommands {
+			if sub.Name == "proposer-settings" {
+				proposerSettings = sub
+			}
+		}
+	}
+	require.NotNil(t, proposerSettings)
+	registered := false
+	for _, f := range proposerSettings.Flags {
+		for _, name := range f.Names() {
+			if name == WithBuilderFlag.Name {
+				registered = true
+			}
+		}
+	}
+	require.Equal(t, true, registered, "--%s is not registered on the proposer-settings command", WithBuilderFlag.Name)
+}

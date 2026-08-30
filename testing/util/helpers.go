@@ -56,7 +56,7 @@ func TestRandaoOnion(key ml_dsa_87.MLDSA87Key, layers uint64) (*randao.Onion, er
 func TestRandaoCommitment(key ml_dsa_87.MLDSA87Key) [fieldparams.RandaoCommitmentLength]byte {
 	o, err := TestRandaoOnion(key, TestRandaoOnionLayers)
 	if err != nil {
-		panic(err) // layers > 0, cannot fail
+		panic(err) // lint:nopanic -- layers > 0, cannot fail
 	}
 	return o.Commitment()
 }

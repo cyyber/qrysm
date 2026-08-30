@@ -55,7 +55,7 @@ func (s *Service) subscribableTopics(digest [4]byte) map[string]struct{} {
 	attSubnetCount := params.BeaconNetworkConfig().AttestationSubnetCount
 	syncSubnetCount := params.BeaconConfig().SyncCommitteeSubnetCount
 
-	topics := make(map[string]struct{}, len(gossipTopicMappings)+int(attSubnetCount)+int(syncSubnetCount))
+	topics := make(map[string]struct{}, len(gossipTopicMappings)+int(attSubnetCount)+int(syncSubnetCount)) // lint:ignore uintcast -- subnet counts are small protocol constants.
 	for format := range gossipTopicMappings {
 		switch format {
 		case AttestationSubnetTopicFormat:

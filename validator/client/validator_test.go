@@ -59,9 +59,11 @@ type stubDutyDependentRootProvider struct {
 	previous []byte
 	current  []byte
 	err      error
+	calls    int
 }
 
 func (p *stubDutyDependentRootProvider) GetDutyDependentRoots(context.Context, primitives.Epoch) ([]byte, []byte, error) {
+	p.calls++
 	if p.err != nil {
 		return nil, nil, p.err
 	}
@@ -652,7 +654,7 @@ func TestUpdateDuties_RefreshesWhenDependentRootsChange(t *testing.T) {
 	assert.DeepEqual(t, expectedRoots.current, v.currentDutyDependentRoot)
 }
 
-func TestUpdateDuties_RefreshesWhenDependentRootsUnavailable(t *testing.T) {
+func TestUpdateDuties_RefreshesWhenDependentRootsNotYetCached(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := validatormock.NewMockValidatorClient(ctrl)
@@ -662,6 +664,8 @@ func TestUpdateDuties_RefreshesWhenDependentRootsUnavailable(t *testing.T) {
 		CurrentEpochDuties: []*qrysmpb.DutiesResponse_Duty{},
 		NextEpochDuties:    []*qrysmpb.DutiesResponse_Duty{},
 	}
+	// Duties exist but no dependent roots were recorded for them: the
+	// validator cannot tell whether they are stale and must refresh.
 	v := validator{
 		keyManager:      newMockKeymanager(t, randKeypair(t)),
 		validatorClient: client,
@@ -687,6 +691,44 @@ func TestUpdateDuties_RefreshesWhenDependentRootsUnavailable(t *testing.T) {
 
 	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
 	util.WaitTimeout(&wg, 2*time.Second)
+}
+
+// TestUpdateDuties_KeepsCachedDutiesWhenDependentRootProbeFails is the
+// regression test for a failing duty dependent root probe (e.g. the REST
+// endpoint is down while the validator uses gRPC) triggering a full duties
+// refresh - and re-signing of every selection proof - on every slot of the
+// epoch. The cached duties must be kept, the probe not retried until the next
+// epoch, and probing must resume in the next epoch.
+func TestUpdateDuties_KeepsCachedDutiesWhenDependentRootProbeFails(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := validatormock.NewMockValidatorClient(ctrl)
+
+	provider := &stubDutyDependentRootProvider{err: errors.New("connection refused")}
+	v := validator{
+		validatorClient:           client,
+		dutyDependentRootProvider: provider,
+		duties: &qrysmpb.DutiesResponse{
+			CurrentEpochDuties: []*qrysmpb.DutiesResponse_Duty{{CommitteeIndex: 1}},
+		},
+		previousDutyDependentRoot: []byte("previous-root"),
+		currentDutyDependentRoot:  []byte("current-root"),
+	}
+	client.EXPECT().GetDuties(gomock.Any(), gomock.Any()).Times(0)
+
+	// First failing probe of the epoch: cached duties are kept.
+	require.NoError(t, v.UpdateDuties(context.Background(), primitives.Slot(1)))
+	assert.Equal(t, 1, provider.calls)
+
+	// Further slots of the same epoch do not probe again.
+	require.NoError(t, v.UpdateDuties(context.Background(), primitives.Slot(2)))
+	require.NoError(t, v.UpdateDuties(context.Background(), primitives.Slot(3)))
+	assert.Equal(t, 1, provider.calls, "probe was retried within the same epoch")
+
+	// The next epoch probes again.
+	nextEpochSlot := params.BeaconConfig().SlotsPerEpoch + 1
+	require.NoError(t, v.UpdateDuties(context.Background(), nextEpochSlot))
+	assert.Equal(t, 2, provider.calls, "probe did not resume in the next epoch")
 }
 
 func TestUpdateDuties_ReturnsError(t *testing.T) {

@@ -86,6 +86,7 @@ var Commands = []*cli.Command{
 					TokenFlag,
 					ValidatorHostFlag,
 					ProposerSettingsOutputFlag,
+					WithBuilderFlag,
 				},
 				Before: func(cliCtx *cli.Context) error {
 					return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)

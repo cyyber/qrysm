@@ -244,6 +244,12 @@ func (t *GossipTracer) AddPeer(p peer.ID, _ protocol.ID) {
 
 func (t *GossipTracer) RemovePeer(_ peer.ID) {}
 
+// OnNewOutboundStream is a no-op RawTracer hook.
+func (t *GossipTracer) OnNewOutboundStream(_ peer.ID, _ protocol.ID) {}
+
+// OnClosedOutboundStream is a no-op RawTracer hook.
+func (t *GossipTracer) OnClosedOutboundStream(_ peer.ID) {}
+
 // Join is invoked when we locally subscribe to a topic (a mesh is created).
 func (t *GossipTracer) Join(topic string) {
 	t.mu.Lock()
