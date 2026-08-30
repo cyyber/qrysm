@@ -281,6 +281,7 @@ func V1Alpha1ValidatorToV1(v1Alpha1Validator *qrysmpb.Validator) *qrlpb.Validato
 		ActivationEpoch:            v1Alpha1Validator.ActivationEpoch,
 		ExitEpoch:                  v1Alpha1Validator.ExitEpoch,
 		WithdrawableEpoch:          v1Alpha1Validator.WithdrawableEpoch,
+		RandaoCommitment:           v1Alpha1Validator.RandaoCommitment,
 	}
 }
 
@@ -298,6 +299,7 @@ func V1ValidatorToV1Alpha1(v1Validator *qrlpb.Validator) *qrysmpb.Validator {
 		ActivationEpoch:            v1Validator.ActivationEpoch,
 		ExitEpoch:                  v1Validator.ExitEpoch,
 		WithdrawableEpoch:          v1Validator.WithdrawableEpoch,
+		RandaoCommitment:           v1Validator.RandaoCommitment,
 	}
 }
 

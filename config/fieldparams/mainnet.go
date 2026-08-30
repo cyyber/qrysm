@@ -20,6 +20,8 @@ const (
 	SlashingsLength                       = 1024          // EPOCHS_PER_SLASHINGS_VECTOR
 	SyncCommitteeLength                   = 128           // SYNC_COMMITTEE_SIZE  // TODO (cyyber) : Original value 512, new value needs to be decided
 	RootLength                            = 32            // RootLength defines the byte length of a Merkle root.
+	RandaoRevealLength                    = 32            // RandaoRevealLength defines the byte length of a RANDAO hash-onion reveal.
+	RandaoCommitmentLength                = 32            // RandaoCommitmentLength defines the byte length of a RANDAO hash-onion commitment.
 	ExtendedSeedLength                    = walletcommon.ExtendedSeedSize
 	MLDSA87SeedLength                     = walletcommon.SeedSize                 // MLDSA87SeedLength defines the byte length of a ML-DSA-87 seed.
 	MLDSA87SignatureLength                = cryptomldsa87.CRYPTO_BYTES            // MLDSA87SignatureLength defines the byte length of a ML-DSA-87 signature.

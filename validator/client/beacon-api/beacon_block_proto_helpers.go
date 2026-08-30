@@ -298,6 +298,11 @@ func convertDepositsToProto(jsonDeposits []*apimiddleware.DepositJson) ([]*qrysm
 			return nil, errors.Wrapf(err, "failed to parse deposit amount `%s`", jsonDeposit.Data.Amount)
 		}
 
+		randaoCommitment, err := hexutil.Decode(jsonDeposit.Data.RandaoCommitment)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to decode randao commitment `%s`", jsonDeposit.Data.RandaoCommitment)
+		}
+
 		signature, err := hexutil.Decode(jsonDeposit.Data.Signature)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to decode signature `%s`", jsonDeposit.Data.Signature)
@@ -309,6 +314,7 @@ func convertDepositsToProto(jsonDeposits []*apimiddleware.DepositJson) ([]*qrysm
 				PublicKey:           pubkey,
 				WithdrawalRecipient: withdrawalRecipient,
 				Amount:              amount,
+				RandaoCommitment:    randaoCommitment,
 				Signature:           signature,
 			},
 		}

@@ -764,6 +764,8 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 			WithdrawalRecipient: zeroWithdrawalRecipient,
 			Amount:              0,
 			Signature:           zeroSig[:],
+
+			RandaoCommitment: make([]byte, 32),
 		}, Proof: [][]byte{root}}, 100+i, int64(i), bytesutil.ToBytes32(root)))
 	}
 	service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k'})
@@ -795,12 +797,16 @@ func TestInsertFinalizedDeposits_PrunePendingDeposits(t *testing.T) {
 			WithdrawalRecipient: zeroWithdrawalRecipient,
 			Amount:              0,
 			Signature:           zeroSig[:],
+
+			RandaoCommitment: make([]byte, 32),
 		}, Proof: [][]byte{root}}, 100+i, int64(i), bytesutil.ToBytes32(root)))
 		depositCache.InsertPendingDeposit(ctx, &qrysmpb.Deposit{Data: &qrysmpb.Deposit_Data{
 			PublicKey:           bytesutil.FromBytes2592([field_params.MLDSA87PubkeyLength]byte{}),
 			WithdrawalRecipient: zeroWithdrawalRecipient,
 			Amount:              0,
 			Signature:           zeroSig[:],
+
+			RandaoCommitment: make([]byte, 32),
 		}, Proof: [][]byte{root}}, 100+i, int64(i), bytesutil.ToBytes32(root))
 	}
 	service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k'})
@@ -840,6 +846,8 @@ func TestInsertFinalizedDeposits_MultipleFinalizedRoutines(t *testing.T) {
 			WithdrawalRecipient: zeroWithdrawalRecipient,
 			Amount:              0,
 			Signature:           zeroSig[:],
+
+			RandaoCommitment: make([]byte, 32),
 		}, Proof: [][]byte{root}}, 100+i, int64(i), bytesutil.ToBytes32(root)))
 	}
 	// Insert 3 deposits before hand.

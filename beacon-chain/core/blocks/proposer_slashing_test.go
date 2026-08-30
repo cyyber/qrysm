@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/theQRL/qrysm/beacon-chain/core/blocks"
+	"github.com/theQRL/qrysm/beacon-chain/core/helpers"
 	"github.com/theQRL/qrysm/beacon-chain/core/signing"
 	v "github.com/theQRL/qrysm/beacon-chain/core/validators"
 	"github.com/theQRL/qrysm/beacon-chain/state"
@@ -182,7 +183,15 @@ func TestProcessProposerSlashings_AppliesCorrectStatusZond(t *testing.T) {
 			newStateVals[1].ExitEpoch, beaconState.Validators()[1].ExitEpoch)
 	}
 
-	require.Equal(t, uint64(38750000000000), newState.Balances()[1])
+	// The slashed validator loses effective_balance / MIN_SLASHING_PENALTY_QUOTIENT;
+	// the block proposer (whistleblower) earns effective_balance / WHISTLEBLOWER_REWARD_QUOTIENT.
+	blockProposer, err := helpers.BeaconProposerIndex(context.Background(), beaconState)
+	require.NoError(t, err)
+	wantSlashed := uint64(38750000000000)
+	if blockProposer == proposerIdx {
+		wantSlashed += uint64(40000000000000) / params.BeaconConfig().WhistleBlowerRewardQuotient
+	}
+	require.Equal(t, wantSlashed, newState.Balances()[1])
 	require.Equal(t, uint64(40000000000000), newState.Balances()[2])
 }
 

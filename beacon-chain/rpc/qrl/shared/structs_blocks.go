@@ -77,6 +77,7 @@ type DepositData struct {
 	Pubkey              string `json:"pubkey" validate:"required"`
 	WithdrawalRecipient string `json:"withdrawal_recipient" validate:"required"`
 	Amount              string `json:"amount" validate:"required"`
+	RandaoCommitment    string `json:"randao_commitment" validate:"required"`
 	Signature           string `json:"signature" validate:"required"`
 }
 

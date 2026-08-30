@@ -14,16 +14,19 @@ import (
 	"github.com/theQRL/go-qrl/common/hexutil"
 	"github.com/theQRL/qrysm/beacon-chain/blockchain"
 	"github.com/theQRL/qrysm/beacon-chain/builder"
+	coreblocks "github.com/theQRL/qrysm/beacon-chain/core/blocks"
 	"github.com/theQRL/qrysm/beacon-chain/core/feed"
 	blockfeed "github.com/theQRL/qrysm/beacon-chain/core/feed/block"
 	"github.com/theQRL/qrysm/beacon-chain/core/helpers"
 	"github.com/theQRL/qrysm/beacon-chain/core/transition"
 	"github.com/theQRL/qrysm/beacon-chain/db/kv"
 	"github.com/theQRL/qrysm/beacon-chain/state"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/blocks"
 	"github.com/theQRL/qrysm/consensus-types/interfaces"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
+	"github.com/theQRL/qrysm/encoding/bytesutil"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/time/slots"
 	"go.opencensus.io/trace"
@@ -70,6 +73,18 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *qrysmpb.BlockRequest)
 	head, parentRoot, err := vs.getParentState(ctx, req.Slot)
 	if err != nil {
 		return nil, err
+	}
+	// Fail fast on a reveal that does not open the proposer's RANDAO
+	// commitment: the block would be invalid, so there is no point building
+	// it. A zero reveal is allowed for callers that only want a state root
+	// (REST skip_randao_verification).
+	if len(req.RandaoReveal) != fieldparams.RandaoRevealLength {
+		return nil, status.Errorf(codes.InvalidArgument, "randao reveal must be %d bytes, got %d", fieldparams.RandaoRevealLength, len(req.RandaoReveal))
+	}
+	if reveal := bytesutil.ToBytes32(req.RandaoReveal); reveal != [32]byte{} {
+		if err := coreblocks.VerifyRandaoReveal(ctx, head, reveal); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "Could not verify randao reveal: %v", err)
+		}
 	}
 	sBlk, err := getEmptyBlock(req.Slot)
 	if err != nil {

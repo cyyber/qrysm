@@ -87,6 +87,7 @@ func ResetCaches() {
 	orderedPublicKeys = make([][field_params.MLDSA87PubkeyLength]byte, 0)
 	mlDSA87KeysCache = make(map[[field_params.MLDSA87PubkeyLength]byte]ml_dsa_87.MLDSA87Key)
 	lock.Unlock()
+	resetRandaoOnions()
 }
 
 // NewKeymanager instantiates a new local keymanager from configuration options.
@@ -178,6 +179,9 @@ func (km *Keymanager) initializeKeysCachesFromKeystore() error {
 		}
 		mlDSA87KeysCache[publicKey2592] = secretKey
 	}
+	// Build the RANDAO onions off the critical path so the first proposal
+	// does not pay for it.
+	go warmRandaoOnions(orderedPublicKeys)
 	return nil
 }
 

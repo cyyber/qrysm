@@ -6,8 +6,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/theQRL/go-qrl/common"
 	"github.com/theQRL/qrysm/beacon-chain/core/signing"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
+	"github.com/theQRL/qrysm/crypto/randao"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 )
 
@@ -23,14 +25,32 @@ import (
 //	- Let amount be the amount in Shor to be deposited by the validator where MIN_DEPOSIT_AMOUNT <= amount <= MAX_EFFECTIVE_BALANCE.
 //	- Set deposit_data.amount = amount.
 //	- Let signature be the result of bls_sign of the signing_root(deposit_data) with domain=compute_domain(DOMAIN_DEPOSIT). (Deposits are valid regardless of fork version, compute_domain will default to zeroes there).
-//	- Send a transaction on the QRL execution layer to DEPOSIT_CONTRACT_ADDRESS executing `deposit(pubkey: bytes[2592], withdrawal_recipient: bytes[64], signature: bytes[4627])` along with a deposit of amount Shor.
+//	- Set deposit_data.randao_commitment to the top layer of the validator's RANDAO hash onion (see crypto/randao).
+//	- Send a transaction on the QRL execution layer to DEPOSIT_CONTRACT_ADDRESS executing `deposit(pubkey: bytes[2592], withdrawal_recipient: bytes[64], randao_commitment: bytes[32], signature: bytes[4627])` along with a deposit of amount Shor.
+//
+// The RANDAO commitment is derived from the deposit key's seed with the
+// default onion length. Use DepositInputWithRandaoCommitment to supply one.
 //
 // See: https://github.com/ethereum/consensus-specs/blob/master/specs/validator/0_beacon-chain-validator.md#submit-deposit
 func DepositInput(depositKey ml_dsa_87.MLDSA87Key, withdrawalAddr common.Address, amountInShor uint64, forkVersion []byte) (*qrysmpb.Deposit_Data, [32]byte, error) {
+	commitment := randao.Commitment(depositKey.Marshal(), randao.DefaultLayers)
+	return DepositInputWithRandaoCommitment(depositKey, withdrawalAddr, amountInShor, forkVersion, commitment)
+}
+
+// DepositInputWithRandaoCommitment is DepositInput with an explicit RANDAO
+// hash-onion commitment.
+func DepositInputWithRandaoCommitment(
+	depositKey ml_dsa_87.MLDSA87Key,
+	withdrawalAddr common.Address,
+	amountInShor uint64,
+	forkVersion []byte,
+	randaoCommitment [fieldparams.RandaoCommitmentLength]byte,
+) (*qrysmpb.Deposit_Data, [32]byte, error) {
 	depositMessage := &qrysmpb.DepositMessage{
 		PublicKey:           depositKey.PublicKey().Marshal(),
 		WithdrawalRecipient: withdrawalAddr.Bytes(),
 		Amount:              amountInShor,
+		RandaoCommitment:    randaoCommitment[:],
 	}
 
 	sr, err := depositMessage.HashTreeRoot()
@@ -58,6 +78,7 @@ func DepositInput(depositKey ml_dsa_87.MLDSA87Key, withdrawalAddr common.Address
 		PublicKey:           depositMessage.PublicKey,
 		WithdrawalRecipient: depositMessage.WithdrawalRecipient,
 		Amount:              depositMessage.Amount,
+		RandaoCommitment:    depositMessage.RandaoCommitment,
 		Signature:           sig.Marshal(),
 	}
 
@@ -84,6 +105,7 @@ func VerifyDepositSignature(dd *qrysmpb.Deposit_Data, domain []byte) error {
 		PublicKey:           ddCopy.PublicKey,
 		WithdrawalRecipient: ddCopy.WithdrawalRecipient,
 		Amount:              ddCopy.Amount,
+		RandaoCommitment:    ddCopy.RandaoCommitment,
 	}
 	root, err := di.HashTreeRoot()
 	if err != nil {

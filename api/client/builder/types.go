@@ -517,11 +517,13 @@ func (d *DepositData) MarshalJSON() ([]byte, error) {
 		PublicKey           hexutil.Bytes `json:"pubkey"`
 		WithdrawalRecipient hexutil.Bytes `json:"withdrawal_recipient"`
 		Amount              string        `json:"amount"`
+		RandaoCommitment    hexutil.Bytes `json:"randao_commitment"`
 		Signature           hexutil.Bytes `json:"signature"`
 	}{
 		PublicKey:           d.PublicKey,
 		WithdrawalRecipient: d.WithdrawalRecipient,
 		Amount:              fmt.Sprintf("%d", d.Amount),
+		RandaoCommitment:    d.RandaoCommitment,
 		Signature:           d.Signature,
 	})
 }

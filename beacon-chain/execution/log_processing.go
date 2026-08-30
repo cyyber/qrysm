@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	depositEventSignatureHash = hash.Keccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
+	depositEventSignatureHash = hash.Keccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes,bytes)"))
 	depositEventSignature     = common.HashToLogTopic(common.Hash(depositEventSignatureHash))
 )
 
@@ -103,7 +103,7 @@ func (s *Service) ProcessLog(ctx context.Context, depositLog *gqrltypes.Log) err
 // the execution chain by trying to ascertain which participant deposited
 // in the contract.
 func (s *Service) ProcessDepositLog(ctx context.Context, depositLog *gqrltypes.Log) error {
-	pubkey, withdrawalRecipient, amount, signature, merkleTreeIndex, err := contracts.UnpackDepositLogData(depositLog.Data)
+	pubkey, withdrawalRecipient, amount, randaoCommitment, signature, merkleTreeIndex, err := contracts.UnpackDepositLogData(depositLog.Data)
 	if err != nil {
 		return errors.Wrap(err, "Could not unpack log")
 	}
@@ -127,6 +127,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog *gqrltypes.L
 	depositData := &qrysmpb.Deposit_Data{
 		Amount:              bytesutil.FromBytes8(amount),
 		PublicKey:           pubkey,
+		RandaoCommitment:    randaoCommitment,
 		Signature:           signature,
 		WithdrawalRecipient: withdrawalRecipient,
 	}

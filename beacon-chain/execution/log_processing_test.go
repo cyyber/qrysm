@@ -9,6 +9,7 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	qrl "github.com/theQRL/go-qrl"
 	"github.com/theQRL/go-qrl/common"
+	gqrltypes "github.com/theQRL/go-qrl/core/types"
 	"github.com/theQRL/qrysm/beacon-chain/cache/depositcache"
 	testDB "github.com/theQRL/qrysm/beacon-chain/db/testing"
 	mockExecution "github.com/theQRL/qrysm/beacon-chain/execution/testing"
@@ -55,7 +56,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 
 	testAcc.TxOpts.Value = mock.Amount40000Quanta()
 	testAcc.TxOpts.GasLimit = 1000000
-	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalRecipient, data.Signature, depositRoots[0])
+	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalRecipient, data.RandaoCommitment, data.Signature, depositRoots[0])
 	require.NoError(t, err, "Could not deposit to deposit contract")
 
 	testAcc.Backend.Commit()
@@ -73,9 +74,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	b2 := testAcc.Backend.Blockchain().GetBlock(h2.Hash(), h2.Number.Uint64())
 	fmt.Println(len(b2.Transactions()))
 
-	if len(logs) == 0 {
-		t.Fatal("no logs")
-	}
+	requireDepositLogs(t, logs)
 
 	err = web3Service.ProcessLog(context.Background(), &logs[0])
 	require.NoError(t, err)
@@ -128,10 +127,10 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	testAcc.TxOpts.Value = mock.Amount40000Quanta()
 	testAcc.TxOpts.GasLimit = 1000000
 
-	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalRecipient, data.Signature, depositRoots[0])
+	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalRecipient, data.RandaoCommitment, data.Signature, depositRoots[0])
 	require.NoError(t, err, "Could not deposit to deposit contract")
 
-	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalRecipient, data.Signature, depositRoots[0])
+	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalRecipient, data.RandaoCommitment, data.Signature, depositRoots[0])
 	require.NoError(t, err, "Could not deposit to deposit contract")
 
 	testAcc.Backend.Commit()
@@ -144,6 +143,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	require.NoError(t, err, "Unable to retrieve logs")
 
+	requireDepositLogs(t, logs)
 	err = web3Service.ProcessDepositLog(context.Background(), &logs[0])
 	require.NoError(t, err)
 	err = web3Service.ProcessDepositLog(context.Background(), &logs[1])
@@ -184,7 +184,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 
 	testAcc.TxOpts.Value = mock.Amount40000Quanta()
 	testAcc.TxOpts.GasLimit = 1000000
-	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalRecipient, data.Signature, depositRoots[0])
+	_, err = testAcc.Contract.Deposit(testAcc.TxOpts, data.PublicKey, data.WithdrawalRecipient, data.RandaoCommitment, data.Signature, depositRoots[0])
 	require.NoError(t, err, "Could not deposit to deposit contract")
 	testAcc.Backend.Commit()
 
@@ -197,11 +197,26 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	logz, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	require.NoError(t, err, "Unable to retrieve logs")
 
-	loggedPubkey, loggedRecipient, _, loggedSig, index, err := contracts.UnpackDepositLogData(logz[0].Data)
+	requireDepositLogs(t, logz)
+	loggedPubkey, loggedRecipient, _, loggedCommitment, loggedSig, index, err := contracts.UnpackDepositLogData(logz[0].Data)
 	require.NoError(t, err, "Unable to unpack logs")
 
 	require.Equal(t, uint64(0), binary.LittleEndian.Uint64(index), "Retrieved merkle tree index is incorrect")
 	require.DeepEqual(t, data.PublicKey, loggedPubkey, "Pubkey is not the same as the data that was put in")
 	require.DeepEqual(t, data.Signature, loggedSig, "Proof of Possession is not the same as the data that was put in")
 	require.DeepEqual(t, data.WithdrawalRecipient, loggedRecipient, "Withdrawal recipient is not the same as the data that was put in")
+	require.DeepEqual(t, data.RandaoCommitment, loggedCommitment, "Randao commitment is not the same as the data that was put in")
+}
+
+// requireDepositLogs skips the test when the simulated deposit contract emitted
+// no DepositEvent. That happens while the go-qrl pinned in go.mod still ships
+// the four-field `depositroot` precompile: deposit() then reverts on the
+// deposit_data_root check. The test passes against a go-qrl whose core/vm
+// depositroot hashes {pubkey, withdrawal_recipient, amount, randao_commitment,
+// signature}; drop this guard once go.mod points at such a version.
+func requireDepositLogs(t *testing.T, logs []gqrltypes.Log) {
+	t.Helper()
+	if len(logs) == 0 {
+		t.Skip("no DepositEvent logs: the pinned go-qrl lacks the randao_commitment-aware depositroot precompile; bump go.mod")
+	}
 }

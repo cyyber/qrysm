@@ -48,6 +48,8 @@ func ValidatorFieldRoots(validator *qrysmpb.Validator) ([][32]byte, error) {
 		var withdrawalBuf [32]byte
 		binary.LittleEndian.PutUint64(withdrawalBuf[:8], uint64(validator.WithdrawableEpoch))
 
+		randaoCommitment := bytesutil.ToBytes32(validator.RandaoCommitment)
+
 		// Public key.
 		pubKeyRoot, err := merkleizePubkey(pubkey[:])
 		if err != nil {
@@ -61,8 +63,12 @@ func ValidatorFieldRoots(validator *qrysmpb.Validator) ([][32]byte, error) {
 		if err != nil {
 			return [][32]byte{}, err
 		}
-		fieldRoots = [][32]byte{pubKeyRoot, recipientRoot, effectiveBalanceBuf, slashBuf, activationEligibilityBuf,
-			activationBuf, exitBuf, withdrawalBuf}
+		// The validator container has 9 fields; its SSZ tree therefore has
+		// 16 leaves, the last 7 being zero. They are materialised here so
+		// that OptimizedValidatorRoots can hash a flat, fixed-width layout.
+		fieldRoots = make([][32]byte, ValidatorFieldRootCount)
+		copy(fieldRoots, [][32]byte{pubKeyRoot, recipientRoot, effectiveBalanceBuf, slashBuf, activationEligibilityBuf,
+			activationBuf, exitBuf, withdrawalBuf, randaoCommitment})
 	}
 	return fieldRoots, nil
 }

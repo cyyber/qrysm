@@ -14,6 +14,7 @@ import (
 	field_params "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
+	"github.com/theQRL/qrysm/crypto/randao"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 )
 
@@ -121,10 +122,20 @@ func validateDeposit(depositData *DepositData, credential *Credential) bool {
 		return false
 	}
 
+	randaoCommitment := misc.DecodeHex(depositData.RandaoCommitment)
+	if len(randaoCommitment) != field_params.RandaoCommitmentLength {
+		panic(fmt.Errorf("invalid randao commitment length %d, want %d",
+			len(randaoCommitment), field_params.RandaoCommitmentLength))
+	}
+	if expected := randao.Commitment(signingSeed[:], randao.DefaultLayers); !reflect.DeepEqual(randaoCommitment, expected[:]) {
+		return false
+	}
+
 	depositMessage := &qrysmpb.DepositMessage{
 		PublicKey:           depositKey.PublicKey().Marshal(),
 		WithdrawalRecipient: withdrawalRecipient,
 		Amount:              depositData.Amount,
+		RandaoCommitment:    randaoCommitment,
 	}
 	root, err := depositMessage.HashTreeRoot()
 	if err != nil {

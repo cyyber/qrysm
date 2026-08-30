@@ -106,6 +106,7 @@ type ReadOnlyValidator interface {
 	ExitEpoch() primitives.Epoch
 	PublicKey() [field_params.MLDSA87PubkeyLength]byte
 	WithdrawalRecipient() []byte
+	RandaoCommitment() [field_params.RandaoCommitmentLength]byte
 	Slashed() bool
 	IsNil() bool
 }

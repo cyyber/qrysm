@@ -309,7 +309,6 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 		StateGen:              stategen.New(db, doublylinkedtree.New()),
 	}
 	req := util.NewBeaconBlockZond()
-	req.Block.ProposerIndex = 45
 	req.Block.ParentRoot = parentRoot[:]
 	req.Block.Slot = 1
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
@@ -318,6 +317,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	proposerIdx, err := helpers.BeaconProposerIndex(ctx, beaconState)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()-1))
+	req.Block.ProposerIndex = proposerIdx
 	req.Block.Body.RandaoReveal = randaoReveal
 	currentEpoch := coretime.CurrentEpoch(beaconState)
 	req.Signature, err = signing.ComputeDomainAndSign(beaconState, currentEpoch, req.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
@@ -442,6 +442,8 @@ func TestProposer_PendingDeposits_OutsideExecutionFollowWindow(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("a"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 		{
@@ -452,6 +454,8 @@ func TestProposer_PendingDeposits_OutsideExecutionFollowWindow(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("b"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 	}
@@ -465,6 +469,8 @@ func TestProposer_PendingDeposits_OutsideExecutionFollowWindow(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("c"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 		{
@@ -475,6 +481,8 @@ func TestProposer_PendingDeposits_OutsideExecutionFollowWindow(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("d"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 	}
@@ -581,6 +589,8 @@ func TestProposer_PendingDeposits_FollowsCorrectExecutionBlock(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("a"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 		{
@@ -591,6 +601,8 @@ func TestProposer_PendingDeposits_FollowsCorrectExecutionBlock(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("b"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 	}
@@ -604,6 +616,8 @@ func TestProposer_PendingDeposits_FollowsCorrectExecutionBlock(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("c"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 		{
@@ -614,6 +628,8 @@ func TestProposer_PendingDeposits_FollowsCorrectExecutionBlock(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("d"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 	}
@@ -695,6 +711,8 @@ func TestProposer_PendingDeposits_CantReturnBelowStateExecutionDepositIndex(t *t
 					PublicKey:           bytesutil.PadTo([]byte("a"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 		{
@@ -704,6 +722,8 @@ func TestProposer_PendingDeposits_CantReturnBelowStateExecutionDepositIndex(t *t
 					PublicKey:           bytesutil.PadTo([]byte("b"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 	}
@@ -717,6 +737,8 @@ func TestProposer_PendingDeposits_CantReturnBelowStateExecutionDepositIndex(t *t
 					PublicKey:           bytesutil.PadTo([]byte{byte(i)}, field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		})
 	}
@@ -795,6 +817,8 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("a"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 		{
@@ -804,6 +828,8 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("b"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 	}
@@ -817,6 +843,8 @@ func TestProposer_PendingDeposits_CantReturnMoreThanMax(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte{byte(i)}, field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		})
 	}
@@ -893,6 +921,8 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("a"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 		{
@@ -902,6 +932,8 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("b"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 	}
@@ -915,6 +947,8 @@ func TestProposer_PendingDeposits_CantReturnMoreThanDepositCount(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte{byte(i)}, field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		})
 	}
@@ -995,6 +1029,8 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("a"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 		{
@@ -1005,6 +1041,8 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("b"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 	}
@@ -1018,6 +1056,8 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("c"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 		{
@@ -1028,6 +1068,8 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("d"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 	}
@@ -1111,6 +1153,8 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("a"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 		{
@@ -1121,6 +1165,8 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("b"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 	}
@@ -1134,6 +1180,8 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("c"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 		{
@@ -1144,6 +1192,8 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte("d"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 	}
@@ -1326,6 +1376,8 @@ func TestProposer_ExecutionData_MajorityVote(t *testing.T) {
 				PublicKey:           bytesutil.PadTo([]byte("a"), field_params.MLDSA87PubkeyLength),
 				Signature:           make([]byte, field_params.MLDSA87SignatureLength),
 				WithdrawalRecipient: make([]byte, 64),
+
+				RandaoCommitment: make([]byte, 32),
 			}},
 	}
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
@@ -2000,6 +2052,8 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestExecutionDataEqGenesisExecut
 					PublicKey:           bytesutil.PadTo([]byte("a"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 		{
@@ -2009,6 +2063,8 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestExecutionDataEqGenesisExecut
 					PublicKey:           bytesutil.PadTo([]byte("b"), field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		},
 	}
@@ -2022,6 +2078,8 @@ func TestProposer_Deposits_ReturnsEmptyList_IfLatestExecutionDataEqGenesisExecut
 					PublicKey:           bytesutil.PadTo([]byte{byte(i)}, field_params.MLDSA87PubkeyLength),
 					Signature:           mockSig[:],
 					WithdrawalRecipient: mockWithdrawalRecipient[:],
+
+					RandaoCommitment: make([]byte, 32),
 				}},
 		})
 	}

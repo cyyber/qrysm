@@ -19,6 +19,7 @@ import (
 	"github.com/theQRL/qrysm/cmd"
 	"github.com/theQRL/qrysm/cmd/staking-deposit-cli/deposit/flags"
 	"github.com/theQRL/qrysm/cmd/staking-deposit-cli/stakingdeposit"
+	field_params "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/contracts/deposit"
 	"github.com/theQRL/qrysm/encoding/bytesutil"
@@ -125,6 +126,13 @@ func sendDepositTx(
 	if err != nil {
 		return err
 	}
+	randaoCommitmentBytes, err := hex.DecodeString(strings.TrimPrefix(data.RandaoCommitment, "0x"))
+	if err != nil {
+		return err
+	}
+	if len(randaoCommitmentBytes) != field_params.RandaoCommitmentLength {
+		return fmt.Errorf("invalid randao commitment length %d, want %d", len(randaoCommitmentBytes), field_params.RandaoCommitmentLength)
+	}
 	sigBytes, err := hex.DecodeString(data.Signature[2:])
 	if err != nil {
 		return err
@@ -138,6 +146,7 @@ func sendDepositTx(
 		txOpts,
 		pubKeyBytes,
 		recipientBytes,
+		randaoCommitmentBytes,
 		sigBytes,
 		bytesutil.ToBytes32(depDataRootBytes),
 	)

@@ -156,6 +156,7 @@ type depositDataJSON struct {
 	PubKey              string `json:"pubkey"`
 	Amount              uint64 `json:"amount"`
 	WithdrawalRecipient string `json:"withdrawal_recipient"`
+	RandaoCommitment    string `json:"randao_commitment"`
 	DepositDataRoot     string `json:"deposit_data_root"`
 	Signature           string `json:"signature"`
 }
@@ -381,6 +382,10 @@ func depositJSONToDepositData(input *depositDataJSON) ([]byte, *qrysmpb.Deposit_
 	if err != nil {
 		return nil, nil, err
 	}
+	randaoCommitment, err := hex.DecodeString(strings.TrimPrefix(input.RandaoCommitment, "0x"))
+	if err != nil {
+		return nil, nil, err
+	}
 	sig, err := hex.DecodeString(strings.TrimPrefix(input.Signature, "0x"))
 	if err != nil {
 		return nil, nil, err
@@ -389,6 +394,7 @@ func depositJSONToDepositData(input *depositDataJSON) ([]byte, *qrysmpb.Deposit_
 		PublicKey:           pk,
 		WithdrawalRecipient: withdrawalRecipient,
 		Amount:              input.Amount,
+		RandaoCommitment:    randaoCommitment,
 		Signature:           sig,
 	}, nil
 }

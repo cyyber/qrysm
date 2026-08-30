@@ -69,6 +69,7 @@ func setupGenesisState(tb testing.TB, count uint64) *qrysmpb.BeaconStateZond {
 			ActivationEpoch:            1,
 			ExitEpoch:                  1,
 			WithdrawableEpoch:          1,
+			RandaoCommitment:           make([]byte, field_params.RandaoCommitmentLength),
 		})
 		genesisState.Balances = append(genesisState.Balances, params.BeaconConfig().MaxEffectiveBalance)
 		genesisState.LatestExecutionPayloadHeader = &enginev1.ExecutionPayloadHeaderZond{

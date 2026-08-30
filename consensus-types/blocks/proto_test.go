@@ -15,6 +15,7 @@ import (
 type fields struct {
 	root                  [32]byte
 	sig                   [field_params.MLDSA87SignatureLength]byte
+	randao                [field_params.RandaoRevealLength]byte
 	deposits              []*qrysmpb.Deposit
 	atts                  []*qrysmpb.Attestation
 	proposerSlashings     []*qrysmpb.ProposerSlashing
@@ -303,7 +304,7 @@ func Test_initBlockBodyFromProtoBlindedZond(t *testing.T) {
 func bodyPbZond() *qrysmpb.BeaconBlockBodyZond {
 	f := getFields()
 	return &qrysmpb.BeaconBlockBodyZond{
-		RandaoReveal: f.sig[:],
+		RandaoReveal: f.randao[:],
 		ExecutionData: &qrysmpb.ExecutionData{
 			DepositRoot:  f.root[:],
 			DepositCount: 128,
@@ -323,7 +324,7 @@ func bodyPbZond() *qrysmpb.BeaconBlockBodyZond {
 func bodyPbBlindedZond() *qrysmpb.BlindedBeaconBlockBodyZond {
 	f := getFields()
 	return &qrysmpb.BlindedBeaconBlockBodyZond{
-		RandaoReveal: f.sig[:],
+		RandaoReveal: f.randao[:],
 		ExecutionData: &qrysmpb.ExecutionData{
 			DepositRoot:  f.root[:],
 			DepositCount: 128,
@@ -346,7 +347,7 @@ func bodyZond(t *testing.T) *BeaconBlockBody {
 	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Zond,
-		randaoReveal: f.sig,
+		randaoReveal: f.randao,
 		executionData: &qrysmpb.ExecutionData{
 			DepositRoot:  f.root[:],
 			DepositCount: 128,
@@ -370,7 +371,7 @@ func bodyBlindedZond(t *testing.T) *BeaconBlockBody {
 	return &BeaconBlockBody{
 		version:      version.Zond,
 		isBlinded:    true,
-		randaoReveal: f.sig,
+		randaoReveal: f.randao,
 		executionData: &qrysmpb.ExecutionData{
 			DepositRoot:  f.root[:],
 			DepositCount: 128,
@@ -411,6 +412,7 @@ func getFields() fields {
 			PublicKey:           b2592,
 			WithdrawalRecipient: withdrawalRecipient[:],
 			Amount:              128,
+			RandaoCommitment:    make([]byte, field_params.RandaoCommitmentLength),
 			Signature:           sig[:],
 		}
 	}
@@ -554,6 +556,7 @@ func getFields() fields {
 	return fields{
 		root:                  root,
 		sig:                   sig,
+		randao:                [field_params.RandaoRevealLength]byte(sig[:field_params.RandaoRevealLength]),
 		deposits:              deposits,
 		atts:                  atts,
 		proposerSlashings:     []*qrysmpb.ProposerSlashing{proposerSlashing},

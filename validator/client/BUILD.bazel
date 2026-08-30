@@ -125,6 +125,7 @@ go_test(
         "//cache/lru",
         "//config/features",
         "//config/fieldparams",
+        "//crypto/randao",
         "//config/params",
         "//config/validator/service",
         "//consensus-types/blocks",

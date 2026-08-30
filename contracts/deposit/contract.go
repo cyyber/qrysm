@@ -26,7 +26,7 @@ var (
 )
 
 // DepositContractABI is the input ABI used to generate the binding from.
-const DepositContractABI = "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"pubkey\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"withdrawal_recipient\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"amount\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"index\",\"type\":\"bytes\"}],\"name\":\"DepositEvent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"pubkey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"withdrawal_recipient\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"deposit_data_root\",\"type\":\"bytes32\"}],\"name\":\"deposit\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"get_deposit_count\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"get_deposit_root\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}]"
+const DepositContractABI = "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"pubkey\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"withdrawal_recipient\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"amount\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"randao_commitment\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"index\",\"type\":\"bytes\"}],\"name\":\"DepositEvent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"pubkey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"withdrawal_recipient\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"randao_commitment\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"deposit_data_root\",\"type\":\"bytes32\"}],\"name\":\"deposit\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"get_deposit_count\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"get_deposit_root\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}]"
 
 // DepositContract is an auto generated Go binding around an Ethereum contract.
 type DepositContract struct {
@@ -266,22 +266,22 @@ func (_DepositContract *DepositContractCallerSession) SupportsInterface(interfac
 // Deposit is a paid mutator transaction binding the contract method 0x22895118.
 //
 // Hyperion: function deposit(bytes pubkey, bytes withdrawal_recipient, bytes signature, bytes32 deposit_data_root) payable returns()
-func (_DepositContract *DepositContractTransactor) Deposit(opts *bind.TransactOpts, pubkey []byte, withdrawal_recipient []byte, signature []byte, deposit_data_root [32]byte) (*types.Transaction, error) {
-	return _DepositContract.contract.Transact(opts, "deposit", pubkey, withdrawal_recipient, signature, deposit_data_root)
+func (_DepositContract *DepositContractTransactor) Deposit(opts *bind.TransactOpts, pubkey []byte, withdrawal_recipient []byte, randao_commitment []byte, signature []byte, deposit_data_root [32]byte) (*types.Transaction, error) {
+	return _DepositContract.contract.Transact(opts, "deposit", pubkey, withdrawal_recipient, randao_commitment, signature, deposit_data_root)
 }
 
 // Deposit is a paid mutator transaction binding the contract method 0x22895118.
 //
 // Hyperion: function deposit(bytes pubkey, bytes withdrawal_recipient, bytes signature, bytes32 deposit_data_root) payable returns()
-func (_DepositContract *DepositContractSession) Deposit(pubkey []byte, withdrawal_recipient []byte, signature []byte, deposit_data_root [32]byte) (*types.Transaction, error) {
-	return _DepositContract.Contract.Deposit(&_DepositContract.TransactOpts, pubkey, withdrawal_recipient, signature, deposit_data_root)
+func (_DepositContract *DepositContractSession) Deposit(pubkey []byte, withdrawal_recipient []byte, randao_commitment []byte, signature []byte, deposit_data_root [32]byte) (*types.Transaction, error) {
+	return _DepositContract.Contract.Deposit(&_DepositContract.TransactOpts, pubkey, withdrawal_recipient, randao_commitment, signature, deposit_data_root)
 }
 
 // Deposit is a paid mutator transaction binding the contract method 0x22895118.
 //
 // Hyperion: function deposit(bytes pubkey, bytes withdrawal_recipient, bytes signature, bytes32 deposit_data_root) payable returns()
-func (_DepositContract *DepositContractTransactorSession) Deposit(pubkey []byte, withdrawal_recipient []byte, signature []byte, deposit_data_root [32]byte) (*types.Transaction, error) {
-	return _DepositContract.Contract.Deposit(&_DepositContract.TransactOpts, pubkey, withdrawal_recipient, signature, deposit_data_root)
+func (_DepositContract *DepositContractTransactorSession) Deposit(pubkey []byte, withdrawal_recipient []byte, randao_commitment []byte, signature []byte, deposit_data_root [32]byte) (*types.Transaction, error) {
+	return _DepositContract.Contract.Deposit(&_DepositContract.TransactOpts, pubkey, withdrawal_recipient, randao_commitment, signature, deposit_data_root)
 }
 
 // DepositContractDepositEventIterator is returned from FilterDepositEvent and is used to iterate over the raw logs and unpacked data for DepositEvent events raised by the DepositContract contract.
@@ -356,6 +356,7 @@ type DepositContractDepositEvent struct {
 	Pubkey              []byte
 	WithdrawalRecipient []byte
 	Amount              []byte
+	RandaoCommitment    []byte
 	Signature           []byte
 	Index               []byte
 	Raw                 types.Log // Blockchain specific contextual infos

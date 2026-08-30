@@ -143,7 +143,6 @@ func (s *Service) detectAllAttesterSlashings(
 	// Separate chunk maps for min and max spans.
 	updatedMinChunks := make(map[uint64]Chunker)
 	updatedMaxChunks := make(map[uint64]Chunker)
-	groupedAtts := s.groupByChunkIndex(attestations)
 	validatorIndices := s.params.validatorIndicesInChunk(args.validatorChunkIndex)
 
 	minArgs := &chunkUpdateArgs{
@@ -176,7 +175,20 @@ func (s *Service) detectAllAttesterSlashings(
 	}
 
 	// Check for surrounding votes (MinSpan).
-	surroundingSlashings, err := s.updateSpans(ctx, updatedMinChunks, minArgs, groupedAtts)
+	//
+	// The processing order within a batch decides which pairs of attestations
+	// *in the same batch* can be detected: an attestation is only checked
+	// against the spans as they stand when it is applied. In the min-span pass
+	// an outer (surrounding) vote is found via min_spans[outer.source], which is
+	// only populated once the inner vote (larger source) has been applied — so
+	// inner votes must be applied first, i.e. descending source epoch. The
+	// max-span pass is the mirror image: the inner vote is found via
+	// max_spans[inner.source], populated by the outer vote (smaller source), so
+	// ascending source epoch. Either pass alone then covers every surround pair
+	// in the batch. Iterating a Go map here (the previous implementation grouped
+	// by chunk index) made the order random per call, and the pair went
+	// undetected whenever both passes happened to draw the wrong order.
+	surroundingSlashings, err := s.updateSpans(ctx, updatedMinChunks, minArgs, sortBySourceEpoch(attestations, true))
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(
 			err,
@@ -186,7 +198,7 @@ func (s *Service) detectAllAttesterSlashings(
 	}
 
 	// Check for surrounded votes (MaxSpan).
-	surroundedSlashings, err := s.updateSpans(ctx, updatedMaxChunks, maxArgs, groupedAtts)
+	surroundedSlashings, err := s.updateSpans(ctx, updatedMaxChunks, maxArgs, sortBySourceEpoch(attestations, false))
 	if err != nil {
 		return nil, nil, nil, errors.Wrapf(
 			err,
@@ -344,7 +356,8 @@ func (s *Service) epochUpdateForValidator(
 //  1. Determine the chunks we need to use for updating for the validator indices
 //     in a validator chunk index, then retrieve those chunks from the database.
 //  2. Using the chunks from step (1):
-//     for every attestation by chunk index:
+//     for every attestation, in the order given (see detectAllAttesterSlashings
+//     for why the order matters):
 //     for each validator in the attestation's attesting indices:
 //     - Check if the attestation is slashable, if so return a slashing object.
 //  3. Save the updated chunks to disk.
@@ -352,7 +365,7 @@ func (s *Service) updateSpans(
 	ctx context.Context,
 	updatedChunks map[uint64]Chunker,
 	args *chunkUpdateArgs,
-	attestationsByChunkIdx map[uint64][]*slashertypes.IndexedAttestationWrapper,
+	attestations []*slashertypes.IndexedAttestationWrapper,
 ) (map[[fieldparams.RootLength]byte]*qrysmpb.AttesterSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.updateSpans")
 	defer span.End()
@@ -360,47 +373,45 @@ func (s *Service) updateSpans(
 	// Apply the attestations to the related chunks and find any
 	// slashings along the way.
 	slashings := map[[fieldparams.RootLength]byte]*qrysmpb.AttesterSlashing{}
-	for _, attestationBatch := range attestationsByChunkIdx {
-		for _, att := range attestationBatch {
-			for _, validatorIdx := range att.IndexedAttestation.AttestingIndices {
-				validatorIndex := primitives.ValidatorIndex(validatorIdx)
-				computedValidatorChunkIdx := s.params.validatorChunkIndex(validatorIndex)
+	for _, att := range attestations {
+		for _, validatorIdx := range att.IndexedAttestation.AttestingIndices {
+			validatorIndex := primitives.ValidatorIndex(validatorIdx)
+			computedValidatorChunkIdx := s.params.validatorChunkIndex(validatorIndex)
 
-				// Every validator chunk index represents a range of validators.
-				// If it possible that the validator index in this loop iteration is
-				// not part of the validator chunk index we are updating chunks for.
-				//
-				// For example, if there are 4 validators per validator chunk index,
-				// then validator chunk index 0 contains validator indices [0, 1, 2, 3]
-				// If we see an attestation with attesting indices [3, 4, 5] and we are updating
-				// chunks for validator chunk index 0, only validator index 3 should make
-				// it past this line.
-				if args.validatorChunkIndex != computedValidatorChunkIdx {
-					continue
-				}
-				slashing, err := s.applyAttestationForValidator(
-					ctx,
-					args,
-					validatorIndex,
-					updatedChunks,
-					att,
-				)
-				if err != nil {
-					return nil, errors.Wrapf(
-						err,
-						"could not apply attestation for validator index %d",
-						validatorIndex,
-					)
-				}
-				if slashing == nil {
-					continue
-				}
-				root, err := slashing.HashTreeRoot()
-				if err != nil {
-					return nil, errors.Wrap(err, "could not hash tree root for attester slashing")
-				}
-				slashings[root] = slashing
+			// Every validator chunk index represents a range of validators.
+			// If it possible that the validator index in this loop iteration is
+			// not part of the validator chunk index we are updating chunks for.
+			//
+			// For example, if there are 4 validators per validator chunk index,
+			// then validator chunk index 0 contains validator indices [0, 1, 2, 3]
+			// If we see an attestation with attesting indices [3, 4, 5] and we are updating
+			// chunks for validator chunk index 0, only validator index 3 should make
+			// it past this line.
+			if args.validatorChunkIndex != computedValidatorChunkIdx {
+				continue
 			}
+			slashing, err := s.applyAttestationForValidator(
+				ctx,
+				args,
+				validatorIndex,
+				updatedChunks,
+				att,
+			)
+			if err != nil {
+				return nil, errors.Wrapf(
+					err,
+					"could not apply attestation for validator index %d",
+					validatorIndex,
+				)
+			}
+			if slashing == nil {
+				continue
+			}
+			root, err := slashing.HashTreeRoot()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not hash tree root for attester slashing")
+			}
+			slashings[root] = slashing
 		}
 	}
 

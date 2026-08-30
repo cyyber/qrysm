@@ -5,6 +5,7 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/state/state-native/types"
 	"github.com/theQRL/qrysm/beacon-chain/state/stateutil"
 	"github.com/theQRL/qrysm/config/features"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	consensus_types "github.com/theQRL/qrysm/consensus-types"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
@@ -14,7 +15,20 @@ import (
 
 // SetValidators for the beacon state. Updates the entire
 // to a new value by overwriting the previous one.
+// normalizeRandaoCommitment gives a validator without a RANDAO commitment the
+// zero commitment, so that the field always has its fixed SSZ size. A zero
+// commitment has no known pre-image: such a validator never proposes a valid
+// block, which matches how process_deposit treats an empty commitment.
+func normalizeRandaoCommitment(v *qrysmpb.Validator) {
+	if v != nil && len(v.RandaoCommitment) == 0 {
+		v.RandaoCommitment = make([]byte, fieldparams.RandaoCommitmentLength)
+	}
+}
+
 func (b *BeaconState) SetValidators(val []*qrysmpb.Validator) error {
+	for _, v := range val {
+		normalizeRandaoCommitment(v)
+	}
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -104,6 +118,7 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *qrysmpb.Validat
 // UpdateValidatorAtIndex for the beacon state. Updates the validator
 // at a specific index to a new value.
 func (b *BeaconState) UpdateValidatorAtIndex(idx primitives.ValidatorIndex, val *qrysmpb.Validator) error {
+	normalizeRandaoCommitment(val)
 	if features.Get().EnableExperimentalState {
 		if err := b.validatorsMultiValue.UpdateAt(b, uint64(idx), val); err != nil {
 			return errors.Wrap(err, "could not update validator")
@@ -232,6 +247,7 @@ func (b *BeaconState) UpdateSlashingsAtIndex(idx, val uint64) error {
 // AppendValidator for the beacon state. Appends the new value
 // to the end of list.
 func (b *BeaconState) AppendValidator(val *qrysmpb.Validator) error {
+	normalizeRandaoCommitment(val)
 	var valIdx primitives.ValidatorIndex
 	if features.Get().EnableExperimentalState {
 		b.validatorsMultiValue.Append(b, val)

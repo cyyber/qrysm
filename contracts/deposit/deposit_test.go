@@ -10,6 +10,7 @@ import (
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/contracts/deposit"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
+	"github.com/theQRL/qrysm/crypto/randao"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
@@ -32,10 +33,14 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 
 	sig, err := ml_dsa_87.SignatureFromBytes(result.Signature)
 	require.NoError(t, err)
+	// The commitment is the top of the default-length onion derived from the seed.
+	wantCommitment := randao.Commitment(seed[:], randao.DefaultLayers)
+	assert.DeepEqual(t, wantCommitment[:], result.RandaoCommitment)
 	testData := &qrysmpb.DepositMessage{
 		PublicKey:           result.PublicKey,
 		WithdrawalRecipient: result.WithdrawalRecipient,
 		Amount:              result.Amount,
+		RandaoCommitment:    result.RandaoCommitment,
 	}
 	sr, err := testData.HashTreeRoot()
 	require.NoError(t, err)

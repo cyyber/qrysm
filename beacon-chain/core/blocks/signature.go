@@ -2,7 +2,6 @@ package blocks
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -156,43 +155,6 @@ func BlockSignatureBatch(beaconState state.ReadOnlyBeaconState,
 	}
 	proposerPubKey := proposer.PublicKey
 	return signing.BlockSignatureBatch(proposerPubKey, sig, domain, rootFunc)
-}
-
-// RandaoSignatureBatch retrieves the relevant randao specific signature batch object
-// from a block and its corresponding state.
-func RandaoSignatureBatch(
-	ctx context.Context,
-	beaconState state.ReadOnlyBeaconState,
-	reveal []byte,
-) (*ml_dsa_87.SignatureBatch, error) {
-	buf, proposerPub, domain, err := randaoSigningData(ctx, beaconState)
-	if err != nil {
-		return nil, err
-	}
-	set, err := signatureBatch(buf, proposerPub, reveal, domain, signing.RandaoSignature)
-	if err != nil {
-		return nil, err
-	}
-	return set, nil
-}
-
-// retrieves the randao related signing data from the state.
-func randaoSigningData(ctx context.Context, beaconState state.ReadOnlyBeaconState) ([]byte, []byte, []byte, error) {
-	proposerIdx, err := helpers.BeaconProposerIndex(ctx, beaconState)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "could not get beacon proposer index")
-	}
-	proposerPub := beaconState.PubkeyAtIndex(proposerIdx)
-
-	currentEpoch := slots.ToEpoch(beaconState.Slot())
-	buf := make([]byte, 32)
-	binary.LittleEndian.PutUint64(buf, uint64(currentEpoch))
-
-	domain, err := signing.Domain(beaconState.Fork(), currentEpoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorsRoot())
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	return buf, proposerPub[:], domain, nil
 }
 
 // Method to break down attestations of the same domain and collect them into a single signature batch.

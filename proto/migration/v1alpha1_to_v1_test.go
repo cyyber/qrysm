@@ -30,7 +30,7 @@ var (
 	stateRoot        = bytesutil.PadTo([]byte("stateroot"), fieldparams.RootLength)
 	signature        = bytesutil.PadTo([]byte("signature"), 4627)
 	signatures       = [][]byte{signature}
-	randaoReveal     = bytesutil.PadTo([]byte("randaoreveal"), 4627)
+	randaoReveal     = bytesutil.PadTo([]byte("randaoreveal"), 32)
 	depositRoot      = bytesutil.PadTo([]byte("depositroot"), fieldparams.RootLength)
 	blockHash        = bytesutil.PadTo([]byte("blockhash"), 32)
 	beaconBlockRoot  = bytesutil.PadTo([]byte("beaconblockroot"), fieldparams.RootLength)

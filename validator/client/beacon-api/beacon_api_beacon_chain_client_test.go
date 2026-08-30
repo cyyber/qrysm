@@ -229,6 +229,7 @@ func TestListValidators(t *testing.T) {
 							ActivationEpoch:            "7",
 							ExitEpoch:                  "8",
 							WithdrawableEpoch:          "9",
+							RandaoCommitment:           hexutil.Encode(make([]byte, 32)),
 						},
 					},
 				},
@@ -359,6 +360,7 @@ func TestListValidators(t *testing.T) {
 							ActivationEpoch:            "6",
 							ExitEpoch:                  "7",
 							WithdrawableEpoch:          "8",
+							RandaoCommitment:           hexutil.Encode(make([]byte, 32)),
 						},
 					},
 					{
@@ -372,6 +374,7 @@ func TestListValidators(t *testing.T) {
 							ActivationEpoch:            "14",
 							ExitEpoch:                  "15",
 							WithdrawableEpoch:          "16",
+							RandaoCommitment:           hexutil.Encode(make([]byte, 32)),
 						},
 					},
 				},
@@ -420,6 +423,7 @@ func TestListValidators(t *testing.T) {
 								ActivationEpoch:            6,
 								ExitEpoch:                  7,
 								WithdrawableEpoch:          8,
+								RandaoCommitment:           make([]byte, 32),
 							},
 						}
 					}
@@ -455,6 +459,7 @@ func TestListValidators(t *testing.T) {
 									ActivationEpoch:            6,
 									ExitEpoch:                  7,
 									WithdrawableEpoch:          8,
+									RandaoCommitment:           make([]byte, 32),
 								},
 							},
 						},
@@ -483,6 +488,7 @@ func TestListValidators(t *testing.T) {
 									ActivationEpoch:            6,
 									ExitEpoch:                  7,
 									WithdrawableEpoch:          8,
+									RandaoCommitment:           make([]byte, 32),
 								},
 							},
 							{
@@ -496,6 +502,7 @@ func TestListValidators(t *testing.T) {
 									ActivationEpoch:            14,
 									ExitEpoch:                  15,
 									WithdrawableEpoch:          16,
+									RandaoCommitment:           make([]byte, 32),
 								},
 							},
 						},
@@ -524,6 +531,7 @@ func TestListValidators(t *testing.T) {
 									ActivationEpoch:            14,
 									ExitEpoch:                  15,
 									WithdrawableEpoch:          16,
+									RandaoCommitment:           make([]byte, 32),
 								},
 							},
 						},

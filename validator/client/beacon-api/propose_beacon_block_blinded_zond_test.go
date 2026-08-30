@@ -103,7 +103,7 @@ func generateSignedBlindedZondBlock() *qrysmpb.GenericSignedBeaconBlock_BlindedZ
 				ParentRoot:    test_helpers.FillByteSlice(32, 3),
 				StateRoot:     test_helpers.FillByteSlice(32, 4),
 				Body: &qrysmpb.BlindedBeaconBlockBodyZond{
-					RandaoReveal: test_helpers.FillByteSlice(4627, 5),
+					RandaoReveal: test_helpers.FillByteSlice(32, 5),
 					ExecutionData: &qrysmpb.ExecutionData{
 						DepositRoot:  test_helpers.FillByteSlice(32, 6),
 						DepositCount: 7,
@@ -274,6 +274,8 @@ func generateSignedBlindedZondBlock() *qrysmpb.GenericSignedBeaconBlock_BlindedZ
 								WithdrawalRecipient: test_helpers.FillByteSlice(64, 95),
 								Amount:              96,
 								Signature:           test_helpers.FillByteSlice(4627, 97),
+
+								RandaoCommitment: make([]byte, 32),
 							},
 						},
 						{
@@ -283,6 +285,8 @@ func generateSignedBlindedZondBlock() *qrysmpb.GenericSignedBeaconBlock_BlindedZ
 								WithdrawalRecipient: test_helpers.FillByteSlice(64, 101),
 								Amount:              102,
 								Signature:           test_helpers.FillByteSlice(4627, 103),
+
+								RandaoCommitment: make([]byte, 32),
 							},
 						},
 					},

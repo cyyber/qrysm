@@ -20,7 +20,7 @@ import (
 )
 
 // ExecuteStateTransitionNoVerifyAnySig defines the procedure for a state transition function.
-// This does not validate any ML-DSA-87 signatures of attestations, block proposer signature, randao signature,
+// This does not validate any ML-DSA-87 signatures of attestations, block proposer signature,
 // it is used for performing a state transition as quickly as possible. This function also returns a signature
 // set of all signatures not verified, so that they can be stored and verified later.
 //
@@ -174,6 +174,13 @@ func ProcessBlockNoVerifyAnySig(
 	}
 
 	blk := signed.Block()
+	// The RANDAO reveal is a hash pre-image, not a signature: it is checked
+	// here, against the proposer's commitment in the pre-state, instead of
+	// being deferred to the signature batch.
+	if err := b.VerifyRandaoReveal(ctx, st, blk.Body().RandaoReveal()); err != nil {
+		tracing.AnnotateError(span, err)
+		return nil, nil, errors.Wrap(err, "could not verify block randao")
+	}
 	st, err := ProcessBlockForStateRoot(ctx, st, signed)
 	if err != nil {
 		return nil, nil, err
@@ -185,20 +192,14 @@ func ProcessBlockNoVerifyAnySig(
 		tracing.AnnotateError(span, err)
 		return nil, nil, errors.Wrap(err, "could not retrieve block signature set")
 	}
-	randaoReveal := signed.Block().Body().RandaoReveal()
-	rSet, err := b.RandaoSignatureBatch(ctx, st, randaoReveal[:])
-	if err != nil {
-		tracing.AnnotateError(span, err)
-		return nil, nil, errors.Wrap(err, "could not retrieve randao signature set")
-	}
 	aSet, err := b.AttestationSignatureBatch(ctx, st, signed.Block().Body().Attestations())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not retrieve attestation signature set")
 	}
 
-	// Merge beacon block, randao and attestations signatures into a set.
+	// Merge beacon block and attestations signatures into a set.
 	set := ml_dsa_87.NewSet()
-	set.Join(bSet).Join(rSet).Join(aSet)
+	set.Join(bSet).Join(aSet)
 
 	return set, st, nil
 }
@@ -308,11 +309,10 @@ func ProcessBlockForStateRoot(
 		}
 	}
 
-	randaoReveal := signed.Block().Body().RandaoReveal()
-	state, err = b.ProcessRandaoNoVerify(state, randaoReveal[:])
+	state, err = b.ProcessRandaoNoVerify(ctx, state, signed.Block().Body().RandaoReveal())
 	if err != nil {
 		tracing.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not verify and process randao")
+		return nil, errors.Wrap(err, "could not process randao")
 	}
 
 	state, err = b.ProcessExecutionDataInBlock(ctx, state, signed.Block().Body().ExecutionData())

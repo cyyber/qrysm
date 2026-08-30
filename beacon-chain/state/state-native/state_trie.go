@@ -70,6 +70,9 @@ func InitializeFromProtoUnsafeZond(st *qrysmpb.BeaconStateZond) (state.BeaconSta
 	if st == nil {
 		return nil, errors.New("received nil state")
 	}
+	for _, v := range st.Validators {
+		normalizeRandaoCommitment(v)
+	}
 
 	hRoots := customtypes.HistoricalRoots(make([][32]byte, len(st.HistoricalRoots)))
 	for i, r := range st.HistoricalRoots {

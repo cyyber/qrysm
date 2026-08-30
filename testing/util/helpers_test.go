@@ -2,7 +2,6 @@ package util
 
 import (
 	"context"
-	"encoding/binary"
 	"testing"
 
 	"github.com/theQRL/qrysm/beacon-chain/core/helpers"
@@ -10,8 +9,9 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/core/time"
 	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
-	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
+	"github.com/theQRL/qrysm/crypto/randao"
+	"github.com/theQRL/qrysm/encoding/bytesutil"
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/time/slots"
@@ -52,18 +52,10 @@ func TestRandaoReveal(t *testing.T) {
 
 	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), beaconState)
 	assert.NoError(t, err)
-	buf := make([]byte, fieldparams.RootLength)
-	binary.LittleEndian.PutUint64(buf, uint64(epoch))
-	// We make the previous validator's index sign the message instead of the proposer.
-	sszUint := primitives.SSZUint64(epoch)
-	domain, err := signing.Domain(beaconState.Fork(), epoch, params.BeaconConfig().DomainRandao, beaconState.GenesisValidatorsRoot())
+	proposer, err := beaconState.ValidatorAtIndexReadOnly(proposerIdx)
 	require.NoError(t, err)
-	signingRoot, err := signing.ComputeSigningRoot(&sszUint, domain)
-	require.NoError(t, err)
-
-	pubKey, err := ml_dsa_87.PublicKeyFromBytes(privKeys[proposerIdx].PublicKey().Marshal())
-	require.NoError(t, err)
-	ok, err := ml_dsa_87.VerifySignature(randaoReveal, signingRoot, pubKey)
-	require.NoError(t, err)
-	assert.Equal(t, true, ok)
+	// The reveal must open the proposer's commitment from the genesis deposit.
+	require.Equal(t, fieldparams.RandaoRevealLength, len(randaoReveal))
+	assert.Equal(t, true, randao.Verify(bytesutil.ToBytes32(randaoReveal), proposer.RandaoCommitment()))
+	assert.Equal(t, TestRandaoCommitment(privKeys[proposerIdx]), proposer.RandaoCommitment())
 }

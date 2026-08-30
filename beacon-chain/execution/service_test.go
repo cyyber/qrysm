@@ -283,9 +283,9 @@ func TestHandlePanic_OK(t *testing.T) {
 
 func TestInitDepositCache_OK(t *testing.T) {
 	ctrs := []*qrysmpb.DepositContainer{
-		{Index: 0, ExecutionBlockHeight: 2, Deposit: &qrysmpb.Deposit{Proof: [][]byte{[]byte("A")}, Data: &qrysmpb.Deposit_Data{PublicKey: []byte{}}}},
-		{Index: 1, ExecutionBlockHeight: 4, Deposit: &qrysmpb.Deposit{Proof: [][]byte{[]byte("B")}, Data: &qrysmpb.Deposit_Data{PublicKey: []byte{}}}},
-		{Index: 2, ExecutionBlockHeight: 6, Deposit: &qrysmpb.Deposit{Proof: [][]byte{[]byte("c")}, Data: &qrysmpb.Deposit_Data{PublicKey: []byte{}}}},
+		{Index: 0, ExecutionBlockHeight: 2, Deposit: &qrysmpb.Deposit{Proof: [][]byte{[]byte("A")}, Data: &qrysmpb.Deposit_Data{PublicKey: []byte{}, RandaoCommitment: make([]byte, 32)}}},
+		{Index: 1, ExecutionBlockHeight: 4, Deposit: &qrysmpb.Deposit{Proof: [][]byte{[]byte("B")}, Data: &qrysmpb.Deposit_Data{PublicKey: []byte{}, RandaoCommitment: make([]byte, 32)}}},
+		{Index: 2, ExecutionBlockHeight: 6, Deposit: &qrysmpb.Deposit{Proof: [][]byte{[]byte("c")}, Data: &qrysmpb.Deposit_Data{PublicKey: []byte{}, RandaoCommitment: make([]byte, 32)}}},
 	}
 	gs, _ := util.DeterministicGenesisStateZond(t, 1)
 	beaconDB := dbutil.SetupDB(t)
@@ -322,9 +322,9 @@ func TestInitDepositCache_NoGenesisState(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 
 	ctrs := []*qrysmpb.DepositContainer{
-		{Index: 0, ExecutionBlockHeight: 2, Deposit: &qrysmpb.Deposit{Proof: [][]byte{[]byte("A")}, Data: &qrysmpb.Deposit_Data{PublicKey: []byte{}}}},
-		{Index: 1, ExecutionBlockHeight: 4, Deposit: &qrysmpb.Deposit{Proof: [][]byte{[]byte("B")}, Data: &qrysmpb.Deposit_Data{PublicKey: []byte{}}}},
-		{Index: 2, ExecutionBlockHeight: 6, Deposit: &qrysmpb.Deposit{Proof: [][]byte{[]byte("c")}, Data: &qrysmpb.Deposit_Data{PublicKey: []byte{}}}},
+		{Index: 0, ExecutionBlockHeight: 2, Deposit: &qrysmpb.Deposit{Proof: [][]byte{[]byte("A")}, Data: &qrysmpb.Deposit_Data{PublicKey: []byte{}, RandaoCommitment: make([]byte, 32)}}},
+		{Index: 1, ExecutionBlockHeight: 4, Deposit: &qrysmpb.Deposit{Proof: [][]byte{[]byte("B")}, Data: &qrysmpb.Deposit_Data{PublicKey: []byte{}, RandaoCommitment: make([]byte, 32)}}},
+		{Index: 2, ExecutionBlockHeight: 6, Deposit: &qrysmpb.Deposit{Proof: [][]byte{[]byte("c")}, Data: &qrysmpb.Deposit_Data{PublicKey: []byte{}, RandaoCommitment: make([]byte, 32)}}},
 	}
 	gs, _ := util.DeterministicGenesisStateZond(t, 1)
 	beaconDB := dbutil.SetupDB(t)
@@ -357,6 +357,8 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte{0}, 2592),
 					WithdrawalRecipient: make([]byte, 64),
 					Signature:           make([]byte, 4627),
+
+					RandaoCommitment: make([]byte, 32),
 				},
 			},
 		},
@@ -368,6 +370,8 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte{1}, 2592),
 					WithdrawalRecipient: make([]byte, 64),
 					Signature:           make([]byte, 4627),
+
+					RandaoCommitment: make([]byte, 32),
 				},
 			},
 		},
@@ -379,6 +383,8 @@ func TestInitDepositCacheWithFinalization_OK(t *testing.T) {
 					PublicKey:           bytesutil.PadTo([]byte{2}, 2592),
 					WithdrawalRecipient: make([]byte, 64),
 					Signature:           make([]byte, 4627),
+
+					RandaoCommitment: make([]byte, 32),
 				},
 			},
 		},

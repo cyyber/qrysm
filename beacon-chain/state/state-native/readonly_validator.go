@@ -5,6 +5,7 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/state"
 	field_params "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
+	"github.com/theQRL/qrysm/encoding/bytesutil"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 )
 
@@ -79,6 +80,12 @@ func (v readOnlyValidator) WithdrawalRecipient() []byte {
 }
 
 // Slashed returns the read only validator is slashed.
+// RandaoCommitment returns the validator's current RANDAO hash-onion
+// commitment: the SHA-256 of the next randao_reveal it may put in a block.
+func (v readOnlyValidator) RandaoCommitment() [field_params.RandaoCommitmentLength]byte {
+	return bytesutil.ToBytes32(v.validator.RandaoCommitment)
+}
+
 func (v readOnlyValidator) Slashed() bool {
 	return v.validator.Slashed
 }

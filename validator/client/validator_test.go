@@ -26,6 +26,7 @@ import (
 	validatorType "github.com/theQRL/qrysm/consensus-types/validator"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
 	mldsa87mock "github.com/theQRL/qrysm/crypto/ml_dsa_87/common/mock"
+	"github.com/theQRL/qrysm/crypto/randao"
 	"github.com/theQRL/qrysm/encoding/bytesutil"
 	qrlpbservice "github.com/theQRL/qrysm/proto/qrl/service"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
@@ -166,6 +167,24 @@ func (m *mockKeymanager) SubscribeAccountChanges(pubKeysChan chan [][field_param
 
 func (m *mockKeymanager) SimulateAccountChanges(newKeys [][field_params.MLDSA87PubkeyLength]byte) {
 	m.accountsChangedFeed.Send(newKeys)
+}
+
+func (m *mockKeymanager) RandaoReveal(
+	_ context.Context,
+	publicKey [field_params.MLDSA87PubkeyLength]byte,
+	commitment [field_params.RandaoCommitmentLength]byte,
+) ([field_params.RandaoRevealLength]byte, error) {
+	m.lock.RLock()
+	key, ok := m.keysMap[publicKey]
+	m.lock.RUnlock()
+	if !ok {
+		return [field_params.RandaoRevealLength]byte{}, errors.New("not found")
+	}
+	o, err := randao.NewOnion(key.Marshal(), 64)
+	if err != nil {
+		return [field_params.RandaoRevealLength]byte{}, err
+	}
+	return o.Reveal(commitment)
 }
 
 func (*mockKeymanager) ExtractKeystores(

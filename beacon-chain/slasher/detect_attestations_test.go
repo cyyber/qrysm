@@ -56,6 +56,16 @@ func Test_processQueuedAttestations(t *testing.T) {
 			},
 		},
 		{
+			name: "Detects surrounded vote (source 0, target 1000), (source 50, target 51)",
+			args: args{
+				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
+					createAttestationWrapper(t, 0, 1000, []uint64{0}, nil),
+					createAttestationWrapper(t, 50, 51, []uint64{0}, nil),
+				},
+				currentEpoch: 1000,
+			},
+		},
+		{
 			name: "Detects surrounded vote (source 0, target 3), (source 1, target 2)",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{

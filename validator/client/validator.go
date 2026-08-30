@@ -976,7 +976,6 @@ func (v *validator) isSyncCommitteeAggregator(ctx context.Context, slot primitiv
 // participating on the correct fork version.
 func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot primitives.Slot) {
 	for _, d := range [][]byte{
-		params.BeaconConfig().DomainRandao[:],
 		params.BeaconConfig().DomainBeaconAttester[:],
 		params.BeaconConfig().DomainBeaconProposer[:],
 		params.BeaconConfig().DomainSelectionProof[:],

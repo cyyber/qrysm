@@ -271,6 +271,11 @@ func (c beaconApiBeaconChainClient) ListValidators(ctx context.Context, in *qrys
 			return nil, errors.Wrapf(err, "failed to parse validator withdrawable epoch `%s`", stateValidator.Validator.WithdrawableEpoch)
 		}
 
+		randaoCommitment, err := hexutil.Decode(stateValidator.Validator.RandaoCommitment)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to decode validator randao commitment `%s`", stateValidator.Validator.RandaoCommitment)
+		}
+
 		validators[idx-start] = &qrysmpb.Validators_ValidatorContainer{
 			Index: primitives.ValidatorIndex(validatorIndex),
 			Validator: &qrysmpb.Validator{
@@ -282,6 +287,7 @@ func (c beaconApiBeaconChainClient) ListValidators(ctx context.Context, in *qrys
 				ActivationEpoch:            primitives.Epoch(activationEpoch),
 				ExitEpoch:                  primitives.Epoch(exitEpoch),
 				WithdrawableEpoch:          primitives.Epoch(withdrawableEpoch),
+				RandaoCommitment:           randaoCommitment,
 			},
 		}
 	}

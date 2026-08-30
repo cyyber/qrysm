@@ -11,6 +11,7 @@ type DepositData struct {
 	PubKey              string `json:"pubkey"`
 	Amount              uint64 `json:"amount"`
 	WithdrawalRecipient string `json:"withdrawal_recipient"`
+	RandaoCommitment    string `json:"randao_commitment"`
 	DepositDataRoot     string `json:"deposit_data_root"`
 	Signature           string `json:"signature"`
 
@@ -36,6 +37,7 @@ func NewDepositData(c *Credential) (*DepositData, error) {
 		PublicKey:           depositKey.PublicKey().Marshal(),
 		WithdrawalRecipient: depositData.WithdrawalRecipient,
 		Amount:              c.amount,
+		RandaoCommitment:    depositData.RandaoCommitment,
 	}
 
 	messageRoot, err := depositMessage.HashTreeRoot()
@@ -47,6 +49,7 @@ func NewDepositData(c *Credential) (*DepositData, error) {
 		PubKey:              misc.EncodeHex(depositMessage.PublicKey),
 		WithdrawalRecipient: misc.EncodeHex(depositMessage.WithdrawalRecipient),
 		Amount:              c.amount,
+		RandaoCommitment:    misc.EncodeHex(depositData.RandaoCommitment),
 		Signature:           misc.EncodeHex(depositData.Signature),
 		MessageRoot:         misc.EncodeHex(messageRoot[:]),
 		DepositDataRoot:     misc.EncodeHex(dataRoot[:]),

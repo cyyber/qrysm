@@ -300,7 +300,7 @@ func generateSignedBeaconBlock(
 				DepositRoot:  bytesutil.PadTo([]byte("bad deposit root"), hashLen),
 				DepositCount: 1,
 			},
-			RandaoReveal:      bytesutil.PadTo([]byte("bad randao"), field_params.MLDSA87SignatureLength),
+			RandaoReveal:      bytesutil.PadTo([]byte("bad randao"), field_params.RandaoRevealLength),
 			Graffiti:          bytesutil.PadTo([]byte("teehee"), hashLen),
 			ProposerSlashings: []*qrysmpb.ProposerSlashing{},
 			AttesterSlashings: []*qrysmpb.AttesterSlashing{},

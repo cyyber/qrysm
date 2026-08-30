@@ -60,6 +60,9 @@ message Deposit {
         // Deposit amount in shor.
         uint64 amount = 3;
 
+        // 32 byte RANDAO hash-onion commitment (top layer of the validator's onion).
+        bytes randao_commitment = 5 [(theqrl.qrl.ext.ssz_size) = "32"];
+
         // 4627 byte signature from the validators public key.
         bytes signature = 4 [(theqrl.qrl.ext.ssz_size) = "4627"];
     }
@@ -262,7 +265,7 @@ message BlindedBeaconBlockZond {
 
 message BeaconBlockBodyZond {
   // The validators RANDAO reveal 4627 byte value.
-  bytes randao_reveal = 1 [(theqrl.qrl.ext.ssz_size) = "4627"];
+  bytes randao_reveal = 1 [(theqrl.qrl.ext.ssz_size) = "32"];
 
   // A reference to the QRL execution chain.
   ExecutionData execution_data = 2;
@@ -298,7 +301,7 @@ message BeaconBlockBodyZond {
 
 message BlindedBeaconBlockBodyZond {
   // The validators RANDAO reveal 4627 byte value.
-  bytes randao_reveal = 1 [(theqrl.qrl.ext.ssz_size) = "4627"];
+  bytes randao_reveal = 1 [(theqrl.qrl.ext.ssz_size) = "32"];
 
   // A reference to the QRL execution chain.
   ExecutionData execution_data = 2;

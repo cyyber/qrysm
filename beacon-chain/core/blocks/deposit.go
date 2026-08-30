@@ -181,6 +181,11 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *qrysmpb.Deposit, ver
 				return beaconState, newValidator, nil
 			}
 		}
+		// The RANDAO commitment is stored as given. A validator whose
+		// commitment has no known pre-image (e.g. all zeros) simply never
+		// proposes a valid block; that harms only itself, so it is not a
+		// validity condition of the deposit.
+		randaoCommitment := bytesutil.ToBytes32(deposit.Data.RandaoCommitment)
 
 		effectiveBalance := min(params.BeaconConfig().MaxEffectiveBalance, amount-(amount%params.BeaconConfig().EffectiveBalanceIncrement))
 		if err := beaconState.AppendValidator(&qrysmpb.Validator{
@@ -191,6 +196,7 @@ func ProcessDeposit(beaconState state.BeaconState, deposit *qrysmpb.Deposit, ver
 			ExitEpoch:                  params.BeaconConfig().FarFutureEpoch,
 			WithdrawableEpoch:          params.BeaconConfig().FarFutureEpoch,
 			EffectiveBalance:           effectiveBalance,
+			RandaoCommitment:           randaoCommitment[:],
 		}); err != nil {
 			return nil, newValidator, err
 		}

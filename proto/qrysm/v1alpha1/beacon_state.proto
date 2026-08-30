@@ -86,6 +86,9 @@ message DepositMessage {
 
   // Deposit amount in shor.
   uint64 amount = 3;
+
+  // 32 byte RANDAO hash-onion commitment (top layer of the validator's onion).
+  bytes randao_commitment = 4 [(theqrl.qrl.ext.ssz_size) = "32"];
 }
 
 // SyncCommittee serves as committees to facilitate light client syncing to beacon chain.

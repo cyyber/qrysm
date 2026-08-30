@@ -2,6 +2,7 @@ package keymanager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -16,10 +17,26 @@ import (
 type IKeymanager interface {
 	PublicKeysFetcher
 	Signer
+	RandaoRevealer
 	KeyChangeSubscriber
 	KeyStoreExtractor
 	AccountLister
 	Deleter
+}
+
+// ErrRandaoRevealUnsupported is returned by keymanagers that cannot derive the
+// RANDAO hash onion because they do not hold the validator's seed.
+var ErrRandaoRevealUnsupported = errors.New("randao reveal is not supported by this keymanager")
+
+// RandaoRevealer produces RANDAO hash-onion reveals. Given the validator's
+// current commitment in the beacon state it returns the pre-image to put in
+// the block being proposed.
+type RandaoRevealer interface {
+	RandaoReveal(
+		ctx context.Context,
+		publicKey [field_params.MLDSA87PubkeyLength]byte,
+		commitment [field_params.RandaoCommitmentLength]byte,
+	) ([field_params.RandaoRevealLength]byte, error)
 }
 
 // KeysFetcher for validating private and public keys.

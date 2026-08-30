@@ -502,7 +502,7 @@ func (b *BeaconBlockBody) IsNil() bool {
 }
 
 // RandaoReveal returns the randao reveal from the block body.
-func (b *BeaconBlockBody) RandaoReveal() [field_params.MLDSA87SignatureLength]byte {
+func (b *BeaconBlockBody) RandaoReveal() [field_params.RandaoRevealLength]byte {
 	return b.randaoReveal
 }
 

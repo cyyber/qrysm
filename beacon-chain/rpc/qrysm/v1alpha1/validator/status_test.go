@@ -119,6 +119,8 @@ func TestValidatorStatus_PartiallyDeposited(t *testing.T) {
 		PublicKey:           pubKey1,
 		Signature:           []byte("hi"),
 		WithdrawalRecipient: []byte("hey"),
+
+		RandaoCommitment: make([]byte, 32),
 	}
 	deposit := &qrysmpb.Deposit{
 		Data: depData,
@@ -172,6 +174,8 @@ func TestValidatorStatus_Pending_MultipleDeposits(t *testing.T) {
 		PublicKey:           pubKey1,
 		Signature:           []byte("hi"),
 		WithdrawalRecipient: []byte("hey"),
+
+		RandaoCommitment: make([]byte, 32),
 	}
 	deposit := &qrysmpb.Deposit{
 		Data: depData,
@@ -248,6 +252,8 @@ func TestValidatorStatus_Pending(t *testing.T) {
 		PublicKey:           pubKey,
 		Signature:           bytesutil.PadTo([]byte("hi"), 96),
 		WithdrawalRecipient: bytesutil.PadTo([]byte("hey"), 64),
+
+		RandaoCommitment: make([]byte, 32),
 	}
 
 	deposit := &qrysmpb.Deposit{
@@ -311,6 +317,8 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 		PublicKey:           pubKey,
 		Signature:           bytesutil.PadTo([]byte("hi"), 96),
 		WithdrawalRecipient: bytesutil.PadTo([]byte("hey"), 64),
+
+		RandaoCommitment: make([]byte, 32),
 	}
 
 	deposit := &qrysmpb.Deposit{
@@ -370,6 +378,8 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 		PublicKey:           pubKey,
 		Signature:           bytesutil.PadTo([]byte("hi"), 96),
 		WithdrawalRecipient: bytesutil.PadTo([]byte("hey"), 64),
+
+		RandaoCommitment: make([]byte, 32),
 	}
 
 	deposit := &qrysmpb.Deposit{
@@ -428,6 +438,8 @@ func TestValidatorStatus_Exited(t *testing.T) {
 		PublicKey:           pubKey,
 		Signature:           bytesutil.PadTo([]byte("hi"), 96),
 		WithdrawalRecipient: bytesutil.PadTo([]byte("hey"), 64),
+
+		RandaoCommitment: make([]byte, 32),
 	}
 
 	deposit := &qrysmpb.Deposit{
@@ -663,6 +675,8 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 			PublicKey:           pubKey(uint64(i)),
 			Signature:           bytesutil.PadTo([]byte("hi"), 96),
 			WithdrawalRecipient: bytesutil.PadTo([]byte("hey"), 64),
+
+			RandaoCommitment: make([]byte, 32),
 		}
 
 		deposit := &qrysmpb.Deposit{

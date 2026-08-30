@@ -405,6 +405,7 @@ type Deposit_DataJson struct {
 	PublicKey           string `json:"pubkey" hex:"true"`
 	WithdrawalRecipient string `json:"withdrawal_recipient" hex:"true"`
 	Amount              string `json:"amount"`
+	RandaoCommitment    string `json:"randao_commitment" hex:"true"`
 	Signature           string `json:"signature" hex:"true"`
 }
 
@@ -501,6 +502,7 @@ type ValidatorJson struct {
 	ActivationEpoch            string `json:"activation_epoch"`
 	ExitEpoch                  string `json:"exit_epoch"`
 	WithdrawableEpoch          string `json:"withdrawable_epoch"`
+	RandaoCommitment           string `json:"randao_commitment" hex:"true"`
 }
 
 type SyncCommitteeJson struct {

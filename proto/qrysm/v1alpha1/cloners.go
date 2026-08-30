@@ -220,6 +220,7 @@ func CopyDepositData(depData *Deposit_Data) *Deposit_Data {
 		PublicKey:           bytesutil.SafeCopyBytes(depData.PublicKey),
 		WithdrawalRecipient: bytesutil.SafeCopyBytes(depData.WithdrawalRecipient),
 		Amount:              depData.Amount,
+		RandaoCommitment:    bytesutil.SafeCopyBytes(depData.RandaoCommitment),
 		Signature:           bytesutil.SafeCopyBytes(depData.Signature),
 	}
 }
@@ -265,6 +266,7 @@ func CopyValidator(val *Validator) *Validator {
 		ActivationEpoch:            val.ActivationEpoch,
 		ExitEpoch:                  val.ExitEpoch,
 		WithdrawableEpoch:          val.WithdrawableEpoch,
+		RandaoCommitment:           bytesutil.SafeCopyBytes(val.RandaoCommitment),
 	}
 }
 

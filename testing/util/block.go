@@ -331,7 +331,7 @@ func HydrateBeaconBlockBodyZond(b *qrysmpb.BeaconBlockBodyZond) *qrysmpb.BeaconB
 		b = &qrysmpb.BeaconBlockBodyZond{}
 	}
 	if b.RandaoReveal == nil {
-		b.RandaoReveal = make([]byte, fieldparams.MLDSA87SignatureLength)
+		b.RandaoReveal = make([]byte, fieldparams.RandaoRevealLength)
 	}
 	if b.Graffiti == nil {
 		b.Graffiti = make([]byte, fieldparams.RootLength)
@@ -420,7 +420,7 @@ func HydrateBlindedBeaconBlockBodyZond(b *qrysmpb.BlindedBeaconBlockBodyZond) *q
 		b = &qrysmpb.BlindedBeaconBlockBodyZond{}
 	}
 	if b.RandaoReveal == nil {
-		b.RandaoReveal = make([]byte, fieldparams.MLDSA87SignatureLength)
+		b.RandaoReveal = make([]byte, fieldparams.RandaoRevealLength)
 	}
 	if b.Graffiti == nil {
 		b.Graffiti = make([]byte, 32)
@@ -509,7 +509,7 @@ func HydrateV1BlindedBeaconBlockBodyZond(b *qrlpb.BlindedBeaconBlockBodyZond) *q
 		b = &qrlpb.BlindedBeaconBlockBodyZond{}
 	}
 	if b.RandaoReveal == nil {
-		b.RandaoReveal = make([]byte, fieldparams.MLDSA87SignatureLength)
+		b.RandaoReveal = make([]byte, fieldparams.RandaoRevealLength)
 	}
 	if b.Graffiti == nil {
 		b.Graffiti = make([]byte, 32)
@@ -576,7 +576,7 @@ func HydrateV1ZondBeaconBlockBody(b *qrlpb.BeaconBlockBodyZond) *qrlpb.BeaconBlo
 		b = &qrlpb.BeaconBlockBodyZond{}
 	}
 	if b.RandaoReveal == nil {
-		b.RandaoReveal = make([]byte, fieldparams.MLDSA87SignatureLength)
+		b.RandaoReveal = make([]byte, fieldparams.RandaoRevealLength)
 	}
 	if b.Graffiti == nil {
 		b.Graffiti = make([]byte, fieldparams.RootLength)

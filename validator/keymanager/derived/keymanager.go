@@ -100,6 +100,15 @@ func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (m
 	return km.localKM.Sign(ctx, req)
 }
 
+// RandaoReveal for a public key using the underlying local keymanager.
+func (km *Keymanager) RandaoReveal(
+	ctx context.Context,
+	publicKey [field_params.MLDSA87PubkeyLength]byte,
+	commitment [field_params.RandaoCommitmentLength]byte,
+) ([field_params.RandaoRevealLength]byte, error) {
+	return km.localKM.RandaoReveal(ctx, publicKey, commitment)
+}
+
 // FetchValidatingPublicKeys fetches the list of validating public keys from the keymanager.
 func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][field_params.MLDSA87PubkeyLength]byte, error) {
 	return km.localKM.FetchValidatingPublicKeys(ctx)

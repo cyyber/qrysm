@@ -15,7 +15,7 @@ func GenerateProtoZondBeaconBlock() *qrysmpb.BeaconBlockZond {
 		ParentRoot:    FillByteSlice(32, 3),
 		StateRoot:     FillByteSlice(32, 4),
 		Body: &qrysmpb.BeaconBlockBodyZond{
-			RandaoReveal: FillByteSlice(4627, 5),
+			RandaoReveal: FillByteSlice(32, 5),
 			ExecutionData: &qrysmpb.ExecutionData{
 				DepositRoot:  FillByteSlice(32, 6),
 				DepositCount: 7,
@@ -185,6 +185,7 @@ func GenerateProtoZondBeaconBlock() *qrysmpb.BeaconBlockZond {
 						PublicKey:           FillByteSlice(2592, 94),
 						WithdrawalRecipient: FillByteSlice(64, 95),
 						Amount:              96,
+						RandaoCommitment:    FillByteSlice(32, 98),
 						Signature:           FillByteSlice(4627, 97),
 					},
 				},
@@ -194,6 +195,7 @@ func GenerateProtoZondBeaconBlock() *qrysmpb.BeaconBlockZond {
 						PublicKey:           FillByteSlice(2592, 100),
 						WithdrawalRecipient: FillByteSlice(64, 101),
 						Amount:              102,
+						RandaoCommitment:    FillByteSlice(32, 104),
 						Signature:           FillByteSlice(4627, 103),
 					},
 				},
@@ -262,7 +264,7 @@ func GenerateJsonZondBeaconBlock() *apimiddleware.BeaconBlockZondJson {
 		ParentRoot:    FillEncodedByteSlice(32, 3),
 		StateRoot:     FillEncodedByteSlice(32, 4),
 		Body: &apimiddleware.BeaconBlockBodyZondJson{
-			RandaoReveal: FillEncodedByteSlice(4627, 5),
+			RandaoReveal: FillEncodedByteSlice(32, 5),
 			ExecutionData: &apimiddleware.ExecutionDataJson{
 				DepositRoot:  FillEncodedByteSlice(32, 6),
 				DepositCount: "7",
@@ -432,6 +434,7 @@ func GenerateJsonZondBeaconBlock() *apimiddleware.BeaconBlockZondJson {
 						PublicKey:           FillEncodedByteSlice(2592, 94),
 						WithdrawalRecipient: FillEncodedByteSlice(64, 95),
 						Amount:              "96",
+						RandaoCommitment:    FillEncodedByteSlice(32, 98),
 						Signature:           FillEncodedByteSlice(4627, 97),
 					},
 				},
@@ -441,6 +444,7 @@ func GenerateJsonZondBeaconBlock() *apimiddleware.BeaconBlockZondJson {
 						PublicKey:           FillEncodedByteSlice(2592, 100),
 						WithdrawalRecipient: FillEncodedByteSlice(64, 101),
 						Amount:              "102",
+						RandaoCommitment:    FillEncodedByteSlice(32, 104),
 						Signature:           FillEncodedByteSlice(4627, 103),
 					},
 				},

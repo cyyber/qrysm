@@ -369,6 +369,7 @@ func valContainerFromReadOnlyVal(
 	valStatus validator.ValidatorStatus,
 ) *ValidatorContainer {
 	pubkey := val.PublicKey()
+	randaoCommitment := val.RandaoCommitment()
 	return &ValidatorContainer{
 		Index:   strconv.FormatUint(uint64(id), 10),
 		Balance: strconv.FormatUint(bal, 10),
@@ -382,6 +383,7 @@ func valContainerFromReadOnlyVal(
 			ActivationEpoch:            strconv.FormatUint(uint64(val.ActivationEpoch()), 10),
 			ExitEpoch:                  strconv.FormatUint(uint64(val.ExitEpoch()), 10),
 			WithdrawableEpoch:          strconv.FormatUint(uint64(val.WithdrawableEpoch()), 10),
+			RandaoCommitment:           hexutil.Encode(randaoCommitment[:]),
 		},
 	}
 }

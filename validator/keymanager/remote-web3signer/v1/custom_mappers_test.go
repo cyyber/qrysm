@@ -318,6 +318,8 @@ func TestMapBeaconBlockAltair(t *testing.T) {
 									WithdrawalRecipient: make([]byte, 64),
 									Amount:                0,
 									Signature:             make([]byte, field_params.MLDSA87SignatureLength),
+
+									RandaoCommitment: make([]byte, 32),
 								},
 							},
 						},
@@ -453,6 +455,8 @@ func TestMapBeaconBlockBody(t *testing.T) {
 								WithdrawalRecipient: make([]byte, 64),
 								Amount:                0,
 								Signature:             make([]byte, field_params.MLDSA87SignatureLength),
+
+								RandaoCommitment: make([]byte, 32),
 							},
 						},
 					},

@@ -54,6 +54,8 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		PublicKey:           pubKey1,
 		WithdrawalRecipient: bytesutil.PadTo([]byte("hey"), 64),
 		Signature:           make([]byte, field_params.MLDSA87SignatureLength),
+
+		RandaoCommitment: make([]byte, 32),
 	}
 	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
 	require.NoError(t, err)

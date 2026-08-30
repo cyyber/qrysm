@@ -189,7 +189,7 @@ func (d *Depositor) SendDeposit(dep *qrysmpb.Deposit, txo *bind.TransactOpts, ba
 		return err
 	}
 	sent := time.Now()
-	tx, err := contract.Deposit(txo, dep.Data.PublicKey, dep.Data.WithdrawalRecipient, dep.Data.Signature, root)
+	tx, err := contract.Deposit(txo, dep.Data.PublicKey, dep.Data.WithdrawalRecipient, dep.Data.RandaoCommitment, dep.Data.Signature, root)
 	if err != nil {
 		return errors.Wrap(err, "unable to send transaction to contract")
 	}

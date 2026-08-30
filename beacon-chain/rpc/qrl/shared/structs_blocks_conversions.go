@@ -77,7 +77,7 @@ func (b *BeaconBlockZond) ToConsensus() (*qrysmpb.BeaconBlockZond, error) {
 	if err != nil {
 		return nil, NewDecodeError(err, "StateRoot")
 	}
-	randaoReveal, err := DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.MLDSA87SignatureLength)
+	randaoReveal, err := DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.RandaoRevealLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.RandaoReveal")
 	}
@@ -328,7 +328,7 @@ func (b *BlindedBeaconBlockZond) ToConsensus() (*qrysmpb.BlindedBeaconBlockZond,
 	if err != nil {
 		return nil, NewDecodeError(err, "StateRoot")
 	}
-	randaoReveal, err := DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.MLDSA87SignatureLength)
+	randaoReveal, err := DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.RandaoRevealLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.RandaoReveal")
 	}
@@ -1010,6 +1010,10 @@ func DepositsToConsensus(src []*Deposit) ([]*qrysmpb.Deposit, error) {
 		if err != nil {
 			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Amount", i))
 		}
+		randaoCommitment, err := DecodeHexWithLength(d.Data.RandaoCommitment, fieldparams.RandaoCommitmentLength)
+		if err != nil {
+			return nil, NewDecodeError(err, fmt.Sprintf("[%d].RandaoCommitment", i))
+		}
 		sig, err := DecodeHexWithLength(d.Data.Signature, fieldparams.MLDSA87SignatureLength)
 		if err != nil {
 			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Signature", i))
@@ -1020,6 +1024,7 @@ func DepositsToConsensus(src []*Deposit) ([]*qrysmpb.Deposit, error) {
 				PublicKey:           pubkey,
 				WithdrawalRecipient: withdrawalRecipient,
 				Amount:              amount,
+				RandaoCommitment:    randaoCommitment,
 				Signature:           sig,
 			},
 		}
@@ -1040,6 +1045,7 @@ func DepositsFromConsensus(src []*qrysmpb.Deposit) ([]*Deposit, error) {
 				Pubkey:              hexutil.Encode(d.Data.PublicKey),
 				WithdrawalRecipient: hexutil.Encode(d.Data.WithdrawalRecipient),
 				Amount:              fmt.Sprintf("%d", d.Data.Amount),
+				RandaoCommitment:    hexutil.Encode(d.Data.RandaoCommitment),
 				Signature:           hexutil.Encode(d.Data.Signature),
 			},
 		}

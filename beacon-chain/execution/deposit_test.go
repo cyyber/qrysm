@@ -168,6 +168,8 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 			Amount:              params.BeaconConfig().EffectiveBalanceIncrement, // incomplete deposit
 			WithdrawalRecipient: bytesutil.PadTo([]byte("testing"), field_params.WithdrawalRecipientLength),
 			Signature:           bytesutil.PadTo([]byte("test"), field_params.MLDSA87SignatureLength),
+
+			RandaoCommitment: make([]byte, 32),
 		},
 	}
 

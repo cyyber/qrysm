@@ -39,6 +39,8 @@ func TestRemovePendingDeposit_OK(t *testing.T) {
 		WithdrawalRecipient: make([]byte, 64),
 		Amount:              0,
 		Signature:           make([]byte, field_params.MLDSA87SignatureLength),
+
+		RandaoCommitment: make([]byte, 32),
 	}
 	depToRemove := &qrysmpb.Deposit{Proof: proof1, Data: data}
 	otherDep := &qrysmpb.Deposit{Proof: proof2, Data: data}
@@ -69,6 +71,8 @@ func TestPendingDeposit_RoundTrip(t *testing.T) {
 		WithdrawalRecipient: make([]byte, 64),
 		Amount:              0,
 		Signature:           make([]byte, field_params.MLDSA87SignatureLength),
+
+		RandaoCommitment: make([]byte, 32),
 	}
 	dep := &qrysmpb.Deposit{Proof: proof, Data: data}
 	dc.InsertPendingDeposit(context.Background(), dep, 111, 100, [32]byte{})

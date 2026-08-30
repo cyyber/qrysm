@@ -753,6 +753,8 @@ func TestBeaconBlockProtoHelpers_ConvertDepositsToProto(t *testing.T) {
 						WithdrawalRecipient: []byte{4},
 						Amount:              5,
 						Signature:           []byte{6},
+
+						RandaoCommitment: make([]byte, 32),
 					},
 				},
 				{
@@ -765,6 +767,8 @@ func TestBeaconBlockProtoHelpers_ConvertDepositsToProto(t *testing.T) {
 						WithdrawalRecipient: []byte{10},
 						Amount:              11,
 						Signature:           []byte{12},
+
+						RandaoCommitment: make([]byte, 32),
 					},
 				},
 			},
@@ -1236,6 +1240,7 @@ func generateDeposits() []*apimiddleware.DepositJson {
 				PublicKey:           hexutil.Encode([]byte{3}),
 				WithdrawalRecipient: hexutil.Encode([]byte{4}),
 				Amount:              "5",
+				RandaoCommitment:    hexutil.Encode(make([]byte, 32)),
 				Signature:           hexutil.Encode([]byte{6}),
 			},
 		},
@@ -1248,6 +1253,7 @@ func generateDeposits() []*apimiddleware.DepositJson {
 				PublicKey:           hexutil.Encode([]byte{9}),
 				WithdrawalRecipient: hexutil.Encode([]byte{10}),
 				Amount:              "11",
+				RandaoCommitment:    hexutil.Encode(make([]byte, 32)),
 				Signature:           hexutil.Encode([]byte{12}),
 			},
 		},

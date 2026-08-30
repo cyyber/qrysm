@@ -51,6 +51,8 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 			PublicKey:           bytesutil.PadTo([]byte{1, 2, 3}, 2592),
 			WithdrawalRecipient: make([]byte, 64),
 			Signature:           make([]byte, 4627),
+
+			RandaoCommitment: make([]byte, 32),
 		},
 	}
 	leaf, err := deposit.Data.HashTreeRoot()
@@ -118,6 +120,8 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 			Amount:              1000,
 			WithdrawalRecipient: make([]byte, 64),
 			Signature:           make([]byte, 4627),
+
+			RandaoCommitment: make([]byte, 32),
 		},
 	}
 	sr, err := signing.ComputeSigningRoot(deposit.Data, bytesutil.ToBytes(3, 32))

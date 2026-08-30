@@ -470,6 +470,8 @@ func genDepositData() *v1alpha1.Deposit_Data {
 		WithdrawalRecipient: bytes(64),
 		Amount:              20000,
 		Signature:           bytes(32),
+
+		RandaoCommitment: bytes(32),
 	}
 }
 
@@ -520,6 +522,7 @@ func genValidator() *v1alpha1.Validator {
 		ActivationEpoch:            14325,
 		ExitEpoch:                  23425,
 		WithdrawableEpoch:          30000,
+		RandaoCommitment:           bytes(32),
 	}
 }
 
@@ -542,7 +545,7 @@ func genSyncAggregate() *v1alpha1.SyncAggregate {
 
 func genBeaconBlockBodyZond() *v1alpha1.BeaconBlockBodyZond {
 	return &v1alpha1.BeaconBlockBodyZond{
-		RandaoReveal:      bytes(4627),
+		RandaoReveal:      bytes(32),
 		ExecutionData:     genExecutionData(),
 		Graffiti:          bytes(32),
 		ProposerSlashings: genProposerSlashings(5),
@@ -574,7 +577,7 @@ func genSignedBeaconBlockZond() *v1alpha1.SignedBeaconBlockZond {
 
 func genBlindedBeaconBlockBodyZond() *v1alpha1.BlindedBeaconBlockBodyZond {
 	return &v1alpha1.BlindedBeaconBlockBodyZond{
-		RandaoReveal:           bytes(4627),
+		RandaoReveal:           bytes(32),
 		ExecutionData:          genExecutionData(),
 		Graffiti:               bytes(32),
 		ProposerSlashings:      genProposerSlashings(5),

@@ -518,8 +518,8 @@ message BlockRequest {
     // Slot for which the block should be proposed.
     uint64 slot = 1 [(theqrl.qrl.ext.cast_type) = "github.com/theQRL/qrysm/consensus-types/primitives.Slot"];
 
-    // Validator's 32 byte randao reveal secret of the current epoch.
-    bytes randao_reveal = 2 [(theqrl.qrl.ext.ssz_size) = "4627"];
+    // Validator's 32 byte RANDAO reveal: the pre-image of its current randao_commitment.
+    bytes randao_reveal = 2 [(theqrl.qrl.ext.ssz_size) = "32"];
 
     // Validator's 32 byte graffiti message for the new block.
     bytes graffiti = 3 [(theqrl.qrl.ext.ssz_size) = "32"];
@@ -625,6 +625,11 @@ message Validator {
     // FAR_FUTURE_EPOCH is a constant defined by the official Ethereum Beacon Chain specification:
     // https://github.com/ethereum/consensus-specs/blob/v0.9.2/specs/core/0_beacon-chain.md#constants
     uint64 withdrawable_epoch = 8 [(theqrl.qrl.ext.cast_type) = "github.com/theQRL/qrysm/consensus-types/primitives.Epoch"];
+
+    // 32 byte RANDAO hash-onion commitment. A block proposed by this validator
+    // must carry a randao_reveal whose SHA-256 equals this value; the reveal
+    // then becomes the new commitment.
+    bytes randao_commitment = 9 [(theqrl.qrl.ext.ssz_size) = "32"];
 }
 
 // ValidatorParticipation stores participation metrics during a given epoch.

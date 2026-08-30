@@ -104,6 +104,8 @@ func TestMarshalDepositWithProof(t *testing.T) {
 			WithdrawalRecipient: withdrawalRecipient[:],
 			Amount:              32,
 			Signature:           someSig[:],
+
+			RandaoCommitment: make([]byte, 32),
 		},
 	}
 	enc, err := dep.MarshalSSZ()

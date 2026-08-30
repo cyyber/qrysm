@@ -188,10 +188,12 @@ func signedDeposit(
 		return nil, err
 	}
 	withdrawalRecipient := withdrawalAddr.Bytes()
+	randaoCommitment := TestRandaoCommitment(secretKey)
 	depositMessage := &qrysmpb.DepositMessage{
 		PublicKey:           publicKey,
 		Amount:              balance,
 		WithdrawalRecipient: withdrawalRecipient,
+		RandaoCommitment:    randaoCommitment[:],
 	}
 
 	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
@@ -215,6 +217,7 @@ func signedDeposit(
 		PublicKey:           publicKey,
 		Amount:              balance,
 		WithdrawalRecipient: withdrawalRecipient,
+		RandaoCommitment:    randaoCommitment[:],
 		Signature:           signature.Marshal(),
 	}
 
@@ -346,10 +349,12 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*qrysmpb.D
 
 		// Create the new deposits and add them to the trie. Always use the first validator to create deposit
 		for i := range numRequired {
+			randaoCommitment := TestRandaoCommitment(secretKeys[1])
 			depositMessage := &qrysmpb.DepositMessage{
 				PublicKey:           publicKeys[1].Marshal(),
 				Amount:              params.BeaconConfig().MaxEffectiveBalance,
 				WithdrawalRecipient: addr1.Bytes(),
+				RandaoCommitment:    randaoCommitment[:],
 			}
 
 			domain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, nil, nil)
@@ -373,6 +378,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*qrysmpb.D
 				PublicKey:           depositMessage.PublicKey,
 				Amount:              depositMessage.Amount,
 				WithdrawalRecipient: depositMessage.WithdrawalRecipient,
+				RandaoCommitment:    depositMessage.RandaoCommitment,
 				Signature:           signature.Marshal(),
 			}
 			deposit := &qrysmpb.Deposit{

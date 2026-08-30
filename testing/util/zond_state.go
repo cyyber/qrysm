@@ -212,7 +212,7 @@ func buildGenesisBeaconStateZond(genesisTime uint64, preState state.BeaconState,
 
 	var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
 	bodyRoot, err := (&qrysmpb.BeaconBlockBodyZond{
-		RandaoReveal: make([]byte, fieldparams.MLDSA87SignatureLength),
+		RandaoReveal: make([]byte, fieldparams.RandaoRevealLength),
 		ExecutionData: &qrysmpb.ExecutionData{
 			DepositRoot: make([]byte, 32),
 			BlockHash:   make([]byte, 32),
