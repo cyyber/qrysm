@@ -50,10 +50,14 @@ func (s *Service) nodeFilter(topic string, index uint64) (func(node *qnode.Node)
 
 // searchForPeers performs a network search for peers subscribed to a particular subnet.
 // It exits as soon as one of these conditions is met:
-// - It looped through `batchSize` nodes.
-// - It found `peersToFindCount` peers corresponding to the `filter` criteria.
-// - Iterator is exhausted.
+//   - It looped through `batchSize` nodes.
+//   - It found `peersToFindCount` peers corresponding to the `filter` criteria.
+//   - Iterator is exhausted.
+//   - The context is done. The caller is responsible for closing the iterator
+//     when the context ends, since `iterator.Next` can block indefinitely and
+//     only `iterator.Close` unblocks it; the nodes found so far are returned.
 func searchForPeers(
+	ctx context.Context,
 	iterator qnode.Iterator,
 	batchSize int,
 	peersToFindCount uint,
@@ -61,6 +65,9 @@ func searchForPeers(
 ) []*qnode.Node {
 	nodeFromNodeID := make(map[qnode.ID]*qnode.Node, batchSize)
 	for i := 0; i < batchSize && uint(len(nodeFromNodeID)) < peersToFindCount && iterator.Next(); i++ {
+		if ctx.Err() != nil {
+			break
+		}
 		node := iterator.Node()
 
 		// Dedup first: keep the previously stored node when its sequence
@@ -143,8 +150,19 @@ func (s *Service) FindPeersWithSubnet(
 	}
 
 	topic += s.Encoding().ProtocolSuffix()
+
+	// `iterator.Next` can block indefinitely (discv5 slows down and retries
+	// when its table is small or empty) and only `iterator.Close` unblocks
+	// it, so close the iterator as soon as the search context ends. The
+	// context is also cancelled on return so that the goroutine never
+	// outlives the search.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	iterator := s.dv5Listener.RandomNodes()
-	defer iterator.Close()
+	go func() {
+		<-ctx.Done()
+		iterator.Close()
+	}()
 
 	filter, err := s.nodeFilter(topic, index)
 	if err != nil {
@@ -189,7 +207,7 @@ func (s *Service) FindPeersWithSubnet(
 		}
 
 		// Search for new peers in the network.
-		nodes := searchForPeers(iterator, batchSize, uint(missingPeerCountForTopic), filter)
+		nodes := searchForPeers(ctx, iterator, batchSize, uint(missingPeerCountForTopic), filter)
 
 		// Restrict dials if limit is applied.
 		maxConcurrentDials := math.MaxInt
@@ -197,11 +215,16 @@ func (s *Service) FindPeersWithSubnet(
 			maxConcurrentDials = flags.Get().MaxConcurrentDials
 		}
 
-		// Dial the peers in batches.
+		// Dial the peers in batches. Dials run under the service context, not
+		// the search context: the search budget is typically a couple of
+		// seconds and may already be spent by the time a peer is found, and a
+		// dial cut short by that budget would fail for every candidate and
+		// get each of them downscored. Each dial is still bounded by
+		// maxDialTimeout in connectWithPeer.
 		for start := 0; start < len(nodes); start += maxConcurrentDials {
 			stop := min(start+maxConcurrentDials, len(nodes))
 			for _, node := range nodes[start:stop] {
-				s.dialPeer(ctx, wg, node)
+				s.dialPeer(s.ctx, wg, node)
 			}
 
 			// Wait for all dials to be completed.

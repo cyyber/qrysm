@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,6 +17,9 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/cache"
 	"github.com/theQRL/qrysm/beacon-chain/db/kv"
 	testDB "github.com/theQRL/qrysm/beacon-chain/db/testing"
+	"github.com/theQRL/qrysm/beacon-chain/p2p/peers"
+	"github.com/theQRL/qrysm/beacon-chain/p2p/peers/scorers"
+	p2ptest "github.com/theQRL/qrysm/beacon-chain/p2p/testing"
 	"github.com/theQRL/qrysm/beacon-chain/startup"
 	"github.com/theQRL/qrysm/cmd/beacon-chain/flags"
 	"github.com/theQRL/qrysm/config/params"
@@ -542,7 +546,7 @@ func TestSearchForPeers_NewerEnrFailsFilter_RemovesStale(t *testing.T) {
 	filter := func(n *qnode.Node) bool { return n.Seq() == low.Seq() }
 
 	it := &sliceIterator{nodes: []*qnode.Node{low, high}}
-	got := searchForPeers(it, 16, 4, filter)
+	got := searchForPeers(context.Background(), it, 16, 4, filter)
 	assert.Equal(t, 0, len(got), "stale lower-Seq node must not be returned when newer ENR fails filter")
 }
 
@@ -558,7 +562,75 @@ func TestSearchForPeers_NewerEnrPassesFilter(t *testing.T) {
 	filter := func(n *qnode.Node) bool { return n.Seq() == high.Seq() }
 
 	it := &sliceIterator{nodes: []*qnode.Node{low, high}}
-	got := searchForPeers(it, 16, 4, filter)
+	got := searchForPeers(context.Background(), it, 16, 4, filter)
 	require.Equal(t, 1, len(got))
 	assert.Equal(t, high.Seq(), got[0].Seq())
+}
+
+// blockingIterator is a qnode.Iterator whose Next blocks until Close is
+// called, like discv5's random-node iterator does when its table is empty.
+type blockingIterator struct {
+	closed    chan struct{}
+	closeOnce sync.Once
+}
+
+func newBlockingIterator() *blockingIterator {
+	return &blockingIterator{closed: make(chan struct{})}
+}
+
+func (it *blockingIterator) Next() bool {
+	<-it.closed
+	return false
+}
+
+func (it *blockingIterator) Node() *qnode.Node { return nil }
+
+func (it *blockingIterator) Close() {
+	it.closeOnce.Do(func() { close(it.closed) })
+}
+
+func (it *blockingIterator) isClosed() bool {
+	select {
+	case <-it.closed:
+		return true
+	default:
+		return false
+	}
+}
+
+type blockingIteratorListener struct {
+	mockListener
+	iterator *blockingIterator
+}
+
+func (l blockingIteratorListener) RandomNodes() qnode.Iterator { return l.iterator }
+
+// TestFindPeersWithSubnet_HonoursContext is a regression test for
+// FindPeersWithSubnet hanging past its context deadline: the discovery
+// iterator's Next blocks until Close, and the context used to be checked only
+// between batches, so a search with an empty discovery table never returned
+// and the subnet broadcast lock it was called under stayed held.
+func TestFindPeersWithSubnet_HonoursContext(t *testing.T) {
+	p1 := p2ptest.NewTestP2P(t)
+	it := newBlockingIterator()
+	s := &Service{
+		ctx:         context.Background(),
+		host:        p1.BHost,
+		pubsub:      p1.PubSub(),
+		cfg:         &Config{},
+		dv5Listener: blockingIteratorListener{iterator: it},
+		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
+			ScorerParams: &scorers.Config{},
+		}),
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	start := time.Now()
+	found, err := s.FindPeersWithSubnet(ctx, AttestationSubnetTopicFormat, 1, 1)
+	require.Equal(t, false, found)
+	require.ErrorContains(t, "unable to find requisite number of peers", err)
+	require.Equal(t, true, time.Since(start) < 2*time.Second, "search did not stop when its context expired")
+	require.Equal(t, true, it.isClosed(), "discovery iterator must be closed when the search context ends")
 }

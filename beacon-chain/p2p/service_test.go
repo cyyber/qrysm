@@ -21,6 +21,7 @@ import (
 	mock "github.com/theQRL/qrysm/beacon-chain/blockchain/testing"
 	"github.com/theQRL/qrysm/beacon-chain/p2p/encoder"
 	"github.com/theQRL/qrysm/beacon-chain/p2p/peers"
+	"github.com/theQRL/qrysm/beacon-chain/p2p/peers/peerdata"
 	"github.com/theQRL/qrysm/beacon-chain/p2p/peers/scorers"
 	"github.com/theQRL/qrysm/beacon-chain/startup"
 	"github.com/theQRL/qrysm/config/params"
@@ -400,4 +401,42 @@ func TestService_connectWithPeer(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestService_connectWithPeer_NoDownscoreOnCallerContext checks that a dial
+// aborted because the caller's context ended is not held against the peer,
+// while a dial that fails on its own still is. Subnet peer searches used to
+// dial with an already-expired search context, which made every candidate
+// fail instantly and get downscored until the only peers advertising the
+// subnet were marked bad.
+func TestService_connectWithPeer_NoDownscoreOnCallerContext(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	h, _, _ := createHost(t, 34568)
+	defer func() {
+		require.NoError(t, h.Close())
+	}()
+	// A peer that is never reachable: a valid host whose listener is closed.
+	target, _, _ := createHost(t, 34569)
+	info := peer.AddrInfo{ID: target.ID(), Addrs: target.Addrs()}
+	require.NoError(t, target.Close())
+
+	s := &Service{
+		host: h,
+		peers: peers.NewStatus(context.Background(), &peers.StatusConfig{
+			ScorerParams: &scorers.Config{},
+		}),
+	}
+
+	// Caller context already done: the dial fails, the peer is not downscored.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	require.NotNil(t, s.connectWithPeer(ctx, info))
+	_, err := s.peers.Scorers().BadResponsesScorer().Count(info.ID)
+	require.ErrorIs(t, err, peerdata.ErrPeerUnknown, "peer must not have been scored")
+
+	// Live caller context: the dial fails on its own, the peer is downscored.
+	require.NotNil(t, s.connectWithPeer(context.Background(), info))
+	count, err := s.peers.Scorers().BadResponsesScorer().Count(info.ID)
+	require.NoError(t, err)
+	require.Equal(t, 1, count)
 }

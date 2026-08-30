@@ -100,6 +100,12 @@ func (s *Service) listenForNewNodes() {
 
 	iterator := s.dv5Listener.RandomNodes()
 	defer iterator.Close()
+	// `iterator.Next` can block indefinitely and only `iterator.Close`
+	// unblocks it, so close it as soon as the service stops.
+	go func() {
+		<-s.ctx.Done()
+		iterator.Close()
+	}()
 
 	for {
 		// Exit if service's context is canceled
@@ -140,7 +146,7 @@ func (s *Service) listenForNewNodes() {
 		}
 
 		// Search for new peers.
-		wantedNodes := searchForPeers(iterator, batchSize, missingPeerCount, s.filterPeer)
+		wantedNodes := searchForPeers(s.ctx, iterator, batchSize, missingPeerCount, s.filterPeer)
 
 		wg := new(sync.WaitGroup)
 		for i := 0; i < len(wantedNodes); i++ {

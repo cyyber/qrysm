@@ -460,11 +460,16 @@ func (s *Service) connectWithPeer(ctx context.Context, info peer.AddrInfo) error
 		return errors.New("refused to connect to bad peer")
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, maxDialTimeout)
+	dialCtx, cancel := context.WithTimeout(ctx, maxDialTimeout)
 	defer cancel()
 
-	if err := s.host.Connect(ctx, info); err != nil {
-		s.downscorePeer(pid, "connectionError")
+	if err := s.host.Connect(dialCtx, info); err != nil {
+		// A dial aborted because the caller's context ended (rather than by
+		// the dial timeout or the peer itself) says nothing about the peer,
+		// so it must not be counted against it.
+		if ctx.Err() == nil {
+			s.downscorePeer(pid, "connectionError")
+		}
 		return errors.Wrap(err, "peer connect")
 	}
 	return nil
