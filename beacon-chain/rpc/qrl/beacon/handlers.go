@@ -409,7 +409,7 @@ func (s *Server) GetStateFork(w http.ResponseWriter, r *http.Request) {
 	}
 	st, err := s.Stater.State(ctx, []byte(stateId))
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		shared.WriteStateFetchError(w, err)
 		return
 	}
 	fork := st.Fork()
