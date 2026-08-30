@@ -89,6 +89,11 @@ type Service struct {
 	activeValidatorCount     uint64
 	activeValidatorCountLock sync.Mutex
 	peerDisconnectionTime    *cache.Cache
+	// Exact gossip topics accepted by the pubsub subscription filter for
+	// subscribableTopicsDigest; see subscribableTopics.
+	subscribableTopicsLock   sync.Mutex
+	subscribableTopicSet     map[string]struct{}
+	subscribableTopicsDigest [4]byte
 }
 
 // NewService initializes a new p2p service compatible with shared.Service interface. No
