@@ -3,7 +3,6 @@ package deposit_test
 import (
 	"context"
 	"encoding/binary"
-	"strings"
 	"testing"
 
 	qrl "github.com/theQRL/go-qrl"
@@ -54,7 +53,6 @@ func TestValidatorRegister_OK(t *testing.T) {
 	copy(depositDataRoot[:], depositDataRoots[0])
 	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, pubKeys[0].Marshal(), depositDataItems[0].WithdrawalRecipient, depositDataItems[0].RandaoCommitment, depositDataItems[0].Signature, depositDataRoot)
 	testAccount.Backend.Commit()
-	skipIfStaleBytecode(t, err)
 	require.NoError(t, err, "Validator registration failed")
 	_, err = testAccount.Contract.Deposit(testAccount.TxOpts, pubKeys[0].Marshal(), depositDataItems[0].WithdrawalRecipient, depositDataItems[0].RandaoCommitment, depositDataItems[0].Signature, depositDataRoot)
 	testAccount.Backend.Commit()
@@ -83,17 +81,4 @@ func TestValidatorRegister_OK(t *testing.T) {
 	assert.Equal(t, uint64(0), merkleTreeIndex[0], "Deposit event total deposit count mismatched")
 	assert.Equal(t, uint64(1), merkleTreeIndex[1], "Deposit event total deposit count mismatched")
 	assert.Equal(t, uint64(2), merkleTreeIndex[2], "Deposit event total deposit count mismatched")
-}
-
-// skipIfStaleBytecode skips the test when deposit() reverts because the go-qrl
-// pinned in go.mod still ships the four-field `depositroot` precompile: the
-// contract then reconstructs a root that never matches deposit_data_root. The
-// test passes against a go-qrl whose core/vm depositroot hashes
-// {pubkey, withdrawal_recipient, amount, randao_commitment, signature}; drop
-// this guard once go.mod points at such a version.
-func skipIfStaleBytecode(t *testing.T, err error) {
-	t.Helper()
-	if err != nil && strings.Contains(err.Error(), "execution reverted") {
-		t.Skip("deposit() reverted: the pinned go-qrl lacks the randao_commitment-aware depositroot precompile; bump go.mod")
-	}
 }
