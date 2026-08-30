@@ -45,5 +45,6 @@ type Server struct {
 	ExecutionPayloadReconstructor execution.ExecutionPayloadReconstructor
 	FinalizationFetcher           blockchain.FinalizationFetcher
 	ForkchoiceFetcher             blockchain.ForkchoiceFetcher
+	AttestationStateFetcher       blockchain.AttestationStateFetcher
 	CoreService                   *core.Service
 }

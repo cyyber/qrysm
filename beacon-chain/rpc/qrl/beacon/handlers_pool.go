@@ -118,6 +118,28 @@ outer:
 			}
 		}
 
+		// Verify the signatures against the attestation's target state before
+		// the attestation is broadcast or enters the pool. The gossip path
+		// verifies every attestation it accepts; this API was the only
+		// unverified way in, and the proposer packs pool attestations without
+		// re-verifying signatures, so an invalid one would end up in a block
+		// that then fails to process. (upstream #16879)
+		targetState, err := s.AttestationStateFetcher.AttestationTargetState(ctx, att.Data.Target)
+		if err != nil {
+			attFailures = append(attFailures, &shared.IndexedVerificationFailure{
+				Index:   i,
+				Message: "Could not get attestation target state: " + err.Error(),
+			})
+			continue
+		}
+		if err = blocks.VerifyAttestationSignatures(ctx, targetState, att); err != nil {
+			attFailures = append(attFailures, &shared.IndexedVerificationFailure{
+				Index:   i,
+				Message: "Incorrect attestation signature: " + err.Error(),
+			})
+			continue
+		}
+
 		// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
 		// of a received unaggregated attestation.
 		// Note we can't send for aggregated att because we don't have selection proof.

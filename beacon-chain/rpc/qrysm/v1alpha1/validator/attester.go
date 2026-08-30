@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/theQRL/qrysm/beacon-chain/cache"
+	"github.com/theQRL/qrysm/beacon-chain/core/blocks"
 	"github.com/theQRL/qrysm/beacon-chain/core/feed"
 	"github.com/theQRL/qrysm/beacon-chain/core/feed/operation"
 	"github.com/theQRL/qrysm/beacon-chain/core/helpers"
@@ -55,6 +56,17 @@ func (vs *Server) ProposeAttestation(ctx context.Context, att *qrysmpb.Attestati
 		if _, err := ml_dsa_87.SignatureFromBytes(sig); err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "Incorrect attestation signature")
 		}
+	}
+
+	// Verify the signatures against the target state before broadcasting and
+	// pooling, like the gossip path does; see SubmitAttestations in the REST
+	// API for the rationale. (upstream #16879)
+	targetState, err := vs.AttestationStateFetcher.AttestationTargetState(ctx, att.Data.Target)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not get attestation target state: %v", err)
+	}
+	if err := blocks.VerifyAttestationSignatures(ctx, targetState, att); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Incorrect attestation signature: %v", err)
 	}
 
 	root, err := att.Data.HashTreeRoot()
