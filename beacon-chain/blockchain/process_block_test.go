@@ -2097,3 +2097,69 @@ func driftGenesisTime(s *Service, slot, delay int64) {
 	// viableForHead formula in that test and the assertion no longer holds.
 	// Re-port that test from upstream alongside this sync if you re-enable it.
 }
+
+// TestLateBlockTasks_ForkchoiceWriteLock is a regression test for
+// lateBlockTasks calling notifyForkchoiceUpdate — which mutates forkchoice
+// (SetOptimisticToValid) — while holding only the forkchoice read lock. Under
+// the read lock those writes raced with concurrent forkchoice readers; run
+// with -race this test fails on the old locking and passes with the write lock.
+func TestLateBlockTasks_ForkchoiceWriteLock(t *testing.T) {
+	service, tr := minimalTestService(t)
+	ctx, beaconDB, fcs := tr.ctx, tr.db, tr.fcs
+
+	// Wall clock two slots past genesis, head still at slot 0, so lateBlockTasks
+	// gets past its "head is current" early return.
+	service.SetGenesisTime(time.Now().Add(-time.Duration(2*params.BeaconConfig().SecondsPerSlot) * time.Second))
+	fcs.SetGenesisTime(uint64(time.Now().Unix()) - 2*params.BeaconConfig().SecondsPerSlot)
+
+	// An execution block as head so notifyForkchoiceUpdate reaches the engine
+	// and then SetOptimisticToValid (the forkchoice write).
+	payloadHash := [32]byte{'p'}
+	b := util.NewBeaconBlockZond()
+	b.Block.Body.ExecutionPayload.BlockHash = payloadHash[:]
+	wsb := util.SaveBlock(t, ctx, beaconDB, b)
+	headRoot, err := wsb.Block().HashTreeRoot()
+	require.NoError(t, err)
+	st, _ := util.DeterministicGenesisStateZond(t, 10)
+	require.NoError(t, beaconDB.SaveState(ctx, st, headRoot))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, headRoot))
+
+	ojc := &qrysmpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &qrysmpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	fcState, fcRoot, err := prepareForkchoiceState(ctx, 0, headRoot, [32]byte{}, payloadHash, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, fcState, fcRoot))
+	optimistic, err := fcs.IsOptimistic(headRoot)
+	require.NoError(t, err)
+	require.Equal(t, true, optimistic, "head must start optimistic so the FCU has something to write")
+
+	service.head = &head{root: headRoot, block: wsb, state: st}
+	service.cfg.ExecutionEngineCaller = &mockExecution.EngineClient{}
+	// A known proposer for the next slot with no payload ID yet is what makes
+	// lateBlockTasks issue the forkchoice update.
+	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(service.CurrentSlot()+1, 0, [8]byte{}, [32]byte{})
+
+	// Hammer forkchoice through a read-locked reader while lateBlockTasks runs.
+	stop := make(chan struct{})
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+			}
+			_, _ = service.IsOptimisticForRoot(ctx, headRoot)
+		}
+	}()
+	service.lateBlockTasks(ctx)
+	close(stop)
+	wg.Wait()
+
+	// The forkchoice update really ran: the head is no longer optimistic.
+	optimistic, err = fcs.IsOptimistic(headRoot)
+	require.NoError(t, err)
+	require.Equal(t, false, optimistic)
+}

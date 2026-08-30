@@ -3,6 +3,7 @@ package node
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/theQRL/go-qrl/common"
 	"github.com/theQRL/qrysm/cmd"
@@ -26,7 +27,20 @@ func configureTracing(cliCtx *cli.Context) error {
 func configureChainConfig(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		return params.LoadChainConfigFile(chainConfigFileName, nil)
+		if err := params.LoadChainConfigFile(chainConfigFileName, nil); err != nil {
+			return err
+		}
+	}
+	// Whatever config ended up active (a built-in preset selected by flags or
+	// the file loaded above) has to satisfy the invariants the epoch transition
+	// relies on and match the SSZ state layout this binary was compiled with;
+	// otherwise the node fails at an epoch boundary instead of at startup.
+	cfg := params.BeaconConfig()
+	if err := cfg.Validate(); err != nil {
+		return errors.Wrap(err, "invalid chain config")
+	}
+	if err := cfg.ValidateStateLayout(); err != nil {
+		return errors.Wrap(err, "chain config does not match this binary")
 	}
 	return nil
 }

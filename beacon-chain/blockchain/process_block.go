@@ -507,13 +507,17 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 		return
 	}
 	s.headLock.RUnlock()
-	s.cfg.ForkChoiceStore.RLock()
+	// notifyForkchoiceUpdate mutates forkchoice (SetOptimisticToValid /
+	// SetOptimisticToInvalid, Head), so it needs the write lock like every
+	// other caller (ReceiveBlock, onBlockBatch, UpdateHead). Holding only the
+	// read lock let those writes race with concurrent readers.
+	s.cfg.ForkChoiceStore.Lock()
 	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
 		headState: headState,
 		headRoot:  headRoot,
 		headBlock: headBlock.Block(),
 	})
-	s.cfg.ForkChoiceStore.RUnlock()
+	s.cfg.ForkChoiceStore.Unlock()
 	if err != nil {
 		log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
 	}

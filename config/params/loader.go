@@ -68,6 +68,9 @@ func UnmarshalConfig(yamlFile []byte, conf *BeaconChainConfig) (*BeaconChainConf
 	// fork epochs / versions from the YAML rather than the defaults inherited
 	// from the seed config.
 	conf.InitializeForkSchedule()
+	if err := conf.Validate(); err != nil {
+		return nil, errors.Wrap(err, "invalid chain config")
+	}
 	log.Debugf("Config file values: %+v", conf)
 	return conf, nil
 }
