@@ -16,6 +16,9 @@ import (
 
 // DeserializeRequestBodyIntoContainer deserializes the request's body into an endpoint-specific struct.
 func DeserializeRequestBodyIntoContainer(body io.Reader, requestContainer any) ErrorJson {
+	if requestContainer == nil {
+		return InternalServerErrorWithMessage(errors.New("nil request container"), "could not decode request body")
+	}
 	decoder := json.NewDecoder(body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&requestContainer); err != nil {
