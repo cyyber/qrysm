@@ -16,6 +16,7 @@ import (
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
+	"github.com/theQRL/qrysm/encoding/bytesutil"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
@@ -143,6 +144,63 @@ func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
 			PublicKey: val.PublicKey,
 			SubnetId:  0})
 	require.NoError(t, err)
+	assert.DeepEqual(t, sig, contr.Signatures[0])
+}
+
+// TestGetSyncCommitteeContribution_UsesAggregatorRootNotHead ports upstream
+// #17277: the contribution is built from the root the aggregator voted for,
+// not the head at aggregation time, so a block arriving after the sync
+// message deadline does not empty the contribution.
+func TestGetSyncCommitteeContribution_UsesAggregatorRootNotHead(t *testing.T) {
+	votedRoot := bytesutil.PadTo([]byte("A"), 32)
+	lateBlockRoot := bytesutil.PadTo([]byte("B"), 32)
+
+	st, _ := util.DeterministicGenesisStateZond(t, 10)
+	syncCommitteePool := synccommittee.NewStore()
+	headFetcher := &mock.ChainService{
+		State:                st,
+		SyncCommitteeIndices: []primitives.CommitteeIndex{10},
+		Root:                 lateBlockRoot,
+	}
+	server := &Server{
+		CoreService: &core.Service{
+			SyncCommitteePool: syncCommitteePool,
+			HeadFetcher:       headFetcher,
+			P2P:               &mockp2p.MockBroadcaster{},
+		},
+		SyncCommitteePool:     syncCommitteePool,
+		HeadFetcher:           headFetcher,
+		P2P:                   &mockp2p.MockBroadcaster{},
+		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
+		OptimisticModeFetcher: &mock.ChainService{},
+	}
+
+	secKey, err := ml_dsa_87.RandKey()
+	require.NoError(t, err)
+	lsig, err := secKey.Sign([]byte{'A'})
+	require.NoError(t, err)
+	sig := lsig.Marshal()
+	// The mock resolves any public key to validator index 0.
+	_, err = server.SubmitSyncMessage(context.Background(), &qrysmpb.SyncCommitteeMessage{
+		Slot:           1,
+		ValidatorIndex: 0,
+		BlockRoot:      votedRoot,
+		Signature:      sig,
+	})
+	require.NoError(t, err)
+
+	val, err := st.ValidatorAtIndex(0)
+	require.NoError(t, err)
+	contr, err := server.GetSyncCommitteeContribution(context.Background(),
+		&qrysmpb.SyncCommitteeContributionRequest{
+			Slot:      1,
+			PublicKey: val.PublicKey,
+			SubnetId:  0})
+	require.NoError(t, err)
+
+	assert.DeepEqual(t, votedRoot, contr.BlockRoot)
+	assert.Equal(t, uint64(1), contr.AggregationBits.Count())
+	require.Equal(t, 1, len(contr.Signatures))
 	assert.DeepEqual(t, sig, contr.Signatures[0])
 }
 
