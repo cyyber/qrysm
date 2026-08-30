@@ -48,9 +48,31 @@ func migrateFinalizedParent(ctx context.Context, db *bolt.DB) error {
 				return ctx.Err()
 			}
 
+			// The index bucket holds more than encoded containers: the
+			// previous finalized checkpoint under its own key, and the raw
+			// "needs reindexing" sentinel for recently finalized non-canonical
+			// blocks (see updateFinalizedBlockRoots). Neither decodes as a
+			// container; treating them as corruption aborted the migration
+			// and, since completion is only recorded on success, kept the
+			// node from starting on every restart.
+			if bytes.Equal(k, previousFinalizedCheckpointKey) {
+				continue
+			}
+			if bytes.Equal(v, containerFinalizedButNotCanonical) {
+				slotsWithoutBug += 1
+				if slotsWithoutBug > maxBugSearch {
+					break
+				}
+				continue
+			}
+
 			idxEntry := &qrysmpb.FinalizedBlockRootContainer{}
 			if err := decode(ctx, v, idxEntry); err != nil {
-				return errors.Wrapf(err, "unable to decode finalized block root container for root=%#x", k)
+				// An undecodable entry is not one this migration knows how to
+				// repair; skipping it is preferable to refusing to start.
+				log.WithError(err).WithField("root", fmt.Sprintf("%#x", k)).
+					Warn("Skipping finalized index entry that could not be decoded during parent root repair")
+				continue
 			}
 			// Not one of the corrupt values
 			if !bytes.Equal(idxEntry.ParentRoot, k) {

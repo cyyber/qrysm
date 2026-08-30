@@ -83,6 +83,7 @@ go_test(
         "genesis_test.go",
         "init_test.go",
         "kv_test.go",
+        "migration_finalized_parent_test.go",
         "migration_state_validators_test.go",
         "p2p_test.go",
         "state_summary_test.go",
