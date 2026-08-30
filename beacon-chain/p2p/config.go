@@ -4,6 +4,7 @@ import (
 	statefeed "github.com/theQRL/qrysm/beacon-chain/core/feed/state"
 	"github.com/theQRL/qrysm/beacon-chain/db"
 	"github.com/theQRL/qrysm/beacon-chain/startup"
+	"net"
 )
 
 const (
@@ -35,9 +36,11 @@ type Config struct {
 	MaxPeers            uint
 	AllowListCIDR       string
 	DenyListCIDR        []string
-	StateNotifier       statefeed.Notifier
-	DB                  db.ReadOnlyDatabaseWithSeqNum
-	ClockWaiter         startup.ClockWaiter
+	// IPColocationWhitelist contains CIDR ranges that are exempt from IP colocation limits.
+	IPColocationWhitelist []*net.IPNet
+	StateNotifier         statefeed.Notifier
+	DB                    db.ReadOnlyDatabaseWithSeqNum
+	ClockWaiter           startup.ClockWaiter
 }
 
 // connManagerLowHigh picks low/high water marks for the libp2p connection manager based on

@@ -145,7 +145,7 @@ func (s *Service) pubsubOptions() []pubsub.Option {
 		// don't drop legitimate (incompressible) messages at the wire layer.
 		pubsub.WithMaxMessageSize(encoder.MaxGossipCompressedSize),
 		pubsub.WithValidateQueueSize(pubsubQueueSize),
-		pubsub.WithPeerScore(peerScoringParams()),
+		pubsub.WithPeerScore(peerScoringParams(s.cfg.IPColocationWhitelist)),
 		pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute),
 		pubsub.WithGossipSubParams(pubsubGossipParam()),
 		pubsub.WithRawTracer(gossipTracer{host: s.host}),

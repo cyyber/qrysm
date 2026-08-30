@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -560,32 +561,53 @@ func (b *BeaconNode) startStateGen(ctx context.Context, bfs *backfill.Status, fc
 	return nil
 }
 
+// parseIPNetStrings parses the CIDR ranges given to --p2p-colocation-whitelist.
+func parseIPNetStrings(ipWhitelist []string) ([]*net.IPNet, error) {
+	ipNets := make([]*net.IPNet, 0, len(ipWhitelist))
+	for _, cidr := range ipWhitelist {
+		_, ipNet, err := net.ParseCIDR(cidr)
+		if err != nil {
+			log.WithError(err).WithField("cidr", cidr).Error("Invalid CIDR in IP colocation whitelist")
+			return nil, err
+		}
+		ipNets = append(ipNets, ipNet)
+		log.WithField("cidr", cidr).Info("Added IP range to colocation whitelist")
+	}
+	return ipNets, nil
+}
+
 func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 	bootstrapNodeAddrs, dataDir, err := registration.P2PPreregistration(cliCtx)
 	if err != nil {
 		return err
 	}
 
+	colocationWhitelist, err := parseIPNetStrings(slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PColocationWhitelist.Name)))
+	if err != nil {
+		return fmt.Errorf("failed to register p2p service: %w", err)
+	}
+
 	svc, err := p2p.NewService(b.ctx, &p2p.Config{
-		NoDiscovery:       cliCtx.Bool(cmd.NoDiscovery.Name),
-		StaticPeers:       slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.StaticPeers.Name)),
-		BootstrapNodeAddr: bootstrapNodeAddrs,
-		RelayNodeAddr:     cliCtx.String(cmd.RelayNode.Name),
-		DataDir:           dataDir,
-		LocalIP:           cliCtx.String(cmd.P2PIP.Name),
-		HostAddress:       cliCtx.String(cmd.P2PHost.Name),
-		HostDNS:           cliCtx.String(cmd.P2PHostDNS.Name),
-		PrivateKey:        cliCtx.String(cmd.P2PPrivKey.Name),
-		StaticPeerID:      cliCtx.Bool(cmd.P2PStaticID.Name),
-		TCPPort:           cliCtx.Uint(cmd.P2PTCPPort.Name),
-		UDPPort:           cliCtx.Uint(cmd.P2PUDPPort.Name),
-		MaxPeers:          cliCtx.Uint(cmd.P2PMaxPeers.Name),
-		AllowListCIDR:     cliCtx.String(cmd.P2PAllowList.Name),
-		DenyListCIDR:      slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
-		EnableUPnP:        cliCtx.Bool(cmd.EnableUPnPFlag.Name),
-		StateNotifier:     b,
-		DB:                b.db,
-		ClockWaiter:       b.clockWaiter,
+		NoDiscovery:           cliCtx.Bool(cmd.NoDiscovery.Name),
+		StaticPeers:           slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.StaticPeers.Name)),
+		BootstrapNodeAddr:     bootstrapNodeAddrs,
+		RelayNodeAddr:         cliCtx.String(cmd.RelayNode.Name),
+		DataDir:               dataDir,
+		LocalIP:               cliCtx.String(cmd.P2PIP.Name),
+		HostAddress:           cliCtx.String(cmd.P2PHost.Name),
+		HostDNS:               cliCtx.String(cmd.P2PHostDNS.Name),
+		PrivateKey:            cliCtx.String(cmd.P2PPrivKey.Name),
+		StaticPeerID:          cliCtx.Bool(cmd.P2PStaticID.Name),
+		TCPPort:               cliCtx.Uint(cmd.P2PTCPPort.Name),
+		UDPPort:               cliCtx.Uint(cmd.P2PUDPPort.Name),
+		MaxPeers:              cliCtx.Uint(cmd.P2PMaxPeers.Name),
+		AllowListCIDR:         cliCtx.String(cmd.P2PAllowList.Name),
+		DenyListCIDR:          slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
+		IPColocationWhitelist: colocationWhitelist,
+		EnableUPnP:            cliCtx.Bool(cmd.EnableUPnPFlag.Name),
+		StateNotifier:         b,
+		DB:                    b.db,
+		ClockWaiter:           b.clockWaiter,
 	})
 	if err != nil {
 		return err

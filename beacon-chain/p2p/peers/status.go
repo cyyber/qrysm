@@ -25,6 +25,7 @@ package peers
 import (
 	"context"
 	"math"
+	"net"
 	"slices"
 	"sort"
 	"time"
@@ -79,11 +80,12 @@ const (
 
 // Status is the structure holding the peer status information.
 type Status struct {
-	ctx       context.Context
-	scorers   *scorers.Service
-	store     *peerdata.Store
-	ipTracker map[string]uint64
-	rand      *rand.Rand
+	ctx                   context.Context
+	scorers               *scorers.Service
+	store                 *peerdata.Store
+	ipTracker             map[string]uint64
+	rand                  *rand.Rand
+	ipColocationWhitelist []*net.IPNet
 }
 
 // StatusConfig represents peer status service params.
@@ -92,6 +94,8 @@ type StatusConfig struct {
 	PeerLimit int
 	// ScorerParams holds peer scorer configuration params.
 	ScorerParams *scorers.Config
+	// IPColocationWhitelist contains CIDR ranges that are exempt from IP colocation limits.
+	IPColocationWhitelist []*net.IPNet
 }
 
 // NewStatus creates a new status entity.
@@ -104,6 +108,9 @@ func NewStatus(ctx context.Context, config *StatusConfig) *Status {
 		store:     store,
 		scorers:   scorers.NewService(ctx, store, config.ScorerParams),
 		ipTracker: map[string]uint64{},
+		// CIDR ranges exempt from the per-IP peer limit (e.g. several honest
+		// nodes behind one NAT).
+		ipColocationWhitelist: config.IPColocationWhitelist,
 		// Random generator used to calculate dial backoff period.
 		// It is ok to use deterministic generator, no need for true entropy.
 		rand: rand.NewDeterministicGenerator(),
@@ -1001,7 +1008,16 @@ func (p *Status) isfromBadIP(pid peer.ID) bool {
 	if others > 0 && countsTowardColocation(peerData.ConnState) {
 		others--
 	}
-	return others >= ColocationLimit
+	if others < ColocationLimit {
+		return false
+	}
+	// Whitelisted ranges are exempt from the limit.
+	for _, ipNet := range p.ipColocationWhitelist {
+		if ipNet.Contains(ip) {
+			return false
+		}
+	}
+	return true
 }
 
 // countsTowardColocation reports whether a peer in the given connection state

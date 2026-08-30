@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"net"
 	"strconv"
 	"testing"
 	"time"
@@ -1238,4 +1239,37 @@ func createPeer(t *testing.T, p *peers.Status, addr ma.Multiaddr,
 	p.Add(new(qnr.Record), id, addr, dir)
 	p.SetConnectionState(id, state)
 	return id
+}
+
+func TestPeerIPTracker_Whitelist(t *testing.T) {
+	_, whitelisted, err := net.ParseCIDR("10.0.0.0/24")
+	require.NoError(t, err)
+	p := peers.NewStatus(context.Background(), &peers.StatusConfig{
+		PeerLimit: 30,
+		ScorerParams: &scorers.Config{
+			BadResponsesScorerConfig: &scorers.BadResponsesScorerConfig{Threshold: 2},
+		},
+		IPColocationWhitelist: []*net.IPNet{whitelisted},
+	})
+	addr := func(ip string, port int) ma.Multiaddr {
+		a, err := ma.NewMultiaddr("/ip4/" + ip + "/tcp/" + strconv.Itoa(port))
+		require.NoError(t, err)
+		return a
+	}
+	// Many live connections from a whitelisted range are all fine.
+	var inRange []peer.ID
+	for i := range peers.ColocationLimit + 10 {
+		inRange = append(inRange, createPeer(t, p, addr("10.0.0.7", 3000+i), network.DirInbound, peers.PeerConnected))
+	}
+	for _, pr := range inRange {
+		assert.Equal(t, false, p.IsBad(pr), "whitelisted IP hit the colocation limit")
+	}
+	// The limit still applies outside the whitelist.
+	var outside []peer.ID
+	for i := range peers.ColocationLimit + 1 {
+		outside = append(outside, createPeer(t, p, addr("10.0.1.7", 3000+i), network.DirInbound, peers.PeerConnected))
+	}
+	for _, pr := range outside {
+		assert.Equal(t, true, p.IsBad(pr), "non-whitelisted IP escaped the colocation limit")
+	}
 }
