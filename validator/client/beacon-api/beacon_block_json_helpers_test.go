@@ -596,13 +596,13 @@ func TestBeaconBlockJsonHelpers_JsonifyWithdrawals(t *testing.T) {
 		{
 			WithdrawalIndex:  "1",
 			ValidatorIndex:   "2",
-			ExecutionAddress: hexutil.Encode([]byte{3}),
+			ExecutionAddress: hexutil.EncodeQ([]byte{3}),
 			Amount:           "4",
 		},
 		{
 			WithdrawalIndex:  "5",
 			ValidatorIndex:   "6",
-			ExecutionAddress: hexutil.Encode([]byte{7}),
+			ExecutionAddress: hexutil.EncodeQ([]byte{7}),
 			Amount:           "8",
 		},
 	}
