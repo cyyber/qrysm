@@ -96,6 +96,11 @@ func (s *Service) AddConnectionHandler(reqFunc, goodByeFunc func(ctx context.Con
 					return
 				}
 				s.peers.Add(nil /* QNR */, remotePeer, conn.RemoteMultiaddr(), conn.Stat().Direction)
+				// Mark the connection as being established before the checks
+				// below: the IP colocation tracker only counts connected and
+				// connecting peers, so this is what makes several simultaneous
+				// connections from one IP count against each other.
+				s.peers.SetConnectionState(remotePeer, peers.PeerConnecting)
 				// Defensive check in the event we still get a bad peer.
 				if s.peers.IsBad(remotePeer) {
 					log.WithField("reason", "bad peer").Trace("Ignoring connection request")
@@ -149,7 +154,6 @@ func (s *Service) AddConnectionHandler(reqFunc, goodByeFunc func(ctx context.Con
 					return
 				}
 
-				s.peers.SetConnectionState(conn.RemotePeer(), peers.PeerConnecting)
 				if err := reqFunc(context.TODO(), conn.RemotePeer()); err != nil && !errors.Is(err, io.EOF) {
 					log.WithError(err).Trace("Handshake failed")
 					disconnectFromPeer()
