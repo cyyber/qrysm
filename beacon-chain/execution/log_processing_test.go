@@ -9,6 +9,7 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	qrl "github.com/theQRL/go-qrl"
 	"github.com/theQRL/go-qrl/common"
+	gqrltypes "github.com/theQRL/go-qrl/core/types"
 	"github.com/theQRL/qrysm/beacon-chain/cache/depositcache"
 	testDB "github.com/theQRL/qrysm/beacon-chain/db/testing"
 	mockExecution "github.com/theQRL/qrysm/beacon-chain/execution/testing"
@@ -87,6 +88,13 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	require.LogsContain(t, hook, "Deposit registered from deposit contract")
 
 	hook.Reset()
+}
+
+func TestProcessLog_MalformedLogNoTopics_NoPanic(t *testing.T) {
+	s := &Service{}
+	// A log with no topics (e.g. from a hostile or buggy execution client) must be
+	// skipped rather than panicking on depositLog.Topics[0].
+	require.NoError(t, s.ProcessLog(context.Background(), &gqrltypes.Log{}))
 }
 
 func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {

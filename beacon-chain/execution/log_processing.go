@@ -85,6 +85,13 @@ func (s *Service) ProcessExecutionBlock(ctx context.Context, blkNum *big.Int) er
 func (s *Service) ProcessLog(ctx context.Context, depositLog *gqrltypes.Log) error {
 	s.processingLock.RLock()
 	defer s.processingLock.RUnlock()
+	// A well-formed log carries at least the event-signature topic. Guard against a
+	// malformed log so a hostile or buggy execution client cannot panic this path;
+	// startup deposit-log processing (processPastLogs) is not wrapped in panic recovery.
+	if len(depositLog.Topics) == 0 {
+		log.Debug("Skipping deposit log with no topics")
+		return nil
+	}
 	// Process logs according to their event signature.
 	if depositLog.Topics[0] == depositEventSignature {
 		if err := s.ProcessDepositLog(ctx, depositLog); err != nil {
@@ -111,6 +118,12 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog *gqrltypes.L
 	// This can happen sometimes when we receive the same log twice from the
 	// execution network, and prevents us from updating our trie
 	// with the same log twice, causing an inconsistent state root.
+	// A well-formed merkle index is 8 little-endian bytes. Reject a malformed value
+	// rather than letting binary.LittleEndian.Uint64 panic on a short slice from a
+	// hostile or buggy execution client (this path has no panic recovery on startup).
+	if len(merkleTreeIndex) < 8 {
+		return errors.Errorf("malformed deposit merkle index length: %d", len(merkleTreeIndex))
+	}
 	index := int64(binary.LittleEndian.Uint64(merkleTreeIndex)) // lint:ignore uintcast -- MerkleTreeIndex should not exceed int64 in your lifetime.
 	if index <= s.lastReceivedMerkleIndex {
 		return nil
@@ -202,6 +215,11 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	rawLogCount, err := s.depositContractCaller.GetDepositCount(&bind.CallOpts{})
 	if err != nil {
 		return err
+	}
+	// get_deposit_count returns 8 little-endian bytes; reject a malformed value
+	// rather than panicking in binary.LittleEndian.Uint64 on a short slice.
+	if len(rawLogCount) < 8 {
+		return errors.Errorf("malformed deposit count length: %d", len(rawLogCount))
 	}
 	logCount := binary.LittleEndian.Uint64(rawLogCount)
 
