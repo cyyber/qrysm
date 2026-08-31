@@ -49,10 +49,10 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, headRoot)
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
 	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
-	switch err == nil {
-	case true:
+	switch {
+	case err == nil:
 		feeRecipient = recipient
-	case errors.As(err, kv.ErrNotFoundFeeRecipient):
+	case errors.Is(err, kv.ErrNotFoundFeeRecipient):
 		// If fee recipient is not found in DB and not set from beacon node CLI,
 		// use the burn address.
 		if feeRecipient.String() == params.BeaconConfig().QRLBurnAddress {
