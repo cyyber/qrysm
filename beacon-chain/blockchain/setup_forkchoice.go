@@ -99,6 +99,15 @@ func (s *Service) setupForkchoiceRoot(st state.BeaconState) error {
 	if err := s.cfg.ForkChoiceStore.InsertNode(s.ctx, st, roblock); err != nil {
 		return errors.Wrap(err, "could not insert finalized block to forkchoice")
 	}
+	// Re-seed the cached finalized payload hash now that the finalized node is
+	// in the tree. setupForkchoiceCheckpoints already ran UpdateFinalizedCheckpoint,
+	// but that was before this insert, when the node was absent from nodeByRoot, so
+	// the cache is still zero. prune won't refresh it either while the finalized node
+	// is the tree root. Without this, every forkchoice update sends a zero finalized
+	// hash to the execution layer until finalization next advances (~1 epoch).
+	if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: cp.Epoch, Root: fRoot}); err != nil {
+		return errors.Wrap(err, "could not re-seed finalized checkpoint after forkchoice insert")
+	}
 	if !features.Get().EnableStartOptimistic {
 		lastValidatedCheckpoint, err := s.cfg.BeaconDB.LastValidatedCheckpoint(s.ctx)
 		if err != nil {
