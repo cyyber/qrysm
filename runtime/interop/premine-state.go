@@ -349,7 +349,7 @@ func (s *PremineGenesisConfig) setLatestBlockHeader(g state.BeaconState) error {
 	switch s.Version {
 	case version.Zond:
 		body = &qrysmpb.BeaconBlockBodyZond{
-			RandaoReveal: make([]byte, fieldparams.MLDSA87SignatureLength),
+			RandaoReveal: make([]byte, fieldparams.RandaoRevealLength),
 			ExecutionData: &qrysmpb.ExecutionData{
 				DepositRoot: make([]byte, 32),
 				BlockHash:   make([]byte, 32),
