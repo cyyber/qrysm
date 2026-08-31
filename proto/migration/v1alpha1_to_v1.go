@@ -558,6 +558,7 @@ func BeaconStateZondToProto(st state.BeaconState) (*qrlpb.BeaconStateZond, error
 			ActivationEpoch:            validator.ActivationEpoch,
 			ExitEpoch:                  validator.ExitEpoch,
 			WithdrawableEpoch:          validator.WithdrawableEpoch,
+			RandaoCommitment:           bytesutil.SafeCopyBytes(validator.RandaoCommitment),
 		}
 	}
 

@@ -440,6 +440,7 @@ func TestBeaconStateZondToProto(t *testing.T) {
 			ActivationEpoch:            11,
 			ExitEpoch:                  12,
 			WithdrawableEpoch:          13,
+			RandaoCommitment:           bytesutil.PadTo([]byte("randaocommitment"), 32),
 		}}
 		state.Balances = []uint64{14}
 		state.RandaoMixes = [][]byte{bytesutil.PadTo([]byte("randaomixes"), 32)}
@@ -545,6 +546,7 @@ func TestBeaconStateZondToProto(t *testing.T) {
 	assert.Equal(t, primitives.Epoch(11), resultValidator.ActivationEpoch)
 	assert.Equal(t, primitives.Epoch(12), resultValidator.ExitEpoch)
 	assert.Equal(t, primitives.Epoch(13), resultValidator.WithdrawableEpoch)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("randaocommitment"), 32), resultValidator.RandaoCommitment)
 	assert.DeepEqual(t, []uint64{14}, result.Balances)
 	assert.Equal(t, 65536, len(result.RandaoMixes))
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("randaomixes"), 32), result.RandaoMixes[0])
