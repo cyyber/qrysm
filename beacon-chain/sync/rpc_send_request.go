@@ -37,6 +37,21 @@ func SendBeaconBlocksByRangeRequest(
 	}
 	defer closeStream(stream, log)
 
+	// Bound the total time spent reading the response. readResponseChunk resets the
+	// per-chunk read deadline to respTimeout on every chunk, so without an overall
+	// cap a peer that trickles one valid block just under respTimeout could hold this
+	// request — and the init-sync worker running it — open for count*respTimeout.
+	// Reset the stream once the overall budget elapses so the in-flight read fails,
+	// mirroring the respTimeout bound the server handler applies.
+	ctx, cancel := context.WithTimeout(ctx, respTimeout)
+	defer cancel()
+	go func() {
+		<-ctx.Done()
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			_ = stream.Reset()
+		}
+	}()
+
 	// Cap the slice capacity to MaxRequestBlocks to prevent panic from invalid Count values
 	// (e.g., due to unsigned integer underflow).
 	sliceCap := req.Count
@@ -104,6 +119,21 @@ func SendBeaconBlocksByRootRequest(
 		return nil, err
 	}
 	defer closeStream(stream, log)
+
+	// Bound the total time spent reading the response. readResponseChunk resets the
+	// per-chunk read deadline to respTimeout on every chunk, so without an overall
+	// cap a peer that trickles one valid block just under respTimeout could hold this
+	// request — and the init-sync worker running it — open for count*respTimeout.
+	// Reset the stream once the overall budget elapses so the in-flight read fails,
+	// mirroring the respTimeout bound the server handler applies.
+	ctx, cancel := context.WithTimeout(ctx, respTimeout)
+	defer cancel()
+	go func() {
+		<-ctx.Done()
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			_ = stream.Reset()
+		}
+	}()
 
 	// Augment block processing function, if non-nil block processor is provided.
 	blocks := make([]interfaces.ReadOnlySignedBeaconBlock, 0, len(*req))
