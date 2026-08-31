@@ -477,6 +477,48 @@ func TestSaveAttestationForPubKey_BatchWrites_LowCapacity_TimerReached(t *testin
 	require.NoError(t, err)
 }
 
+// TestFlushAttestationRecords_SignalsOnlyFlushedRecords verifies the per-record
+// acknowledgement that closes the slashing-safety race: a flush must signal only the
+// records it actually persisted, never other pending waiters. Under the previous
+// broadcast-feed approach every waiter was woken by any flush, so a caller could
+// return (and broadcast its attestation) before its own record was written.
+func TestFlushAttestationRecords_SignalsOnlyFlushedRecords(t *testing.T) {
+	ctx := t.Context()
+	pubKeys := [][field_params.MLDSA87PubkeyLength]byte{{1}}
+	validatorDB := setupDB(t, pubKeys)
+
+	flushed := &AttestationRecord{
+		PubKey:      pubKeys[0],
+		Source:      0,
+		Target:      1,
+		SigningRoot: bytesutil.PadTo([]byte("a"), 32),
+		done:        make(chan saveAttestationsResponse, 1),
+	}
+	pending := &AttestationRecord{
+		PubKey:      pubKeys[0],
+		Source:      1,
+		Target:      2,
+		SigningRoot: bytesutil.PadTo([]byte("b"), 32),
+		done:        make(chan saveAttestationsResponse, 1),
+	}
+
+	validatorDB.flushAttestationRecords(ctx, []*AttestationRecord{flushed})
+
+	// The flushed record's caller is notified with no error.
+	select {
+	case res := <-flushed.done:
+		require.NoError(t, res.err)
+	default:
+		t.Fatal("expected the flushed record's done channel to be signaled")
+	}
+	// A record that was not part of this flush must not be signaled.
+	select {
+	case <-pending.done:
+		t.Fatal("a record not in the flushed batch must not be signaled")
+	default:
+	}
+}
+
 func BenchmarkStore_CheckSlashableAttestation_Surround_SafeAttestation_54kEpochs(b *testing.B) {
 	numValidators := 1
 	numEpochs := primitives.Epoch(54000)

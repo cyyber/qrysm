@@ -11,7 +11,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	prombolt "github.com/prysmaticlabs/prombbolt"
 	"github.com/theQRL/qrysm/async/abool"
-	"github.com/theQRL/qrysm/async/event"
 	"github.com/theQRL/qrysm/config/features"
 	field_params "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
@@ -64,7 +63,6 @@ type Store struct {
 	databasePath                       string
 	batchedAttestations                *QueuedAttestationRecords
 	batchedAttestationsChan            chan *AttestationRecordSaveRequest
-	batchAttestationsFlushedFeed       *event.Feed
 	batchedAttestationsFlushInProgress abool.AtomicBool
 }
 
@@ -133,11 +131,10 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 	}
 
 	kv := &Store{
-		db:                           boltDB,
-		databasePath:                 dirPath,
-		batchedAttestations:          NewQueuedAttestationRecords(),
-		batchedAttestationsChan:      make(chan *AttestationRecordSaveRequest, attestationBatchCapacity),
-		batchAttestationsFlushedFeed: new(event.Feed),
+		db:                      boltDB,
+		databasePath:            dirPath,
+		batchedAttestations:     NewQueuedAttestationRecords(),
+		batchedAttestationsChan: make(chan *AttestationRecordSaveRequest, attestationBatchCapacity),
 	}
 
 	if err := kv.db.Update(func(tx *bolt.Tx) error {

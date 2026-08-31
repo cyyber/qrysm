@@ -34,6 +34,11 @@ type AttestationRecord struct {
 	Source      primitives.Epoch
 	Target      primitives.Epoch
 	SigningRoot []byte
+	// done, when non-nil, is signaled exactly once with the result of the flush that
+	// persists this record. It lets a SaveAttestationForPubKey caller wait for the
+	// specific batch its record was written in, instead of any flush. Buffered (cap 1)
+	// and set only for batched single saves; nil for read records and synchronous saves.
+	done chan saveAttestationsResponse
 }
 
 // NewQueuedAttestationRecords constructor allocates the underlying slice and
@@ -314,6 +319,15 @@ func (s *Store) SaveAttestationForPubKey(
 	if att == nil || att.Data == nil || att.Data.Source == nil || att.Data.Target == nil {
 		return errors.New("incoming attestation does not contain source and/or target epoch")
 	}
+	// done is signaled by the flush that actually persists this record, so we only
+	// return once our record is durably written. A shared broadcast feed (the previous
+	// approach) could wake us on an earlier flush that did not include this record —
+	// e.g. a ticker flush that fired while the record was still in the channel buffer —
+	// letting us report the attestation as saved before it is on disk. That is a
+	// slashing-safety hole: a crash and restart in that window could lose the record
+	// and permit a second, slashable vote. Buffered (cap 1) so the flusher never blocks
+	// and a flush that completes before we start waiting is not lost.
+	done := make(chan saveAttestationsResponse, 1)
 	s.batchedAttestationsChan <- &AttestationRecordSaveRequest{
 		ctx: ctx,
 		record: &AttestationRecord{
@@ -321,21 +335,13 @@ func (s *Store) SaveAttestationForPubKey(
 			Source:      att.Data.Source.Epoch,
 			Target:      att.Data.Target.Epoch,
 			SigningRoot: signingRoot[:],
+			done:        done,
 		},
 	}
 
-	// Subscribe to be notified when the attestation record queued
-	// for saving to the DB is indeed saved. If an error occurred
-	// during the process of saving the attestation record, the sender
-	// will give us that error. We use a buffered channel
-	// to prevent blocking the sender from notifying us of the result.
 	_, innerSpan := trace.StartSpan(ctx, "Validator.SaveAttestationForPubKey.WaitForResponse")
 	defer innerSpan.End()
-	responseChan := make(chan saveAttestationsResponse, 1)
-	defer close(responseChan)
-	sub := s.batchAttestationsFlushedFeed.Subscribe(responseChan)
-	defer sub.Unsubscribe()
-	res := <-responseChan
+	res := <-done
 	return res.err
 }
 
@@ -414,12 +420,19 @@ func (s *Store) flushAttestationRecords(ctx context.Context, records []*Attestat
 			s.batchedAttestations.Append(ar)
 		}
 	}
-	// Forward the error, if any, to all subscribers via an event feed.
-	// We use a struct wrapper around the error as the event feed
-	// cannot handle sending a raw `nil` in case there is no error.
-	s.batchAttestationsFlushedFeed.Send(saveAttestationsResponse{
-		err: err,
-	})
+	// Signal each waiting caller via its own record channel, so a caller only returns
+	// once the flush that actually included its record has completed. The send is
+	// non-blocking: each channel is buffered (cap 1) and drained by exactly one waiter,
+	// and a record re-queued after an error retains its channel, which may already have
+	// been signaled.
+	for _, ar := range records {
+		if ar.done != nil {
+			select {
+			case ar.done <- saveAttestationsResponse{err: err}:
+			default:
+			}
+		}
+	}
 }
 
 // Saves a list of attestation records to the database in a single boltDB
