@@ -1,6 +1,7 @@
 package attestations
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sort"
@@ -240,9 +241,19 @@ func TestAggregateAndSaveForkChoiceAtts_Multiple(t *testing.T) {
 	wanted = append(wanted, att3...)
 
 	received := s.cfg.Pool.ForkchoiceAttestations()
-	sort.Slice(received, func(i, j int) bool {
-		return received[i].Data.Slot < received[j].Data.Slot
-	})
+	// Aggregation order within a slot is not deterministic; sort both sides
+	// by (slot, aggregation bits) before comparing.
+	sortAtts := func(atts []*qrysmpb.Attestation) {
+		sort.Slice(atts, func(i, j int) bool {
+			if atts[i].Data.Slot != atts[j].Data.Slot {
+				return atts[i].Data.Slot < atts[j].Data.Slot
+			}
+			return bytes.Compare(atts[i].AggregationBits, atts[j].AggregationBits) < 0
+		})
+	}
+	sortAtts(wanted)
+	sortAtts(received)
+	require.Equal(t, len(wanted), len(received))
 	for i, a := range wanted {
 		assert.Equal(t, true, proto.Equal(a, received[i]))
 	}

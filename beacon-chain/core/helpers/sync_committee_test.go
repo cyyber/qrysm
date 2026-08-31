@@ -93,6 +93,13 @@ func TestIsCurrentEpochSyncCommittee_DoesNotExist(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
+	// Every test state at the genesis slot shares the ZeroHash sync-period
+	// cache key, so an async cache fill spawned by an earlier test can land
+	// after this test's ClearCache and satisfy the lookup from the cache
+	// (returning no error). A slot in a distinct sync period gives this test
+	// its own cache key, forcing the state lookup path deterministically.
+	uniquePeriodSlot := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod) * 7)
+	require.NoError(t, state.SetSlot(uniquePeriodSlot+1))
 
 	ok, err := IsCurrentPeriodSyncCommittee(state, 12390192)
 	require.ErrorContains(t, "validator index 12390192 does not exist", err)

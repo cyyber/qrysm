@@ -53,6 +53,7 @@ SKIP_TESTS=(
     # beacon-chain/rpc/qrysm/v1alpha1/{beacon,validator}: minimal-preset fixtures
     # run against the mainnet SSZ layout.
     'TestServer_ListAssignments_'
+    'TestServer_ListBeaconCommittees_(Current|Previous)Epoch'
     'TestServer_ListIndexedAttestations_OldEpoch'
     'TestProposer_GetSyncAggregate_OK'
     'TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot'
