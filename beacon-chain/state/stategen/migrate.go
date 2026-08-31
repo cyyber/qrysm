@@ -106,6 +106,18 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				continue
 			}
 
+			// aState is only generated when the first HasState check above missed. A
+			// concurrent DeleteStates (e.g. DisableSaveHotStateToDB on the block-import
+			// path) can remove aRoot's state between that check and the HasState check
+			// just above, so we reach here with aState still nil. Regenerate it rather
+			// than passing a nil state to SaveState, which would panic this background
+			// migration goroutine (it has no panic recovery).
+			if aState == nil || aState.IsNil() {
+				aState, err = s.StateByRoot(ctx, aRoot)
+				if err != nil {
+					return err
+				}
+			}
 			if err := s.beaconDB.SaveState(ctx, aState, aRoot); err != nil {
 				return err
 			}
