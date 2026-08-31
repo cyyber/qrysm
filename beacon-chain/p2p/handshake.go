@@ -126,8 +126,13 @@ func (s *Service) AddConnectionHandler(reqFunc, goodByeFunc func(ctx context.Con
 					// Wait for peer to initiate handshake
 					time.Sleep(timeForStatus)
 
-					// Exit if we are disconnected with the peer.
+					// Exit if we are disconnected with the peer. Clean up first: we set
+					// PeerConnecting above, which counts toward the IP-colocation limit,
+					// so a bare return would strand the peer in PeerConnecting and leak
+					// the colocation count (eventually gating honest peers on that IP and
+					// blocking future handshakes with this peer).
 					if s.host.Network().Connectedness(remotePeer) != network.Connected {
+						disconnectFromPeer()
 						return
 					}
 
