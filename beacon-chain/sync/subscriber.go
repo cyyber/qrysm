@@ -664,41 +664,67 @@ func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 		log.WithError(err).Error("Could not compute fork digest")
 		return pids
 	}
+	minimumPeersPerSubnet := flags.Get().MinimumPeersPerSubnet
 	currSlot := s.cfg.clock.CurrentSlot()
-	wantedSubs := s.retrievePersistentSubs(currSlot)
-	wantedSubs = slice.SetUint64(append(wantedSubs, s.attesterSubnetIndices(currSlot)...))
+
+	wantedSubnets := make(map[uint64]bool)
+	for _, sub := range s.retrievePersistentSubs(currSlot) {
+		wantedSubnets[sub] = true
+	}
+	for _, sub := range s.attesterSubnetIndices(currSlot) {
+		wantedSubnets[sub] = true
+	}
+
 	topic := p2p.GossipTypeMapping[reflect.TypeFor[*qrysmpb.Attestation]()]
 
-	// Map of peers in subnets
-	peerMap := make(map[peer.ID]bool)
-
-	for _, sub := range wantedSubs {
-		subnetTopic := fmt.Sprintf(topic, digest, sub) + s.cfg.p2p.Encoding().ProtocolSuffix()
-		ps := s.cfg.p2p.PubSub().ListPeers(subnetTopic)
-		if len(ps) > flags.Get().MinimumPeersPerSubnet {
-			// In the event we have more than the minimum, we can
-			// mark the remaining as viable for pruning.
-			ps = ps[:flags.Get().MinimumPeersPerSubnet]
-		}
-		// Add peer to peer map.
-		for _, p := range ps {
-			// Even if the peer id has
-			// already been seen we still set
-			// it, as the outcome is the same.
-			peerMap[p] = true
-		}
-	}
-
-	// Clear out necessary peers from the peers to prune.
-	newPeers := make([]peer.ID, 0, len(pids))
-
+	pidSet := make(map[peer.ID]bool, len(pids))
 	for _, pid := range pids {
-		if peerMap[pid] {
-			continue
-		}
-		newPeers = append(newPeers, pid)
+		pidSet[pid] = true
 	}
-	return newPeers
+
+	// For each wanted subnet, get the current peer count and track which
+	// candidate peers participate in each subnet.
+	subnetPeerCount := make(map[uint64]int, len(wantedSubnets))
+	peerSubnets := make(map[peer.ID][]uint64)
+	for subnet := range wantedSubnets {
+		subnetTopic := fmt.Sprintf(topic, digest, subnet) + s.cfg.p2p.Encoding().ProtocolSuffix()
+		peers := s.cfg.p2p.PubSub().ListPeers(subnetTopic)
+		subnetPeerCount[subnet] = len(peers)
+		for _, pid := range peers {
+			if pidSet[pid] {
+				peerSubnets[pid] = append(peerSubnets[pid], subnet)
+			}
+		}
+	}
+
+	// Sort candidates by ascending subnet count so we try to prune peers
+	// covering fewer subnets first, preserving multi-subnet peers that are
+	// more valuable for maintaining minimums across subnets.
+	slices.SortFunc(pids, func(a, b peer.ID) int {
+		return len(peerSubnets[a]) - len(peerSubnets[b])
+	})
+
+	// Greedily prune each candidate if doing so would not drop any of its
+	// subnets below the minimum peer threshold.
+	prunable := make([]peer.ID, 0, len(pids))
+	for _, pid := range pids {
+		subnets := peerSubnets[pid]
+		canPrune := true
+		for _, subnet := range subnets {
+			if subnetPeerCount[subnet] <= minimumPeersPerSubnet {
+				canPrune = false
+				break
+			}
+		}
+		if canPrune {
+			prunable = append(prunable, pid)
+			for _, subnet := range subnets {
+				subnetPeerCount[subnet]--
+			}
+		}
+	}
+
+	return prunable
 }
 
 // Add fork digest to topic.
