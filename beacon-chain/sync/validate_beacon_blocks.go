@@ -399,6 +399,32 @@ func (s *Service) setSeenBlockIndexSlot(slot primitives.Slot, proposerIdx primit
 	s.seenBlockCache.Add(string(b), true)
 }
 
+// equivocationCacheKey namespaces the "equivocation detection attempted" marker so
+// it can share seenBlockCache without colliding with the seen-block keys, which are
+// the bare slot||proposer bytes.
+func equivocationCacheKey(slot primitives.Slot, proposerIdx primitives.ValidatorIndex) string {
+	b := append([]byte("equiv"), bytesutil.Bytes32(uint64(slot))...)
+	b = append(b, bytesutil.Bytes32(uint64(proposerIdx))...)
+	return string(b)
+}
+
+// Returns true if equivocation detection was already attempted for this proposer
+// and slot. Used to bound the work a peer can force by replaying differing blocks
+// for a slot that has already been seen.
+func (s *Service) hasSeenEquivocationForBlock(slot primitives.Slot, proposerIdx primitives.ValidatorIndex) bool {
+	s.seenBlockLock.RLock()
+	defer s.seenBlockLock.RUnlock()
+	_, seen := s.seenBlockCache.Get(equivocationCacheKey(slot, proposerIdx))
+	return seen
+}
+
+// Marks equivocation detection as attempted for this proposer and slot.
+func (s *Service) setSeenEquivocationForBlock(slot primitives.Slot, proposerIdx primitives.ValidatorIndex) {
+	s.seenBlockLock.Lock()
+	defer s.seenBlockLock.Unlock()
+	s.seenBlockCache.Add(equivocationCacheKey(slot, proposerIdx), true)
+}
+
 // Returns true if the block is marked as a bad block.
 func (s *Service) hasBadBlock(root [32]byte) bool {
 	s.badBlockLock.RLock()
@@ -451,6 +477,18 @@ func (s *Service) detectAndBroadcastEquivocation(ctx context.Context, blk interf
 	slot := blk.Block().Slot()
 	proposerIndex := blk.Block().ProposerIndex()
 
+	// Run the (expensive) detection below — a head-block copy, head-state fetch and
+	// ML-DSA proposer-slashing verification, all under validateBlockLock — at most
+	// once per (slot, proposer). Without this bound a peer could replay many
+	// differently-signed blocks for a slot it knows is already seen and force that
+	// work per gossip message. The guard is set only for a genuinely differing block
+	// (below), so ordinary duplicate gossip of the head block does not consume it and
+	// a genuine second proposal (the first differing block seen) is still handled;
+	// the slasher covers anything missed while a flood is in progress.
+	if s.hasSeenEquivocationForBlock(slot, proposerIndex) {
+		return nil
+	}
+
 	headBlock, err := s.cfg.chain.HeadBlock(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get head block")
@@ -463,6 +501,11 @@ func (s *Service) detectAndBroadcastEquivocation(ctx context.Context, blk interf
 	if blk.Signature() == headBlock.Signature() {
 		return nil
 	}
+
+	// The incoming block differs from the head block for the same (slot, proposer):
+	// a potential equivocation. Record the attempt so a flood of further differing
+	// blocks for this slot skips the verification above.
+	s.setSeenEquivocationForBlock(slot, proposerIndex)
 
 	header1, err := blk.Header()
 	if err != nil {

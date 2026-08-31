@@ -2021,4 +2021,58 @@ func TestDetectAndBroadcastEquivocation(t *testing.T) {
 		err = r.detectAndBroadcastEquivocation(ctx, signedNewBlock)
 		require.ErrorIs(t, err, ErrSlashingSignatureFailure)
 	})
+
+	t.Run("dedup: second differing block for same slot/proposer is skipped", func(t *testing.T) {
+		headBlock := util.NewBeaconBlockZond()
+		headBlock.Block.Slot = 1
+		headBlock.Block.ProposerIndex = 0
+		headBlock.Block.ParentRoot = bytesutil.PadTo([]byte("head"), 32)
+		sig1, err := signing.ComputeDomainAndSign(beaconState, 0, headBlock.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[0])
+		require.NoError(t, err)
+		headBlock.Signature = sig1
+		signedHeadBlock, err := blocks.NewSignedBeaconBlock(headBlock)
+		require.NoError(t, err)
+
+		slashingPool := &slashingsmock.PoolMock{}
+		chainService := &mock.ChainService{
+			State:   beaconState,
+			Genesis: time.Now(),
+			Block:   signedHeadBlock,
+		}
+		r := &Service{
+			cfg: &config{
+				p2p:          p,
+				chain:        chainService,
+				slashingPool: slashingPool,
+			},
+			seenBlockCache: lruwrpr.New(10),
+		}
+
+		// First differing block: equivocation detected and inserted.
+		firstBlock := util.NewBeaconBlockZond()
+		firstBlock.Block.Slot = 1
+		firstBlock.Block.ProposerIndex = 0
+		firstBlock.Block.ParentRoot = bytesutil.PadTo([]byte("first"), 32)
+		firstSig, err := signing.ComputeDomainAndSign(beaconState, 0, firstBlock.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[0])
+		require.NoError(t, err)
+		firstBlock.Signature = firstSig
+		signedFirst, err := blocks.NewSignedBeaconBlock(firstBlock)
+		require.NoError(t, err)
+		require.NoError(t, r.detectAndBroadcastEquivocation(ctx, signedFirst))
+		require.Equal(t, 1, len(slashingPool.PendingPropSlashings))
+
+		// A second differing block for the same (slot, proposer) is deduped and does
+		// not run the head-state fetch / signature verification again.
+		secondBlock := util.NewBeaconBlockZond()
+		secondBlock.Block.Slot = 1
+		secondBlock.Block.ProposerIndex = 0
+		secondBlock.Block.ParentRoot = bytesutil.PadTo([]byte("second"), 32)
+		secondSig, err := signing.ComputeDomainAndSign(beaconState, 0, secondBlock.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[0])
+		require.NoError(t, err)
+		secondBlock.Signature = secondSig
+		signedSecond, err := blocks.NewSignedBeaconBlock(secondBlock)
+		require.NoError(t, err)
+		require.NoError(t, r.detectAndBroadcastEquivocation(ctx, signedSecond))
+		require.Equal(t, 1, len(slashingPool.PendingPropSlashings), "second differing block should be deduped")
+	})
 }
