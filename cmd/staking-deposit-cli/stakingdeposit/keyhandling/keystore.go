@@ -26,7 +26,7 @@ const (
 	standardArgon2idM uint32 = 1 << 18
 	standardArgon2idP uint8  = 1
 	lightArgon2idT    uint32 = 8
-	lightArgon2idM    uint32 = 19456 // 19MB, web3.js policy floor
+	lightArgon2idM    uint32 = 19456 // 19MB, policy floor
 	lightArgon2idP    uint8  = 1
 	argon2idKeyLen           = 32
 
