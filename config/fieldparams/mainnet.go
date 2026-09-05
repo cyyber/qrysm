@@ -15,8 +15,8 @@ const (
 	HistoricalRootsLength                 = 16777216      // HISTORICAL_ROOTS_LIMIT
 	ValidatorRegistryLimit                = 1099511627776 // VALIDATOR_REGISTRY_LIMIT
 	ExecutionDataVotesLength              = 2             // SLOTS_PER_EXECUTION_VOTING_PERIOD
-	PreviousEpochAttestationsLength       = 16384         // MAX_ATTESTATIONS * SLOTS_PER_EPOCH
-	CurrentEpochAttestationsLength        = 16384         // MAX_ATTESTATIONS * SLOTS_PER_EPOCH
+	PreviousEpochAttestationsLength       = 512           // MAX_ATTESTATIONS * SLOTS_PER_EPOCH
+	CurrentEpochAttestationsLength        = 512           // MAX_ATTESTATIONS * SLOTS_PER_EPOCH
 	SlashingsLength                       = 1024          // EPOCHS_PER_SLASHINGS_VECTOR
 	SyncCommitteeLength                   = 128           // SYNC_COMMITTEE_SIZE  // TODO (cyyber) : Original value 512, new value needs to be decided
 	RootLength                            = 32            // RootLength defines the byte length of a Merkle root.

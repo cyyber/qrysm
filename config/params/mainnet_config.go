@@ -52,9 +52,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	GenesisDelay:             604800, // 1 week.
 
 	// Misc constant.
-	TargetCommitteeSize:            128,
-	MaxValidatorsPerCommittee:      2048,
-	MaxCommitteesPerSlot:           64,
+	TargetCommitteeSize:            32,
+	MaxValidatorsPerCommittee:      32,
+	MaxCommitteesPerSlot:           1,
 	MinPerEpochChurnLimit:          10, // TODO (cyyber): Re-evaluate the value
 	ChurnLimitQuotient:             1 << 16,
 	ShuffleRoundCount:              90,
@@ -126,7 +126,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Max operations per block constants.
 	MaxProposerSlashings:             16,
 	MaxAttesterSlashings:             2,
-	MaxAttestations:                  128,
+	MaxAttestations:                  4,
 	MaxDeposits:                      16,
 	MaxVoluntaryExits:                16,
 	MaxWithdrawalsPerPayload:         16,

@@ -12,7 +12,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	// Misc
 	minimalConfig.MaxCommitteesPerSlot = 4
 	minimalConfig.TargetCommitteeSize = 4
-	minimalConfig.MaxValidatorsPerCommittee = 2048
+	minimalConfig.MaxValidatorsPerCommittee = 32
 	minimalConfig.MinPerEpochChurnLimit = 2           // Changed in EIP7514
 	minimalConfig.MaxPerEpochActivationChurnLimit = 4 // New in EIP7514
 	minimalConfig.ChurnLimitQuotient = 32
@@ -57,7 +57,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	// Max operations per block
 	minimalConfig.MaxProposerSlashings = 16
 	minimalConfig.MaxAttesterSlashings = 2
-	minimalConfig.MaxAttestations = 128
+	minimalConfig.MaxAttestations = 4
 	minimalConfig.MaxDeposits = 16
 	minimalConfig.MaxVoluntaryExits = 16
 	minimalConfig.MaxWithdrawalsPerPayload = 4
