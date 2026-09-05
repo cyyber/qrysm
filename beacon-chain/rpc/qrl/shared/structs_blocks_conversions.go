@@ -9,6 +9,7 @@ import (
 	"github.com/theQRL/go-qrl/common"
 	"github.com/theQRL/go-qrl/common/hexutil"
 	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
+	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	bytesutil2 "github.com/theQRL/qrysm/encoding/bytesutil"
 	"github.com/theQRL/qrysm/math"
@@ -825,7 +826,7 @@ func AttesterSlashingsToConsensus(src []*AttesterSlashing) ([]*qrysmpb.AttesterS
 			a1Sigs[j] = a1Sig
 		}
 
-		err = VerifyMaxLength(s.Attestation1.AttestingIndices, 2048)
+		err = VerifyMaxLength(s.Attestation1.AttestingIndices, int(params.BeaconConfig().MaxValidatorsPerCommittee))
 		if err != nil {
 			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Attestation1.AttestingIndices", i))
 		}
@@ -851,7 +852,7 @@ func AttesterSlashingsToConsensus(src []*AttesterSlashing) ([]*qrysmpb.AttesterS
 			a2Sigs[j] = a2Sig
 		}
 
-		err = VerifyMaxLength(s.Attestation2.AttestingIndices, 2048)
+		err = VerifyMaxLength(s.Attestation2.AttestingIndices, int(params.BeaconConfig().MaxValidatorsPerCommittee))
 		if err != nil {
 			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Attestation2.AttestingIndices", i))
 		}
@@ -948,7 +949,7 @@ func AttsToConsensus(src []*Attestation) ([]*qrysmpb.Attestation, error) {
 	if src == nil {
 		return nil, errNilValue
 	}
-	err := VerifyMaxLength(src, 128)
+	err := VerifyMaxLength(src, int(params.BeaconConfig().MaxAttestations))
 	if err != nil {
 		return nil, err
 	}
