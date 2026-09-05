@@ -24,7 +24,7 @@ import (
 )
 
 func TestProcessSyncCommittee_PerfectParticipation(t *testing.T) {
-	beaconState, privKeys := util.DeterministicGenesisStateZond(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	beaconState, privKeys := util.DeterministicGenesisStateZond(t, testValidatorSetSize)
 	require.NoError(t, beaconState.SetSlot(1))
 	committee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -54,15 +54,15 @@ func TestProcessSyncCommittee_PerfectParticipation(t *testing.T) {
 	var reward uint64
 	beaconState, reward, err = altair.ProcessSyncAggregate(context.Background(), beaconState, syncAggregate)
 	require.NoError(t, err)
-	assert.Equal(t, uint64(20442752), reward)
+	assert.Equal(t, uint64(28908544), reward)
 
 	// Use a non-sync committee index to compare profitability.
 	syncCommittee := make(map[primitives.ValidatorIndex]bool)
 	for _, index := range indices {
 		syncCommittee[index] = true
 	}
-	nonSyncIndex := primitives.ValidatorIndex(params.BeaconConfig().MaxValidatorsPerCommittee + 1)
-	for i := primitives.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxValidatorsPerCommittee; i++ {
+	nonSyncIndex := primitives.ValidatorIndex(testValidatorSetSize + 1)
+	for i := primitives.ValidatorIndex(0); uint64(i) < testValidatorSetSize; i++ {
 		if !syncCommittee[i] {
 			nonSyncIndex = i
 			break
@@ -101,7 +101,7 @@ func TestProcessSyncCommittee_PerfectParticipation(t *testing.T) {
 }
 
 func TestProcessSyncCommittee_MixParticipation_BadSignature(t *testing.T) {
-	beaconState, privKeys := util.DeterministicGenesisStateZond(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	beaconState, privKeys := util.DeterministicGenesisStateZond(t, testValidatorSetSize)
 	require.NoError(t, beaconState.SetSlot(1))
 	committee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -135,7 +135,7 @@ func TestProcessSyncCommittee_MixParticipation_BadSignature(t *testing.T) {
 }
 
 func TestProcessSyncCommittee_MixParticipation_GoodSignature(t *testing.T) {
-	beaconState, privKeys := util.DeterministicGenesisStateZond(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	beaconState, privKeys := util.DeterministicGenesisStateZond(t, testValidatorSetSize)
 	require.NoError(t, beaconState.SetSlot(1))
 	committee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -170,7 +170,7 @@ func TestProcessSyncCommittee_MixParticipation_GoodSignature(t *testing.T) {
 
 // This is a regression test #11696
 func TestProcessSyncCommittee_DontPrecompute(t *testing.T) {
-	beaconState, _ := util.DeterministicGenesisStateZond(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	beaconState, _ := util.DeterministicGenesisStateZond(t, testValidatorSetSize)
 	require.NoError(t, beaconState.SetSlot(1))
 	committee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -194,11 +194,11 @@ func TestProcessSyncCommittee_DontPrecompute(t *testing.T) {
 	require.Equal(t, 127, len(votedKeys))
 	require.DeepEqual(t, committeeKeys[0], votedKeys[0].Marshal())
 	balances := st.Balances()
-	require.Equal(t, uint64(1117968), balances[idx])
+	require.Equal(t, uint64(1580937), balances[idx])
 }
 
 func TestProcessSyncCommittee_processSyncAggregate(t *testing.T) {
-	beaconState, _ := util.DeterministicGenesisStateZond(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	beaconState, _ := util.DeterministicGenesisStateZond(t, testValidatorSetSize)
 	require.NoError(t, beaconState.SetSlot(1))
 	committee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)
@@ -234,22 +234,22 @@ func TestProcessSyncCommittee_processSyncAggregate(t *testing.T) {
 			require.DeepEqual(t, true, votedMap[pk])
 			idx, ok := st.ValidatorIndexByPubkey(pk)
 			require.Equal(t, true, ok)
-			require.Equal(t, uint64(40000001117968), balances[idx])
+			require.Equal(t, uint64(40000001580937), balances[idx])
 		} else {
 			pk := bytesutil.ToBytes2592(committeeKeys[i])
 			require.DeepEqual(t, false, votedMap[pk])
 			idx, ok := st.ValidatorIndexByPubkey(pk)
 			require.Equal(t, true, ok)
 			if idx != proposerIndex {
-				require.Equal(t, uint64(39999998882032), balances[idx])
+				require.Equal(t, uint64(39999998419063), balances[idx])
 			}
 		}
 	}
-	require.Equal(t, uint64(40000010221376), balances[proposerIndex])
+	require.Equal(t, uint64(40000014454272), balances[proposerIndex])
 }
 
 func Test_VerifySyncCommitteeSigs(t *testing.T) {
-	beaconState, privKeys := util.DeterministicGenesisStateZond(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	beaconState, privKeys := util.DeterministicGenesisStateZond(t, testValidatorSetSize)
 	require.NoError(t, beaconState.SetSlot(1))
 	committee, err := altair.NextSyncCommittee(context.Background(), beaconState)
 	require.NoError(t, err)

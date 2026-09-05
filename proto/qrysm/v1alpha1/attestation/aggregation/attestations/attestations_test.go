@@ -53,17 +53,19 @@ func TestAggregate(t *testing.T) {
 			},
 		},
 		{
+			// Every input is bitlistLen wide and the helper sets bit i%bitlistLen,
+			// so the aggregate is a single full bitlist of that width.
 			name:   "256 attestations with single bit set",
 			inputs: aggtesting.BitlistsWithSingleBitSet(256, bitlistLen),
 			want: []bitfield.Bitlist{
-				aggtesting.BitlistWithAllBitsSet(256),
+				aggtesting.BitlistWithAllBitsSet(bitlistLen),
 			},
 		},
 		{
 			name:   "1024 attestations with single bit set",
 			inputs: aggtesting.BitlistsWithSingleBitSet(1024, bitlistLen),
 			want: []bitfield.Bitlist{
-				aggtesting.BitlistWithAllBitsSet(1024),
+				aggtesting.BitlistWithAllBitsSet(bitlistLen),
 			},
 		},
 		{

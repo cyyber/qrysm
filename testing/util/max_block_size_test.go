@@ -138,9 +138,10 @@ func TestMaxBlockSize_FullGasLimit(t *testing.T) {
 	require.Equal(t, len(encodedTxs), len(decoded.Block.Body.ExecutionPayload.Transactions))
 }
 
-// TestMaxBlockSize_FullBlock builds a worst-case beacon block with:
+// TestMaxBlockSize_FullBlock builds a large beacon block with:
 //   - 128 sync committee signatures (full SyncAggregate)
-//   - 128 attestations (MaxAttestations) with all validators attesting
+//   - MaxAttestations attestations that together cover the slot's whole
+//     committee, sized at MaxValidatorsPerCommittee (the widest the SSZ types allow)
 //   - Block proposer signature
 //   - Execution payload filled with signed go-qrl transactions consuming 20M gas
 //
@@ -158,10 +159,11 @@ func TestMaxBlockSize_FullBlock(t *testing.T) {
 		lastTxData   = (lastTxGas - txGas) / zeroGasCost // 2_000 zero bytes
 	)
 
-	// 16384 validators → 1 committee per slot with 128 validators → 128 attestations.
-	// committeesPerSlot = 16384 / SlotsPerEpoch(128) / TargetCommitteeSize(128) = 1
-	// committeeSize     = 16384 / SlotsPerEpoch(128) = 128
-	numValidators := uint64(16384)
+	// Size the validator set so each slot's single committee is exactly
+	// MaxValidatorsPerCommittee wide, the widest committee the SSZ types can encode:
+	// committeeSize = numValidators / SlotsPerEpoch = MaxValidatorsPerCommittee.
+	cfg := params.BeaconConfig()
+	numValidators := cfg.MaxValidatorsPerCommittee * uint64(cfg.SlotsPerEpoch)
 	t.Logf("Generating genesis state with %d validators...", numValidators)
 	genesis, keys := DeterministicGenesisStateZond(t, numValidators)
 
@@ -171,7 +173,7 @@ func TestMaxBlockSize_FullBlock(t *testing.T) {
 
 	// Generate a full block with max attestations and full sync aggregate.
 	conf := &BlockGenConfig{
-		NumAttestations:   params.BeaconConfig().MaxAttestations, // 128
+		NumAttestations:   params.BeaconConfig().MaxAttestations,
 		FullSyncAggregate: true,
 		NumTransactions:   0,
 	}

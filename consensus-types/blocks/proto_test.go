@@ -5,6 +5,7 @@ import (
 
 	"github.com/theQRL/go-bitfield"
 	field_params "github.com/theQRL/qrysm/config/fieldparams"
+	"github.com/theQRL/qrysm/config/params"
 	enginev1 "github.com/theQRL/qrysm/proto/engine/v1"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/runtime/version"
@@ -416,7 +417,7 @@ func getFields() fields {
 			Signature:           sig[:],
 		}
 	}
-	atts := make([]*qrysmpb.Attestation, 128)
+	atts := make([]*qrysmpb.Attestation, params.BeaconConfig().MaxAttestations)
 	for i := range atts {
 		atts[i] = &qrysmpb.Attestation{}
 		atts[i].Signatures = [][]byte{sig[:]}

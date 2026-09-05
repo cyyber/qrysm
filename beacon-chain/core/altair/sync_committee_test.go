@@ -64,7 +64,7 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 		{
 			name: "less than optimal validator count, epoch 100",
 			args: args{
-				state: getState(t, params.BeaconConfig().MaxValidatorsPerCommittee),
+				state: getState(t, testValidatorSetSize),
 				epoch: 100,
 			},
 			wantErr: false,
@@ -111,7 +111,7 @@ func TestSyncCommitteeIndices_DifferentPeriods(t *testing.T) {
 		return st
 	}
 
-	st := getState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	st := getState(t, testValidatorSetSize)
 	got1, err := altair.NextSyncCommitteeIndices(context.Background(), st)
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch))
@@ -177,7 +177,7 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 		{
 			name: "less than optimal validator count, epoch 100",
 			args: args{
-				state: getState(t, params.BeaconConfig().MaxValidatorsPerCommittee),
+				state: getState(t, testValidatorSetSize),
 				epoch: 100,
 			},
 			wantErr: false,
@@ -251,7 +251,7 @@ func TestValidateNilSyncContribution(t *testing.T) {
 
 func TestSyncSubCommitteePubkeys_CanGet(t *testing.T) {
 	helpers.ClearCache()
-	st := getState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	st := getState(t, testValidatorSetSize)
 	com, err := altair.NextSyncCommittee(context.Background(), st)
 	require.NoError(t, err)
 	sub, err := altair.SyncSubCommitteePubkeys(com, 0)
