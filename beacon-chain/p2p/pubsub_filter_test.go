@@ -75,7 +75,7 @@ func TestService_CanSubscribe(t *testing.T) {
 		},
 		{
 			name:  "att subnet topic on current fork",
-			topic: fmt.Sprintf(AttestationSubnetTopicFormat, digest, 55 /*subnet*/) + validProtocolSuffix,
+			topic: fmt.Sprintf(AttestationSubnetTopicFormat, digest, 3 /*subnet*/) + validProtocolSuffix,
 			want:  true,
 		},
 		{

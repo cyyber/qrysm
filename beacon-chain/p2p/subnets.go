@@ -29,11 +29,20 @@ var syncCommsSubnetCount = params.BeaconConfig().SyncCommitteeSubnetCount
 var attSubnetQnrKey = params.BeaconNetworkConfig().AttSubnetKey
 var syncCommsSubnetQnrKey = params.BeaconNetworkConfig().SyncCommsSubnetKey
 
+// attnetsBitvectorBits is the width of the `attnets` bitvector carried in QNRs
+// and in MetaData (bitfield.Bitvector64, 8 bytes). It is deliberately fixed at
+// 64 bits rather than derived from AttestationSubnetCount so that raising the
+// subnet count later (up to 64) does not change the wire encoding: only the
+// first AttestationSubnetCount bits are meaningful, and any higher bits in a
+// peer's record are ignored rather than treated as malformed.
+const attnetsBitvectorBits = 64
+
 // The value used with the subnet, inorder
 // to create an appropriate key to retrieve
 // the relevant lock. This is used to differentiate
 // sync subnets from attestation subnets. This is deliberately
-// chosen as more than 64(attestation subnet count).
+// chosen as more than attnetsBitvectorBits, the maximum
+// attestation subnet count.
 const syncLockerVal = 100
 
 // nodeFilter returns a function that filters nodes based on the subnet topic and subnet index.
@@ -408,10 +417,12 @@ func attSubnets(record *qnr.Record) ([]uint64, error) {
 	if err != nil {
 		return nil, err
 	}
-	// lint:ignore uintcast -- subnet count can be safely cast to int.
-	if len(bitV) != byteCount(int(attestationSubnetCount)) {
+	// The record is validated against the fixed 64-bit wire width, not
+	// AttestationSubnetCount; see attnetsBitvectorBits.
+	if len(bitV) != byteCount(attnetsBitvectorBits) {
 		return []uint64{}, errors.Errorf("invalid bitvector provided, it has a size of %d", len(bitV))
 	}
+	// Bits at or above AttestationSubnetCount are ignored.
 	var committeeIdxs []uint64
 	for i := uint64(0); i < attestationSubnetCount; i++ {
 		if bitV.BitAt(i) {

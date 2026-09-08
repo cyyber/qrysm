@@ -99,7 +99,8 @@ func TestAttestation_ComputeSubnetForAttestation(t *testing.T) {
 	valCount, err := helpers.ActiveValidatorCount(context.Background(), state, slots.ToEpoch(att.Data.Slot))
 	require.NoError(t, err)
 	sub := helpers.ComputeSubnetForAttestation(valCount, att)
-	assert.Equal(t, uint64(6), sub, "Did not get correct subnet for attestation")
+	// (2 slots since epoch start * 1 committee per slot + committee index 4) mod 4 subnets.
+	assert.Equal(t, uint64(2), sub, "Did not get correct subnet for attestation")
 }
 
 func Test_ValidateAttestationTime(t *testing.T) {

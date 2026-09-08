@@ -340,7 +340,7 @@ func Test_validateUnaggregatedAttTopic_CommitteeIndexBoundary(t *testing.T) {
 			CommitteeIndex: 1,
 		},
 	}
-	// Subnet for slot=1, count=1, committeeIndex=1: (1*1 + 1) % 64 = 2.
+	// Subnet for slot=1, count=1, committeeIndex=1: (1*1 + 1) % 4 = 2.
 	// We pick the matching topic so the count check is what rejects the
 	// attestation, not the subnet check.
 	topic := fmt.Sprintf("/consensus/%x/beacon_attestation_2", digest)

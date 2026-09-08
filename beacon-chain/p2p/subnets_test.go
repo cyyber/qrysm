@@ -219,7 +219,7 @@ func Test_AttSubnets(t *testing.T) {
 				convertedKey, err := ecdsaqrysm.ConvertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := qnode.NewLocalNode(db, convertedKey)
-				entry := qnr.WithEntry(attSubnetQnrKey, make([]byte, byteCount(int(attestationSubnetCount))+1))
+				entry := qnr.WithEntry(attSubnetQnrKey, make([]byte, byteCount(attnetsBitvectorBits)+1))
 				localNode.Set(entry)
 				return localNode.Node().Record()
 			},
@@ -237,7 +237,7 @@ func Test_AttSubnets(t *testing.T) {
 				convertedKey, err := ecdsaqrysm.ConvertFromInterfacePrivKey(priv)
 				assert.NoError(t, err)
 				localNode := qnode.NewLocalNode(db, convertedKey)
-				entry := qnr.WithEntry(attSubnetQnrKey, make([]byte, byteCount(int(attestationSubnetCount))+100))
+				entry := qnr.WithEntry(attSubnetQnrKey, make([]byte, byteCount(attnetsBitvectorBits)+100))
 				localNode.Set(entry)
 				return localNode.Node().Record()
 			},
@@ -287,9 +287,8 @@ func Test_AttSubnets(t *testing.T) {
 				localNode.Set(entry)
 				return localNode.Node().Record()
 			},
-			want: []uint64{0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20,
-				22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48,
-				50, 52, 54, 56, 58, 60, 62},
+			// Only bits below AttestationSubnetCount (4) are reported.
+			want:    []uint64{0, 2},
 			wantErr: false,
 		},
 		{
@@ -310,9 +309,29 @@ func Test_AttSubnets(t *testing.T) {
 				localNode.Set(entry)
 				return localNode.Node().Record()
 			},
-			want: []uint64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-				21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
-				50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63},
+			// Only bits below AttestationSubnetCount (4) are reported.
+			want:    []uint64{0, 1, 2, 3},
+			wantErr: false,
+		},
+		{
+			name: "bits above the subnet count are ignored",
+			record: func(t *testing.T) *qnr.Record {
+				db, err := qnode.OpenDB("")
+				assert.NoError(t, err)
+				priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
+				assert.NoError(t, err)
+				convertedKey, err := ecdsaqrysm.ConvertFromInterfacePrivKey(priv)
+				assert.NoError(t, err)
+				localNode := qnode.NewLocalNode(db, convertedKey)
+				bitV := bitfield.NewBitvector64()
+				bitV.SetBitAt(0, true)
+				bitV.SetBitAt(attestationSubnetCount, true)
+				bitV.SetBitAt(63, true)
+				entry := qnr.WithEntry(attSubnetQnrKey, bitV.Bytes())
+				localNode.Set(entry)
+				return localNode.Node().Record()
+			},
+			want:    []uint64{0},
 			wantErr: false,
 		},
 	}

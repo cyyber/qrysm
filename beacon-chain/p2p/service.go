@@ -155,6 +155,11 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	// Reinitialize them in the event we are running a custom config.
 	attestationSubnetCount = params.BeaconNetworkConfig().AttestationSubnetCount
 	syncCommsSubnetCount = params.BeaconConfig().SyncCommitteeSubnetCount
+	// The attnets bitvector in QNRs and MetaData is fixed at 64 bits, so the
+	// configured subnet count must fit in it.
+	if attestationSubnetCount > attnetsBitvectorBits {
+		return nil, errors.Errorf("attestation subnet count %d exceeds the %d-bit attnets bitvector", attestationSubnetCount, attnetsBitvectorBits)
+	}
 
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
 	if err != nil {

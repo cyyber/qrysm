@@ -153,7 +153,8 @@ func TestService_Attestation_Subnet(t *testing.T) {
 					Slot:           10,
 				},
 			},
-			topic: "/consensus/00000000/beacon_attestation_21",
+			// (10 slots since epoch start + committee 11) mod 4 subnets.
+			topic: "/consensus/00000000/beacon_attestation_1",
 		},
 		{
 			att: &qrysmpb.Attestation{
@@ -162,7 +163,8 @@ func TestService_Attestation_Subnet(t *testing.T) {
 					Slot:           529,
 				},
 			},
-			topic: "/consensus/00000000/beacon_attestation_8",
+			// (17 slots since epoch start + committee 55) mod 4 subnets.
+			topic: "/consensus/00000000/beacon_attestation_0",
 		},
 	}
 	for _, tt := range tests {

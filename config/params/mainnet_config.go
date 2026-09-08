@@ -23,7 +23,7 @@ const genesisForkEpoch = 0
 var mainnetNetworkConfig = &NetworkConfig{
 	GossipMaxSize:                   10 * 1 << 20, // 10 MiB
 	MaxChunkSize:                    10 * 1 << 20, // 10 MiB
-	AttestationSubnetCount:          64,
+	AttestationSubnetCount:          4,
 	AttestationPropagationSlotRange: 32,
 	MaxRequestBlocks:                1 << 10, // 1024
 	TtfbTimeout:                     35 * time.Second,
@@ -34,7 +34,7 @@ var mainnetNetworkConfig = &NetworkConfig{
 	ConsensusKey:                    "consensus",
 	AttSubnetKey:                    "attnets",
 	SyncCommsSubnetKey:              "syncnets",
-	MinimumPeersInSubnetSearch:      20,
+	MinimumPeersInSubnetSearch:      4, // Unused, see NetworkConfig.
 	ContractDeploymentBlock:         0,
 	BootstrapNodes: []string{
 		// TODO(now.youtrack.cloud/issue/TQ-13)

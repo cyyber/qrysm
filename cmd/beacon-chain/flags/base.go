@@ -208,7 +208,7 @@ var (
 	MinPeersPerSubnet = &cli.Uint64Flag{
 		Name:  "minimum-peers-per-subnet",
 		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
-		Value: 6,
+		Value: 4,
 	}
 	// MaxConcurrentDials defines a flag to set the maximum number of peers that a node will attempt to dial with from discovery.
 	MaxConcurrentDials = &cli.Uint64Flag{
