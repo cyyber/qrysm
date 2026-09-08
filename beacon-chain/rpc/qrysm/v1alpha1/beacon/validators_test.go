@@ -536,6 +536,7 @@ func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 			val := &qrysmpb.Validator{
 				PublicKey:           pubKey,
 				WithdrawalRecipient: make([]byte, 64),
+				RandaoCommitment:    make([]byte, fieldparams.RandaoCommitmentLength),
 				ActivationEpoch:     0,
 				ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
 			}
@@ -548,6 +549,7 @@ func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 			validators[i] = &qrysmpb.Validator{
 				PublicKey:           pubKey,
 				WithdrawalRecipient: make([]byte, 64),
+				RandaoCommitment:    make([]byte, fieldparams.RandaoCommitmentLength),
 				ActivationEpoch:     0,
 				ExitEpoch:           0,
 			}
@@ -599,6 +601,7 @@ func TestServer_ListValidators_InactiveInTheMiddle(t *testing.T) {
 			val := &qrysmpb.Validator{
 				PublicKey:           pubKey,
 				WithdrawalRecipient: make([]byte, 64),
+				RandaoCommitment:    make([]byte, fieldparams.RandaoCommitmentLength),
 				ActivationEpoch:     0,
 				ExitEpoch:           params.BeaconConfig().FarFutureEpoch,
 			}
@@ -611,6 +614,7 @@ func TestServer_ListValidators_InactiveInTheMiddle(t *testing.T) {
 			validators[i] = &qrysmpb.Validator{
 				PublicKey:           pubKey,
 				WithdrawalRecipient: make([]byte, 64),
+				RandaoCommitment:    make([]byte, fieldparams.RandaoCommitmentLength),
 				ActivationEpoch:     0,
 				ExitEpoch:           0,
 			}
@@ -840,6 +844,7 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 						Validator: &qrysmpb.Validator{
 							PublicKey:           pubKey(3),
 							WithdrawalRecipient: make([]byte, 64),
+							RandaoCommitment:    make([]byte, fieldparams.RandaoCommitmentLength),
 						},
 						Index: 3,
 					},
@@ -847,6 +852,7 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 						Validator: &qrysmpb.Validator{
 							PublicKey:           pubKey(4),
 							WithdrawalRecipient: make([]byte, 64),
+							RandaoCommitment:    make([]byte, fieldparams.RandaoCommitmentLength),
 						},
 						Index: 4,
 					},
@@ -854,6 +860,7 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 						Validator: &qrysmpb.Validator{
 							PublicKey:           pubKey(5),
 							WithdrawalRecipient: make([]byte, 64),
+							RandaoCommitment:    make([]byte, fieldparams.RandaoCommitmentLength),
 						},
 						Index: 5,
 					},
@@ -867,6 +874,7 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 						Validator: &qrysmpb.Validator{
 							PublicKey:           pubKey(50),
 							WithdrawalRecipient: make([]byte, 64),
+							RandaoCommitment:    make([]byte, fieldparams.RandaoCommitmentLength),
 						},
 						Index: 50,
 					},
@@ -874,6 +882,7 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 						Validator: &qrysmpb.Validator{
 							PublicKey:           pubKey(51),
 							WithdrawalRecipient: make([]byte, 64),
+							RandaoCommitment:    make([]byte, fieldparams.RandaoCommitmentLength),
 						},
 						Index: 51,
 					},
@@ -881,6 +890,7 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 						Validator: &qrysmpb.Validator{
 							PublicKey:           pubKey(52),
 							WithdrawalRecipient: make([]byte, 64),
+							RandaoCommitment:    make([]byte, fieldparams.RandaoCommitmentLength),
 						},
 						Index: 52,
 					},
@@ -888,6 +898,7 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 						Validator: &qrysmpb.Validator{
 							PublicKey:           pubKey(53),
 							WithdrawalRecipient: make([]byte, 64),
+							RandaoCommitment:    make([]byte, fieldparams.RandaoCommitmentLength),
 						},
 						Index: 53,
 					},
@@ -895,6 +906,7 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 						Validator: &qrysmpb.Validator{
 							PublicKey:           pubKey(54),
 							WithdrawalRecipient: make([]byte, 64),
+							RandaoCommitment:    make([]byte, fieldparams.RandaoCommitmentLength),
 						},
 						Index: 54,
 					},
@@ -908,6 +920,7 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 						Validator: &qrysmpb.Validator{
 							PublicKey:           pubKey(99),
 							WithdrawalRecipient: make([]byte, 64),
+							RandaoCommitment:    make([]byte, fieldparams.RandaoCommitmentLength),
 						},
 						Index: 99,
 					},
@@ -921,6 +934,7 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 						Validator: &qrysmpb.Validator{
 							PublicKey:           pubKey(0),
 							WithdrawalRecipient: make([]byte, 64),
+							RandaoCommitment:    make([]byte, fieldparams.RandaoCommitmentLength),
 						},
 						Index: 0,
 					},
@@ -928,6 +942,7 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 						Validator: &qrysmpb.Validator{
 							PublicKey:           pubKey(1),
 							WithdrawalRecipient: make([]byte, 64),
+							RandaoCommitment:    make([]byte, fieldparams.RandaoCommitmentLength),
 						},
 						Index: 1,
 					},
@@ -1100,6 +1115,7 @@ func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
 			ActivationEpoch:     0,
 			PublicKey:           make([]byte, field_params.MLDSA87PubkeyLength),
 			WithdrawalRecipient: make([]byte, 64),
+			RandaoCommitment:    make([]byte, fieldparams.RandaoCommitmentLength),
 			EffectiveBalance:    params.BeaconConfig().MaxEffectiveBalance,
 		}
 		balances[i] = params.BeaconConfig().MaxEffectiveBalance
@@ -1155,6 +1171,7 @@ func TestServer_GetValidator(t *testing.T) {
 			ActivationEpoch:     i,
 			PublicKey:           pubKey(uint64(i)),
 			WithdrawalRecipient: make([]byte, 64),
+			RandaoCommitment:    make([]byte, fieldparams.RandaoCommitmentLength),
 		}
 	}
 
@@ -1848,6 +1865,7 @@ func setupValidators(t testing.TB, _ db.Database, count int) ([]*qrysmpb.Validat
 		validators = append(validators, &qrysmpb.Validator{
 			PublicKey:           pubKey,
 			WithdrawalRecipient: make([]byte, 64),
+			RandaoCommitment:    make([]byte, fieldparams.RandaoCommitmentLength),
 		})
 	}
 	s, err := util.NewBeaconStateZond()
