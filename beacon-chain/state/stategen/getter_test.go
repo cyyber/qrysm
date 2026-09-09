@@ -153,6 +153,45 @@ func TestStateByRoot_HotStateUsingEpochBoundaryCacheWithReplay(t *testing.T) {
 	assert.Equal(t, targetSlot, loadedState.Slot(), "Did not correctly load state")
 }
 
+func TestStateByRoot_RejectsAncestorAfterTarget(t *testing.T) {
+	ctx := context.Background()
+	tests := []struct {
+		name        string
+		initialSync bool
+	}{
+		{name: "regular getter"},
+		{name: "initial sync getter", initialSync: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			beaconDB := testDB.SetupDB(t)
+			service := New(beaconDB, doublylinkedtree.New())
+
+			ancestorState, _ := util.DeterministicGenesisStateZond(t, 32)
+			require.NoError(t, ancestorState.SetSlot(11))
+			ancestorBlock := util.NewBeaconBlockZond()
+			ancestorRoot, err := ancestorBlock.Block.HashTreeRoot()
+			require.NoError(t, err)
+			require.NoError(t, service.epochBoundaryStateCache.put(ancestorRoot, ancestorState))
+
+			targetBlock := util.NewBeaconBlockZond()
+			targetBlock.Block.Slot = 12
+			targetBlock.Block.ParentRoot = ancestorRoot[:]
+			targetRoot, err := targetBlock.Block.HashTreeRoot()
+			require.NoError(t, err)
+			util.SaveBlock(t, ctx, beaconDB, targetBlock)
+			require.NoError(t, beaconDB.SaveStateSummary(ctx, &qrysmpb.StateSummary{Slot: 10, Root: targetRoot[:]}))
+
+			if tt.initialSync {
+				_, err = service.StateByRootInitialSync(ctx, targetRoot)
+			} else {
+				_, err = service.loadStateByRoot(ctx, targetRoot)
+			}
+			require.ErrorIs(t, err, ErrReplayTargetSlotExceeded)
+		})
+	}
+}
+
 func TestStateByRoot_HotStateCached(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
@@ -402,7 +441,7 @@ func TestLastAncestorState_CanGetUsingDB(t *testing.T) {
 	util.SaveBlock(t, ctx, service.beaconDB, b3)
 	require.NoError(t, service.beaconDB.SaveState(ctx, b1State, r1))
 
-	lastState, err := service.latestAncestor(ctx, r3)
+	lastState, _, err := service.latestAncestorAndBlockRootsForSlot(ctx, r3, 3)
 	require.NoError(t, err)
 	assert.Equal(t, b1State.Slot(), lastState.Slot(), "Did not get wanted state")
 }
@@ -442,7 +481,7 @@ func TestLastAncestorState_CanGetUsingCache(t *testing.T) {
 	util.SaveBlock(t, ctx, service.beaconDB, b3)
 	service.hotStateCache.put(r1, b1State)
 
-	lastState, err := service.latestAncestor(ctx, r3)
+	lastState, _, err := service.latestAncestorAndBlockRootsForSlot(ctx, r3, 3)
 	require.NoError(t, err)
 	assert.Equal(t, b1State.Slot(), lastState.Slot(), "Did not get wanted state")
 }

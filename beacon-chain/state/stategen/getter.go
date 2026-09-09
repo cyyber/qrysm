@@ -11,7 +11,6 @@ import (
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/blocks"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
-	"github.com/theQRL/qrysm/encoding/bytesutil"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
@@ -94,8 +93,7 @@ func (s *State) ActiveNonSlashedBalancesByRoot(ctx context.Context, blockRoot [3
 }
 
 // StateByRootInitialSync retrieves the state from the DB for the initial syncing phase.
-// It assumes initial syncing using a block list rather than a block tree hence the returned
-// state is not copied (block batches returned from initial sync are linear).
+// It assumes initial syncing applies a linear chain, so the returned state is not copied.
 // It invalidates cache for parent root because pre-state will get mutated.
 //
 // WARNING: Do not use this method for anything other than initial syncing purpose or block tree is applied.
@@ -121,26 +119,23 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 		return cachedInfo.state, nil
 	}
 
-	startState, err := s.latestAncestor(ctx, blockRoot)
+	summary, err := s.stateSummary(ctx, blockRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get state summary")
+	}
+
+	startState, blockRoots, err := s.latestAncestorAndBlockRootsForSlot(ctx, blockRoot, summary.Slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor state")
 	}
 	if startState == nil || startState.IsNil() {
 		return nil, errUnknownState
 	}
-	summary, err := s.stateSummary(ctx, blockRoot)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get state summary")
-	}
 	if startState.Slot() == summary.Slot {
 		return startState, nil
 	}
 
-	blks, err := s.loadBlocks(ctx, startState.Slot()+1, summary.Slot, bytesutil.ToBytes32(summary.Root))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not load blocks")
-	}
-	startState, err = s.replayBlocks(ctx, startState, blks, summary.Slot)
+	startState, err = s.replayBlockRoots(ctx, startState, blockRoots, summary.Slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not replay blocks")
 	}
@@ -219,7 +214,7 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 
 	// Since the requested state is not in caches or DB, start replaying using the last
 	// available ancestor state which is retrieved using input block's root.
-	startState, err := s.latestAncestor(ctx, blockRoot)
+	startState, blockRoots, err := s.latestAncestorAndBlockRootsForSlot(ctx, blockRoot, targetSlot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor state")
 	}
@@ -231,88 +226,109 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 		return startState, nil
 	}
 
-	blks, err := s.loadBlocks(ctx, startState.Slot()+1, targetSlot, bytesutil.ToBytes32(summary.Root))
-	if err != nil {
-		return nil, errors.Wrap(err, "could not load blocks for hot state using root")
-	}
-
-	replayBlockCount.Observe(float64(len(blks)))
-
-	return s.replayBlocks(ctx, startState, blks, targetSlot)
+	replayBlockCount.Observe(float64(len(blockRoots)))
+	return s.replayBlockRoots(ctx, startState, blockRoots, targetSlot)
 }
 
-// latestAncestor returns the highest available ancestor state of the input block root.
-// It recursively looks up block's parent until a corresponding state of the block root
-// is found in the caches or DB.
-//
-// There's three ways to derive block parent state:
-// 1) block parent state is the last finalized state
-// 2) block parent state is the epoch boundary state and exists in epoch boundary cache
-// 3) block parent state is in DB
-func (s *State) latestAncestor(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
+// latestAncestorAndBlockRootsForSlot returns the highest available ancestor
+// state and the canonical roots that must be replayed to targetSlot. The roots
+// are returned in ascending slot order. It intentionally retains roots, not
+// decoded blocks, while walking backwards through the lineage. State summaries
+// can represent a pre-block state, so blocks after targetSlot are excluded even
+// when blockRoot itself is at a later slot.
+func (s *State) latestAncestorAndBlockRootsForSlot(
+	ctx context.Context,
+	blockRoot [32]byte,
+	targetSlot primitives.Slot,
+) (state.BeaconState, [][32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.latestAncestor")
 	defer span.End()
 
 	if finalizedState := s.finalizedStateIfRoot(blockRoot); finalizedState != nil {
-		return finalizedState, nil
+		return finalizedState, nil, nil
 	}
 
+	currentRoot := blockRoot
 	b, err := s.beaconDB.Block(ctx, blockRoot)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+	roots := make([][32]byte, 0)
+	appendCurrentRoot := func() {
+		if b.Block().Slot() <= targetSlot {
+			roots = append(roots, currentRoot)
+		}
 	}
 
 	for {
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return nil, nil, ctx.Err()
 		}
 
 		// Is the state the genesis state.
 		parentRoot := b.Block().ParentRoot()
 		if parentRoot == params.BeaconConfig().ZeroHash {
-			s, err := s.beaconDB.GenesisState(ctx)
-			return s, errors.Wrap(err, "could not get genesis state")
+			ancestor, err := s.beaconDB.GenesisState(ctx)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "could not get genesis state")
+			}
+			appendCurrentRoot()
+			reverseBlockRoots(roots)
+			return ancestor, roots, nil
 		}
 
 		// Return an error if slot hasn't been covered by checkpoint sync.
 		ps := b.Block().Slot() - 1
 		if !s.slotAvailable(ps) {
-			return nil, errors.Wrapf(ErrNoDataForSlot, "slot %d not in db due to checkpoint sync", ps)
+			return nil, nil, errors.Wrapf(ErrNoDataForSlot, "slot %d not in db due to checkpoint sync", ps)
 		}
 		// Does the state exist in the hot state cache.
 		if s.hotStateCache.has(parentRoot) {
-			return s.hotStateCache.get(parentRoot), nil
+			appendCurrentRoot()
+			reverseBlockRoots(roots)
+			return s.hotStateCache.get(parentRoot), roots, nil
 		}
 
 		// Does the state exist in finalized info cache.
 		if finalizedState := s.finalizedStateIfRoot(parentRoot); finalizedState != nil {
-			return finalizedState, nil
+			appendCurrentRoot()
+			reverseBlockRoots(roots)
+			return finalizedState, roots, nil
 		}
 
 		// Does the state exist in epoch boundary cache.
 		cachedInfo, ok, err := s.epochBoundaryStateCache.getByBlockRoot(parentRoot)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if ok {
-			return cachedInfo.state, nil
+			appendCurrentRoot()
+			reverseBlockRoots(roots)
+			return cachedInfo.state, roots, nil
 		}
 
 		// Does the state exists in DB.
 		if s.beaconDB.HasState(ctx, parentRoot) {
-			s, err := s.beaconDB.State(ctx, parentRoot)
-			return s, errors.Wrap(err, "failed to retrieve state from db")
+			ancestor, err := s.beaconDB.State(ctx, parentRoot)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "failed to retrieve state from db")
+			}
+			appendCurrentRoot()
+			reverseBlockRoots(roots)
+			return ancestor, roots, nil
 		}
 
+		appendCurrentRoot()
+		currentRoot = parentRoot
 		b, err = s.beaconDB.Block(ctx, parentRoot)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to retrieve block from db")
+			return nil, nil, errors.Wrap(err, "failed to retrieve block from db")
 		}
 		if b == nil || b.IsNil() {
-			return nil, errUnknownBlock
+			return nil, nil, errUnknownBlock
 		}
 	}
 }

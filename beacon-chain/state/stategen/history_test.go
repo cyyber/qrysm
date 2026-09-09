@@ -7,8 +7,6 @@ import (
 	"testing"
 
 	"github.com/theQRL/qrysm/beacon-chain/state"
-	"github.com/theQRL/qrysm/consensus-types/interfaces"
-	"github.com/theQRL/qrysm/consensus-types/mock"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 
 	"github.com/pkg/errors"
@@ -39,12 +37,11 @@ func TestBestForSlot(t *testing.T) {
 	copy(betterHTR[:], []byte{42})
 
 	cases := []struct {
-		name   string
-		err    error
-		blocks []interfaces.ReadOnlySignedBeaconBlock
-		roots  [][32]byte
-		root   [32]byte
-		cc     CanonicalChecker
+		name  string
+		err   error
+		roots [][32]byte
+		root  [32]byte
+		cc    CanonicalChecker
 	}{
 		{
 			name:  "empty list",
@@ -285,8 +282,8 @@ func TestAncestorChainCache(t *testing.T) {
 	// should only contain the genesis block
 	require.Equal(t, 1, len(hist.states))
 
-	endBlock := hist.blocks[hist.slotMap[end]]
-	st, bs, err := ch.ancestorChain(ctx, endBlock)
+	endRoot := hist.slotMap[end]
+	st, bs, err := ch.ancestorChain(ctx, endRoot)
 	require.NoError(t, err)
 	require.Equal(t, 3, len(bs))
 	expectedHTR, err := hist.states[hist.slotMap[0]].HashTreeRoot(ctx)
@@ -301,7 +298,7 @@ func TestAncestorChainCache(t *testing.T) {
 			hist.slotMap[end]: hist.hiddenStates[hist.slotMap[end]],
 		},
 	}
-	st, bs, err = ch.ancestorChain(ctx, endBlock)
+	st, bs, err = ch.ancestorChain(ctx, endRoot)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(bs))
 	expectedHTR, err = hist.hiddenStates[hist.slotMap[end]].HashTreeRoot(ctx)
@@ -316,7 +313,7 @@ func TestAncestorChainCache(t *testing.T) {
 			hist.slotMap[begin]: hist.hiddenStates[hist.slotMap[begin]],
 		},
 	}
-	st, bs, err = ch.ancestorChain(ctx, endBlock)
+	st, bs, err = ch.ancestorChain(ctx, endRoot)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(bs))
 	expectedHTR, err = hist.hiddenStates[hist.slotMap[begin]].HashTreeRoot(ctx)
@@ -329,13 +326,13 @@ func TestAncestorChainCache(t *testing.T) {
 	specs[2].savedState = true
 	hist = newMockHistory(t, specs, end+1)
 	ch = &CanonicalHistory{h: hist, cc: hist, cs: hist}
-	endBlock = hist.blocks[hist.slotMap[end]]
+	endRoot = hist.slotMap[end]
 	ch.cache = &mockCachedGetter{
 		cache: map[[32]byte]state.BeaconState{
 			hist.slotMap[begin]: hist.hiddenStates[hist.slotMap[begin]],
 		},
 	}
-	st, bs, err = ch.ancestorChain(ctx, endBlock)
+	st, bs, err = ch.ancestorChain(ctx, endRoot)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(bs))
 	expectedHTR, err = hist.states[hist.slotMap[end]].HashTreeRoot(ctx)
@@ -356,21 +353,20 @@ func TestAncestorChainOK(t *testing.T) {
 	hist := newMockHistory(t, specs, end+1)
 	ch := &CanonicalHistory{h: hist, cc: hist, cs: hist}
 
-	endBlock := hist.blocks[hist.slotMap[end]]
-	st, bs, err := ch.ancestorChain(ctx, endBlock)
+	endRoot := hist.slotMap[end]
+	st, bs, err := ch.ancestorChain(ctx, endRoot)
 	require.NoError(t, err)
 
 	// middle is the most recent slot where savedState == true
 	require.Equal(t, 1, len(bs))
-	require.DeepEqual(t, endBlock, bs[0])
+	require.Equal(t, endRoot, bs[0])
 	expectedHTR, err := hist.states[hist.slotMap[middle]].HashTreeRoot(ctx)
 	require.NoError(t, err)
 	actualHTR, err := st.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, expectedHTR, actualHTR)
 
-	middleBlock := hist.blocks[hist.slotMap[middle]]
-	st, bs, err = ch.ancestorChain(ctx, middleBlock)
+	st, bs, err = ch.ancestorChain(ctx, hist.slotMap[middle])
 	require.NoError(t, err)
 	actualHTR, err = st.HashTreeRoot(ctx)
 	require.NoError(t, err)
@@ -432,15 +428,13 @@ func TestChainForSlot(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			st, blocks, err := ch.chainForSlot(ctx, c.slot)
+			st, roots, err := ch.chainForSlot(ctx, c.slot)
 			require.NoError(t, err)
 			actualStRoot, err := st.HashTreeRoot(ctx)
 			require.NoError(t, err)
 			require.Equal(t, c.stateRoot, actualStRoot)
-			require.Equal(t, len(c.blockRoots), len(blocks))
-			for i, b := range blocks {
-				root, err := b.Block().HashTreeRoot()
-				require.NoError(t, err)
+			require.Equal(t, len(c.blockRoots), len(roots))
+			for i, root := range roots {
 				require.Equal(t, c.blockRoots[i], root)
 			}
 		})
@@ -461,10 +455,8 @@ func TestAncestorChainOrdering(t *testing.T) {
 
 	hist := newMockHistory(t, specs, five+1)
 	endRoot := hist.slotMap[specs[len(specs)-1].slot]
-	endBlock := hist.blocks[endRoot]
-
 	ch := &CanonicalHistory{h: hist, cc: hist, cs: hist}
-	st, bs, err := ch.ancestorChain(ctx, endBlock)
+	st, bs, err := ch.ancestorChain(ctx, endRoot)
 	require.NoError(t, err)
 	expectedRoot, err := hist.states[hist.slotMap[one]].HashTreeRoot(ctx)
 	require.NoError(t, err)
@@ -476,7 +468,7 @@ func TestAncestorChainOrdering(t *testing.T) {
 	// that means we should get two, three, four, five (length of 4)
 	require.Equal(t, 4, len(bs))
 	for i, slot := range []primitives.Slot{two, three, four, five} {
-		require.Equal(t, slot, bs[i].Block().Slot(), fmt.Sprintf("wrong value at index %d", i))
+		require.Equal(t, hist.slotMap[slot], bs[i], fmt.Sprintf("wrong value at index %d", i))
 	}
 
 	// do the same query, but with the final state saved
@@ -484,10 +476,9 @@ func TestAncestorChainOrdering(t *testing.T) {
 	specs[5].savedState = true
 	hist = newMockHistory(t, specs, five+1)
 	endRoot = hist.slotMap[specs[len(specs)-1].slot]
-	endBlock = hist.blocks[endRoot]
 
 	ch = &CanonicalHistory{h: hist, cc: hist, cs: hist}
-	st, bs, err = ch.ancestorChain(ctx, endBlock)
+	st, bs, err = ch.ancestorChain(ctx, endRoot)
 	require.NoError(t, err)
 	expectedRoot, err = hist.states[endRoot].HashTreeRoot(ctx)
 	require.NoError(t, err)
@@ -496,15 +487,14 @@ func TestAncestorChainOrdering(t *testing.T) {
 	require.Equal(t, expectedRoot, actualRoot)
 	require.Equal(t, 0, len(bs))
 
-	// slice off the last element for an odd size list (to cover odd/even in the reverseChain func)
+	// Slice off the last element for an odd-size list to cover both paths in reverseBlockRoots.
 	specs = specs[:len(specs)-1]
 	require.Equal(t, 5, len(specs))
 	hist = newMockHistory(t, specs, five+1)
 
 	ch = &CanonicalHistory{h: hist, cc: hist, cs: hist}
 	endRoot = hist.slotMap[specs[len(specs)-1].slot]
-	endBlock = hist.blocks[endRoot]
-	st, bs, err = ch.ancestorChain(ctx, endBlock)
+	st, bs, err = ch.ancestorChain(ctx, endRoot)
 	require.NoError(t, err)
 	expectedRoot, err = hist.states[hist.slotMap[one]].HashTreeRoot(ctx)
 	require.NoError(t, err)
@@ -513,7 +503,7 @@ func TestAncestorChainOrdering(t *testing.T) {
 	require.Equal(t, expectedRoot, actualRoot)
 	require.Equal(t, 3, len(bs))
 	for i, slot := range []primitives.Slot{two, three, four} {
-		require.Equal(t, slot, bs[i].Block().Slot(), fmt.Sprintf("wrong value at index %d", i))
+		require.Equal(t, hist.slotMap[slot], bs[i], fmt.Sprintf("wrong value at index %d", i))
 	}
 }
 
@@ -530,26 +520,18 @@ func (m *mockCanonicalChecker) IsCanonical(_ context.Context, root [32]byte) (bo
 	return m.is, m.err
 }
 
-func TestReverseChain(t *testing.T) {
+func TestReverseBlockRoots(t *testing.T) {
 	// test 0,1,2,3 elements to handle: zero case; single element; even number; odd number
 	for i := range 4 {
-		t.Run(fmt.Sprintf("reverseChain with %d elements", i), func(t *testing.T) {
-			actual := mockBlocks(i, incrFwd)
-			expected := mockBlocks(i, incrBwd)
-			reverseChain(actual)
+		t.Run(fmt.Sprintf("reverseBlockRoots with %d elements", i), func(t *testing.T) {
+			actual := mockRoots(i, incrFwd)
+			expected := mockRoots(i, incrBwd)
+			reverseBlockRoots(actual)
 			if len(actual) != len(expected) {
 				t.Errorf("different list lengths")
 			}
 			for i := range actual {
-				sblockA, ok := actual[i].(*mock.SignedBeaconBlock)
-				require.Equal(t, true, ok)
-				blockA, ok := sblockA.BeaconBlock.(*mock.BeaconBlock)
-				require.Equal(t, true, ok)
-				sblockE, ok := expected[i].(*mock.SignedBeaconBlock)
-				require.Equal(t, true, ok)
-				blockE, ok := sblockE.BeaconBlock.(*mock.BeaconBlock)
-				require.Equal(t, true, ok)
-				require.Equal(t, blockA.Htr, blockE.Htr)
+				require.Equal(t, expected[i], actual[i])
 			}
 		})
 	}
@@ -569,15 +551,14 @@ func incrFwd(n int, c chan uint32) {
 	close(c)
 }
 
-func mockBlocks(n int, iter func(int, chan uint32)) []interfaces.ReadOnlySignedBeaconBlock {
+func mockRoots(n int, iter func(int, chan uint32)) [][32]byte {
 	bchan := make(chan uint32)
 	go iter(n, bchan)
-	mb := make([]interfaces.ReadOnlySignedBeaconBlock, 0)
+	roots := make([][32]byte, 0)
 	for i := range bchan {
-		var h [32]byte
-		binary.LittleEndian.PutUint32(h[:], i)
-		b := &mock.SignedBeaconBlock{BeaconBlock: &mock.BeaconBlock{BeaconBlockBody: &mock.BeaconBlockBody{}, Htr: h}}
-		mb = append(mb, b)
+		var root [32]byte
+		binary.LittleEndian.PutUint32(root[:], i)
+		roots = append(roots, root)
 	}
-	return mb
+	return roots
 }
