@@ -67,6 +67,18 @@ func TestWeakSubjectivity_ComputeWeakSubjectivityPeriod(t *testing.T) {
 	}
 }
 
+func TestWeakSubjectivity_ProposerHistoryRetentionAtValidatorCap(t *testing.T) {
+	const maxActiveValidators = 4096
+	state := genState(t, maxActiveValidators, 40)
+	wsp, err := helpers.ComputeWeakSubjectivityPeriod(context.Background(), state, params.BeaconConfig())
+	require.NoError(t, err)
+	require.Equal(t, primitives.Epoch(118), wsp)
+
+	// Proposal-history pruning deletes a record when its age equals this value,
+	// so the retained period must be strictly greater than the dynamic WSP.
+	require.Equal(t, true, params.BeaconConfig().WeakSubjectivityPeriod > wsp)
+}
+
 type mockWsCheckpoint func() (stateRoot [32]byte, blockRoot [32]byte, e primitives.Epoch)
 
 func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {

@@ -160,7 +160,18 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BeaconStateZondFieldCount: 28,
 
 	// Slasher related values.
-	WeakSubjectivityPeriod:          54000,
+	// Covers the 118-epoch dynamic WSP maximum at the 4,096-validator cap,
+	// including margin for inclusive proposer-history pruning.
+	//
+	// The cap is implicit, not enforced by consensus: it is
+	// MaxCommitteesPerSlot * MaxValidatorsPerCommittee * SlotsPerEpoch
+	// (1 * 32 * 128), the widest validator set whose committees the SSZ
+	// attestation types can encode. Changing any of those, or SafetyDecay,
+	// MinPerEpochChurnLimit or MinValidatorWithdrawabilityDelay, changes the
+	// dynamic maximum and this value must be re-derived. At 8,192 validators
+	// the dynamic WSP would be 220 epochs and 128 would be too small.
+	// TestWeakSubjectivity_ProposerHistoryRetentionAtValidatorCap pins it.
+	WeakSubjectivityPeriod:          128,
 	PruneSlasherStoragePeriod:       10,
 	SlashingProtectionPruningEpochs: 512,
 
