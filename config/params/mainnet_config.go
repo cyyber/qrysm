@@ -153,7 +153,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	EmptyMLDSA87Signature:     [fieldparams.MLDSA87SignatureLength]byte{},
 	DefaultPageSize:           250,
 	MaxPeersToSync:            15,
-	SlotsPerArchivedPoint:     1048576,
+	SlotsPerArchivedPoint:     10112, // 79 epochs, 7 days at 60s slots.
 	GenesisCountdownInterval:  time.Minute,
 	ConfigName:                MainnetName,
 	PresetBase:                "mainnet",
