@@ -12,6 +12,11 @@ the QRVM `depositroot` precompile (go-qrl `core/vm`, address `0x01`), called
 directly via `staticcall` with the five fields concatenated; go-qrl's
 precompile must hash the same five-field container.
 
+The contract enforces `MIN_DEPOSIT_AMOUNT` (`msg.value >= 2000 quanta`); keep it
+in sync with `MinDepositAmount` in `config/params/mainnet_config.go`. Consensus
+does not check the floor, so the contract is the only guard against cheap,
+never-activated validator records.
+
 `bytecode.bin` is the creation bytecode produced by `hypc` with default
 settings (no optimizer); `bytecode.go` derives the runtime code from it for
 genesis allocations. To regenerate after editing the source:

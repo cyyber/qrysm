@@ -38,7 +38,11 @@ func submitDeposits(cliCtx *cli.Context) error {
 
 	contractAddrStr := cliCtx.String(flags.DepositContractAddressFlag.Name)
 	if !cliCtx.Bool(flags.SkipDepositConfirmationFlag.Name) {
-		qrlDepositTotal := uint64(len(depositDataList)) * params.BeaconConfig().MaxEffectiveBalance / params.BeaconConfig().ShorPerQuanta
+		var shorDepositTotal uint64
+		for _, depositData := range depositDataList {
+			shorDepositTotal += depositData.Amount
+		}
+		qrlDepositTotal := shorDepositTotal / params.BeaconConfig().ShorPerQuanta
 		actionText := "This will submit the deposits stored in your deposit data directory. " +
 			fmt.Sprintf("A total of %d QRL will be sent to contract address %s for %d validator accounts. ", qrlDepositTotal, contractAddrStr, len(depositDataList)) +
 			"Do you want to proceed? (Y/N)"
@@ -94,6 +98,13 @@ func submitDeposits(cliCtx *cli.Context) error {
 	depositDelay := time.Duration(depositDelaySeconds) * time.Second
 	bar := progress.InitializeProgressBar(len(depositDataList), "Sending deposit transactions...")
 	for i, depositData := range depositDataList {
+		// The contract reverts outside [MIN_DEPOSIT_AMOUNT, MAX_EFFECTIVE_BALANCE]; skip
+		// such entries instead of paying gas for a transaction that cannot succeed.
+		if depositData.Amount < params.BeaconConfig().MinDepositAmount || depositData.Amount > params.BeaconConfig().MaxEffectiveBalance {
+			log.Errorf("Skipping deposit data index %d: amount %d shor is outside the allowed range [%d, %d] shor",
+				i, depositData.Amount, params.BeaconConfig().MinDepositAmount, params.BeaconConfig().MaxEffectiveBalance)
+			continue
+		}
 		txOpts.Value = new(big.Int).Mul(new(big.Int).SetUint64(depositData.Amount), big.NewInt(1e9)) // value in planck
 
 		if err := sendDepositTx(contract, depositData, txOpts); err != nil {

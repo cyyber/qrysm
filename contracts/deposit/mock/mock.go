@@ -17,6 +17,9 @@ import (
 var (
 	amount40000Quanta     = "40000000000000000000000"
 	amountLessThan1Quanta = "500000000000000000"
+	// MIN_DEPOSIT_AMOUNT is 2000 QRL; one shor (1e9 planck) below it, and exactly it.
+	amountBelowMinimumQuanta = "1999999999999000000000"
+	amountMinimumQuanta      = "2000000000000000000000"
 )
 
 // TestAccount represents a test account in the simulated backend,
@@ -64,6 +67,18 @@ func Amount40000Quanta() *big.Int {
 // LessThan1Quanta returns less than 1 Quanta(in planck) in terms of the big.Int type.
 func LessThan1Quanta() *big.Int {
 	amount, _ := new(big.Int).SetString(amountLessThan1Quanta, 10)
+	return amount
+}
+
+// AmountBelowMinimumQuanta returns one shor less than MIN_DEPOSIT_AMOUNT (2000 QRL).
+func AmountBelowMinimumQuanta() *big.Int {
+	amount, _ := new(big.Int).SetString(amountBelowMinimumQuanta, 10)
+	return amount
+}
+
+// AmountMinimumQuanta returns exactly MIN_DEPOSIT_AMOUNT (2000 QRL).
+func AmountMinimumQuanta() *big.Int {
+	amount, _ := new(big.Int).SetString(amountMinimumQuanta, 10)
 	return amount
 }
 

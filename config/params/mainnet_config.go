@@ -66,7 +66,11 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	HysteresisUpwardMultiplier:     5,
 
 	// Shor value constants.
-	MinDepositAmount:          1 * 1e9,
+	// 2000 QRL, 1/20 of a full stake. Ethereum uses 1/32 (1 of 32 ETH); the
+	// contract enforces this floor, consensus does not. A never-activated record
+	// costs every node ~2.7 KB of state and ~7.3 KB of deposit cache forever,
+	// so a 1-QRL floor made registry bloat ~10^4x cheaper than on Ethereum.
+	MinDepositAmount:          2000 * 1e9,
 	MaxEffectiveBalance:       40000 * 1e9,
 	EjectionBalance:           20000 * 1e9,
 	EffectiveBalanceIncrement: 1 * 1e9,

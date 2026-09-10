@@ -23,7 +23,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.TargetAggregatorsPerCommittee = 8
 
 	// Shor values
-	minimalConfig.MinDepositAmount = 1e9
+	minimalConfig.MinDepositAmount = 2000e9
 	minimalConfig.MaxEffectiveBalance = 40000e9
 	minimalConfig.EjectionBalance = 20000e9
 	minimalConfig.EffectiveBalanceIncrement = 1e9

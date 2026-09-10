@@ -117,7 +117,7 @@ contract DepositContract is IDepositContract, ERC165 {
         require(signature.length == 4627, "DepositContract: invalid signature length");
 
         // Check deposit amount
-        require(msg.value >= 1 quanta, "DepositContract: deposit value too low");
+        require(msg.value >= 2000 quanta, "DepositContract: deposit value too low");
         require(msg.value % 1 shor == 0, "DepositContract: deposit value not multiple of shor");
         uint deposit_amount = msg.value / 1 shor;
         require(deposit_amount <= type(uint64).max, "DepositContract: deposit value too high");

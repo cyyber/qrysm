@@ -118,7 +118,11 @@ func validateDeposit(depositData *DepositData, credential *Credential) bool {
 		panic(fmt.Errorf("invalid dilitihium signature length %d", len(signature)))
 	}
 
-	if depositData.Amount > params.BeaconConfig().MaxEffectiveBalance {
+	// The deposit contract reverts below MIN_DEPOSIT_AMOUNT, so refuse here and
+	// say why instead of letting the user send a transaction that fails.
+	if depositData.Amount < params.BeaconConfig().MinDepositAmount || depositData.Amount > params.BeaconConfig().MaxEffectiveBalance {
+		fmt.Printf("deposit amount %d shor for pubkey %s is outside the allowed range [%d, %d] shor\n",
+			depositData.Amount, depositData.PubKey, params.BeaconConfig().MinDepositAmount, params.BeaconConfig().MaxEffectiveBalance)
 		return false
 	}
 
