@@ -2,7 +2,6 @@ package transition
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/theQRL/qrysm/beacon-chain/core/altair"
@@ -95,21 +94,8 @@ func OptimizedGenesisBeaconStateZond(genesisTime uint64, preState state.BeaconSt
 	if executionData == nil {
 		return nil, errors.New("no executionData provided for genesis state")
 	}
-	maxActiveValidators, err := params.BeaconConfig().MaxActiveValidators()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not determine active validator capacity")
-	}
-	activeValidatorCount := uint64(0)
-	if err := preState.ReadFromEveryValidator(func(_ int, validator state.ReadOnlyValidator) error {
-		if helpers.IsActiveValidatorUsingTrie(validator, params.BeaconConfig().GenesisEpoch) {
-			activeValidatorCount++
-		}
-		return nil
-	}); err != nil {
-		return nil, errors.Wrap(err, "could not count genesis active validators")
-	}
-	if activeValidatorCount > maxActiveValidators {
-		return nil, fmt.Errorf("genesis active validator count %d exceeds committee capacity %d", activeValidatorCount, maxActiveValidators)
+	if err := helpers.ValidateGenesisActiveValidatorCount(preState); err != nil {
+		return nil, err
 	}
 
 	randaoMixes := make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector)

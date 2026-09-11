@@ -3,9 +3,11 @@ load("@qrysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "helpers",
     srcs = [
+        "active_validator_count.go",
         "attestation.go",
         "beacon_committee.go",
         "block.go",
+        "checkpoint.go",
         "genesis.go",
         "metrics.go",
         "randao.go",
@@ -49,6 +51,8 @@ go_test(
         "attestation_test.go",
         "beacon_committee_test.go",
         "block_test.go",
+        "checkpoint_test.go",
+        "genesis_test.go",
         "main_test.go",
         "randao_test.go",
         "rewards_penalties_test.go",

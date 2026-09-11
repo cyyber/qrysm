@@ -70,11 +70,27 @@ func (s *PremineGenesisConfig) prepare(ctx context.Context) (state.BeaconState, 
 		return nil, errors.Wrapf(errUnsupportedVersion, "version=%s", version.String(s.Version))
 	}
 
+	// Generated deposits are distinct, fully funded validators. Reject an
+	// oversized request before doing expensive key and RANDAO onion generation.
+	// Supplied deposit data must instead be checked after processing deposits.
+	if s.depositEntries == nil {
+		maxActiveValidators, err := params.BeaconConfig().MaxActiveValidators()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not determine active validator capacity")
+		}
+		if s.NVals > maxActiveValidators {
+			return nil, errors.Errorf("genesis active validator count %d exceeds committee capacity %d", s.NVals, maxActiveValidators)
+		}
+	}
+
 	st, err := s.empty()
 	if err != nil {
 		return nil, err
 	}
 	if err = s.processDeposits(ctx, st); err != nil {
+		return nil, err
+	}
+	if err := helpers.ValidateGenesisActiveValidatorCount(st); err != nil {
 		return nil, err
 	}
 	if err = s.populate(st); err != nil {

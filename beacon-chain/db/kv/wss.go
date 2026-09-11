@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/theQRL/qrysm/beacon-chain/core/helpers"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/encoding/ssz/detect"
@@ -24,11 +25,6 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 		}
 		return errors.Wrap(err, "genesis block root query error: checkpoint sync must verify genesis to proceed")
 	}
-	err = s.SaveBackfillBlockRoot(ctx, genesisRoot)
-	if err != nil {
-		return errors.Wrap(err, "unable to save genesis root as initial backfill starting point for checkpoint sync")
-	}
-
 	cf, err := detect.FromState(serState)
 	if err != nil {
 		return errors.Wrap(err, "could not sniff config+fork for origin state bytes")
@@ -43,6 +39,9 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize origin state w/ bytes + config+fork")
 	}
+	if err := helpers.ValidateCheckpointActiveValidatorCount(state); err != nil {
+		return errors.Wrap(err, "invalid checkpoint state")
+	}
 
 	wblk, err := cf.UnmarshalBeaconBlock(serBlock)
 	if err != nil {
@@ -50,11 +49,16 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 	}
 	blk := wblk.Block()
 
-	// save block
 	blockRoot, err := blk.HashTreeRoot()
 	if err != nil {
 		return errors.Wrap(err, "could not compute HashTreeRoot of checkpoint block")
 	}
+	// Do not persist even checkpoint metadata until the imported data passes validation.
+	if err := s.SaveBackfillBlockRoot(ctx, genesisRoot); err != nil {
+		return errors.Wrap(err, "unable to save genesis root as initial backfill starting point for checkpoint sync")
+	}
+
+	// save block
 	log.Infof("saving checkpoint block to db, w/ root=%#x", blockRoot)
 	if err := s.SaveBlock(ctx, wblk); err != nil {
 		return errors.Wrap(err, "could not save checkpoint block")

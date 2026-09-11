@@ -8,11 +8,30 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
 	"github.com/theQRL/qrysm/runtime/interop"
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
 )
+
+func TestGenerateGenesis_RejectsActiveValidatorOverflow(t *testing.T) {
+	saved := generateGenesisStateFlags
+	t.Cleanup(func() { generateGenesisStateFlags = saved })
+	capacity, err := params.BeaconConfig().MaxActiveValidators()
+	require.NoError(t, err)
+	generateGenesisStateFlags.NumValidators = capacity + 1
+	generateGenesisStateFlags.GenesisTime = 1
+	generateGenesisStateFlags.GenesisTimeDelay = 0
+	generateGenesisStateFlags.DepositJsonFile = ""
+	generateGenesisStateFlags.GqrlGenesisJsonIn = ""
+	generateGenesisStateFlags.GqrlGenesisJsonOut = ""
+	generateGenesisStateFlags.OverrideExecutionData = false
+
+	st, err := generateGenesis(context.Background())
+	require.ErrorContains(t, fmt.Sprintf("genesis active validator count %d exceeds committee capacity %d", capacity+1, capacity), err)
+	require.Equal(t, true, st == nil)
+}
 
 func Test_genesisStateFromJSONValidators(t *testing.T) {
 	numKeys := 5

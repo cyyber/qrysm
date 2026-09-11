@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/theQRL/qrysm/beacon-chain/core/blocks"
+	"github.com/theQRL/qrysm/beacon-chain/core/helpers"
 	dbIface "github.com/theQRL/qrysm/beacon-chain/db/iface"
 	"github.com/theQRL/qrysm/beacon-chain/state"
 	"github.com/theQRL/qrysm/encoding/ssz/detect"
@@ -14,6 +15,9 @@ import (
 
 // SaveGenesisData bootstraps the beaconDB with a given genesis state.
 func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconState) error {
+	if err := helpers.ValidateGenesisActiveValidatorCount(genesisState); err != nil {
+		return err
+	}
 	wsb, err := blocks.NewGenesisBlockForState(ctx, genesisState)
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
@@ -56,6 +60,11 @@ func (s *Store) LoadGenesis(ctx context.Context, sb []byte) error {
 	}
 	gs, err := vu.UnmarshalBeaconState(sb)
 	if err != nil {
+		return err
+	}
+	// Validate even when an identical genesis is already stored. Otherwise the
+	// no-op path below could accept an oversized genesis from an older release.
+	if err := helpers.ValidateGenesisActiveValidatorCount(gs); err != nil {
 		return err
 	}
 	existing, err := s.GenesisState(ctx)
