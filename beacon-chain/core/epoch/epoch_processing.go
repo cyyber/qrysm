@@ -32,6 +32,23 @@ type sortableIndices struct {
 	validators []*qrysmpb.Validator
 }
 
+// activeValidatorCountAtEpoch intentionally bypasses the committee cache. The
+// registry transition needs the count at a future activation epoch, including
+// activations already scheduled for that epoch. Caching it before this
+// transition mutates the registry would leave a stale committee assignment.
+func activeValidatorCountAtEpoch(st state.ReadOnlyBeaconState, epoch primitives.Epoch) (uint64, error) {
+	var count uint64
+	if err := st.ReadFromEveryValidator(func(_ int, validator state.ReadOnlyValidator) error {
+		if helpers.IsActiveValidatorUsingTrie(validator, epoch) {
+			count++
+		}
+		return nil
+	}); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 // Len is the number of elements in the collection.
 func (s sortableIndices) Len() int { return len(s.indices) }
 
@@ -146,6 +163,20 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 	}
 
 	activationExitEpoch := helpers.ActivationExitEpoch(currentEpoch)
+	maxActiveValidators, err := params.BeaconConfig().MaxActiveValidators()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not determine active validator capacity")
+	}
+	futureActiveValidatorCount, err := activeValidatorCountAtEpoch(state, activationExitEpoch)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not count active validators at activation epoch")
+	}
+	if futureActiveValidatorCount >= maxActiveValidators {
+		limit = 0
+	} else if remainingCapacity := maxActiveValidators - futureActiveValidatorCount; remainingCapacity < limit {
+		limit = remainingCapacity
+	}
+
 	for _, index := range activationQ[:limit] {
 		validator, err := state.ValidatorAtIndex(index)
 		if err != nil {

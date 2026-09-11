@@ -167,7 +167,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Covers the 118-epoch dynamic WSP maximum at the 4,096-validator cap,
 	// including margin for inclusive proposer-history pruning.
 	//
-	// The cap is implicit, not enforced by consensus: it is
+	// The cap is enforced by the registry transition and genesis construction:
 	// MaxCommitteesPerSlot * MaxValidatorsPerCommittee * SlotsPerEpoch
 	// (1 * 32 * 128), the widest validator set whose committees the SSZ
 	// attestation types can encode. Changing any of those, or SafetyDecay,

@@ -139,6 +139,31 @@ func TestGenesisState_HashEquality(t *testing.T) {
 	require.DeepEqual(t, root1, root2, "Tree hash of two genesis states should be equal, received %#x == %#x", root1, root2)
 }
 
+func TestOptimizedGenesisBeaconState_RejectsActiveValidatorOverflow(t *testing.T) {
+	maxActiveValidators, err := params.BeaconConfig().MaxActiveValidators()
+	require.NoError(t, err)
+
+	validators := make([]*qrysmpb.Validator, maxActiveValidators+1)
+	for i := range validators {
+		validators[i] = &qrysmpb.Validator{
+			ActivationEpoch: params.BeaconConfig().GenesisEpoch,
+			ExitEpoch:       params.BeaconConfig().FarFutureEpoch,
+		}
+	}
+	preState, err := state_native.InitializeFromProtoZond(&qrysmpb.BeaconStateZond{
+		Validators: validators,
+	})
+	require.NoError(t, err)
+
+	_, err = transition.OptimizedGenesisBeaconStateZond(
+		0,
+		preState,
+		&qrysmpb.ExecutionData{},
+		&enginev1.ExecutionPayloadZond{},
+	)
+	require.ErrorContains(t, "genesis active validator count", err)
+}
+
 func TestGenesisState_InitializesLatestBlockHashes(t *testing.T) {
 	deposits, _, err := util.DeterministicDepositsAndKeys(100)
 	require.NoError(t, err)

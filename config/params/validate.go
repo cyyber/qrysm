@@ -35,6 +35,9 @@ func (b *BeaconChainConfig) Validate() error {
 		{"WEIGHT_DENOMINATOR", b.WeightDenominator},
 		{"PROPOSER_WEIGHT", b.ProposerWeight},
 		{"SLOTS_PER_EPOCH", uint64(b.SlotsPerEpoch)},
+		{"TARGET_COMMITTEE_SIZE", b.TargetCommitteeSize},
+		{"MAX_VALIDATORS_PER_COMMITTEE", b.MaxValidatorsPerCommittee},
+		{"MAX_COMMITTEES_PER_SLOT", b.MaxCommitteesPerSlot},
 		{"EPOCHS_PER_HISTORICAL_VECTOR", uint64(b.EpochsPerHistoricalVector)},
 		{"SLOTS_PER_HISTORICAL_ROOT", uint64(b.SlotsPerHistoricalRoot)},
 		{"SYNC_COMMITTEE_SIZE", b.SyncCommitteeSize},
@@ -89,6 +92,15 @@ func (b *BeaconChainConfig) Validate() error {
 	if b.SyncCommitteeSize%b.SyncCommitteeSubnetCount != 0 {
 		return fmt.Errorf("SYNC_COMMITTEE_SIZE (%d) must be a multiple of SYNC_COMMITTEE_SUBNET_COUNT (%d)",
 			b.SyncCommitteeSize, b.SyncCommitteeSubnetCount)
+	}
+
+	maxActiveValidators, err := b.MaxActiveValidators()
+	if err != nil {
+		return err
+	}
+	if b.MinGenesisActiveValidatorCount > maxActiveValidators {
+		return fmt.Errorf("MIN_GENESIS_ACTIVE_VALIDATOR_COUNT (%d) must not exceed the active validator capacity (%d)",
+			b.MinGenesisActiveValidatorCount, maxActiveValidators)
 	}
 	return nil
 }

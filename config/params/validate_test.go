@@ -21,6 +21,12 @@ func TestValidate_BuiltInConfigs(t *testing.T) {
 	}
 }
 
+func TestMaxActiveValidators(t *testing.T) {
+	maxActiveValidators, err := params.MainnetConfig().MaxActiveValidators()
+	require.NoError(t, err)
+	require.Equal(t, uint64(4096), maxActiveValidators)
+}
+
 func TestValidate_RejectsBrokenArithmetic(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -86,6 +92,27 @@ func TestValidate_RejectsBrokenArithmetic(t *testing.T) {
 			name:   "zero sync committee subnet count",
 			mutate: func(c *params.BeaconChainConfig) { c.SyncCommitteeSubnetCount = 0 },
 			want:   "SYNC_COMMITTEE_SUBNET_COUNT must be non-zero",
+		},
+		{
+			name:   "zero max validators per committee",
+			mutate: func(c *params.BeaconChainConfig) { c.MaxValidatorsPerCommittee = 0 },
+			want:   "MAX_VALIDATORS_PER_COMMITTEE must be non-zero",
+		},
+		{
+			name: "active validator capacity overflow",
+			mutate: func(c *params.BeaconChainConfig) {
+				c.MaxCommitteesPerSlot = math.MaxUint64
+			},
+			want: "MAX_COMMITTEES_PER_SLOT * SLOTS_PER_EPOCH overflows uint64",
+		},
+		{
+			name: "genesis active validators exceed capacity",
+			mutate: func(c *params.BeaconChainConfig) {
+				maxActiveValidators, err := c.MaxActiveValidators()
+				require.NoError(t, err)
+				c.MinGenesisActiveValidatorCount = maxActiveValidators + 1
+			},
+			want: "MIN_GENESIS_ACTIVE_VALIDATOR_COUNT",
 		},
 		{
 			name: "max effective balance not a multiple of the increment",

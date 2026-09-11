@@ -12,6 +12,7 @@ go_library(
         "io_config.go",
         "loader.go",
         "mainnet_config.go",
+		"max_active_validators.go",
         "minimal_config.go",
         "network_config.go",
         "testnet_e2e_config.go",

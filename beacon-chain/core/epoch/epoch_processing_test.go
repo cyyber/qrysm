@@ -331,6 +331,66 @@ func TestProcessRegistryUpdates_ActivationCompletes(t *testing.T) {
 	}
 }
 
+func TestProcessRegistryUpdates_EnforcesActiveValidatorCapacity(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetConfig()
+	if fieldparams.Preset == "minimal" {
+		cfg = params.MinimalSpecConfig()
+	}
+	params.OverrideBeaconConfig(cfg)
+
+	helpers.ClearCache()
+	t.Cleanup(helpers.ClearCache)
+
+	maxActiveValidators, err := cfg.MaxActiveValidators()
+	require.NoError(t, err)
+
+	const currentEpoch = primitives.Epoch(5)
+	st := buildState(t, cfg.SlotsPerEpoch.Mul(uint64(currentEpoch)), maxActiveValidators-1)
+	require.NoError(t, st.SetFinalizedCheckpoint(&qrysmpb.Checkpoint{Epoch: currentEpoch, Root: make([]byte, fieldparams.RootLength)}))
+
+	validators := st.Validators()
+	balances := st.Balances()
+	for range 2 {
+		validators = append(validators, &qrysmpb.Validator{
+			ActivationEligibilityEpoch: 0,
+			ActivationEpoch:            cfg.FarFutureEpoch,
+			ExitEpoch:                  cfg.FarFutureEpoch,
+			WithdrawableEpoch:          cfg.FarFutureEpoch,
+			EffectiveBalance:           cfg.MaxEffectiveBalance,
+		})
+		balances = append(balances, cfg.MaxEffectiveBalance)
+	}
+	require.NoError(t, st.SetValidators(validators))
+	require.NoError(t, st.SetBalances(balances))
+
+	firstActivationEpoch := helpers.ActivationExitEpoch(currentEpoch)
+	st, err = epoch.ProcessRegistryUpdates(context.Background(), st)
+	require.NoError(t, err)
+	validators = st.Validators()
+	require.Equal(t, firstActivationEpoch, validators[maxActiveValidators-1].ActivationEpoch)
+	require.Equal(t, cfg.FarFutureEpoch, validators[maxActiveValidators].ActivationEpoch)
+
+	// The first queued validator is now active at the next transition's target
+	// epoch. The second must remain queued, rather than being scheduled past
+	// the committee/SSZ capacity.
+	nextEpoch := currentEpoch + 1
+	require.NoError(t, st.SetSlot(cfg.SlotsPerEpoch.Mul(uint64(nextEpoch))))
+	st, err = epoch.ProcessRegistryUpdates(context.Background(), st)
+	require.NoError(t, err)
+	validators = st.Validators()
+	require.Equal(t, firstActivationEpoch, validators[maxActiveValidators-1].ActivationEpoch)
+	require.Equal(t, cfg.FarFutureEpoch, validators[maxActiveValidators].ActivationEpoch)
+
+	activeAtNextActivationEpoch := uint64(0)
+	for _, validator := range validators {
+		if helpers.IsActiveValidator(validator, helpers.ActivationExitEpoch(nextEpoch)) {
+			activeAtNextActivationEpoch++
+		}
+	}
+	require.Equal(t, maxActiveValidators, activeAtNextActivationEpoch)
+}
+
 func TestProcessRegistryUpdates_ValidatorsEjected(t *testing.T) {
 	base := &qrysmpb.BeaconStateZond{
 		Slot: 0,
