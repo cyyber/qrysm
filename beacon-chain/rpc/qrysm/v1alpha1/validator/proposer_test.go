@@ -1993,13 +1993,13 @@ func TestProposer_FilterAttestation(t *testing.T) {
 					var zeroSig [field_params.MLDSA87SignatureLength]byte
 					atts[i].Signatures = [][]byte{zeroSig[:]}
 
-					for i, indice := range attestingIndices {
+					for j, indice := range attestingIndices {
 						hashTreeRoot, err := signing.ComputeSigningRoot(atts[i].Data, domain)
 						require.NoError(t, err)
 						lsig1, err := privKeys[indice].Sign(hashTreeRoot[:])
 						require.NoError(t, err)
 						sig := lsig1.Marshal()
-						sigs[i] = sig
+						sigs[j] = sig
 					}
 					atts[i].Signatures = sigs
 				}
