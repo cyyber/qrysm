@@ -222,6 +222,12 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 		if err := s.verifyBlkFinalizedSlot(blk.Block()); err != nil {
 			return err
 		}
+		if err := s.checkInvalidBlock(blk.Root(), blk.Block().ParentRoot()); err != nil {
+			return err
+		}
+	}
+	if err := s.retryInvalidBlockCleanup(ctx); err != nil {
+		log.WithError(err).Error("Could not finish invalid block cleanup")
 	}
 	b := blks[0].Block()
 

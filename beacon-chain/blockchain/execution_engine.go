@@ -279,21 +279,25 @@ func (s *Service) notifyNewPayload(ctx context.Context,
 func (s *Service) pruneInvalidBlock(ctx context.Context, root, parentRoot, lvh [32]byte) error {
 	newPayloadInvalidNodeCount.Inc()
 	invalidRoots, err := s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, root, parentRoot, lvh)
+	invalid := invalidBlock{
+		error:                ErrInvalidPayload,
+		root:                 root,
+		lastValidHash:        lvh,
+		invalidAncestorRoots: invalidRoots,
+	}
 	if err != nil {
-		return err
+		invalid.error = fmt.Errorf("%w: could not invalidate block: %w", ErrInvalidPayload, err)
+		return invalid
 	}
 	if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
-		return err
+		invalid.error = fmt.Errorf("%w: could not remove invalid block and state: %w", ErrInvalidPayload, err)
+		return invalid
 	}
 	log.WithFields(logrus.Fields{
 		"blockRoot":            fmt.Sprintf("%#x", root),
 		"invalidChildrenCount": len(invalidRoots),
 	}).Warn("Pruned invalid blocks")
-	return invalidBlock{
-		invalidAncestorRoots: invalidRoots,
-		error:                ErrInvalidPayload,
-		lastValidHash:        lvh,
-	}
+	return invalid
 }
 
 // handleInvalidBatchExecutionError follows pending blocks back to the latest
@@ -340,7 +344,7 @@ func (s *Service) handleInvalidBatchExecutionError(ctx context.Context, payloadE
 		invalid.invalidAncestorRoots = append(invalid.invalidAncestorRoots, b.Root())
 	}
 	if err := s.removeInvalidBlockAndState(ctx, invalid.invalidAncestorRoots); err != nil {
-		invalid.error = fmt.Errorf("%w: could not remove invalid batch blocks: %v", payloadErr, err)
+		invalid.error = fmt.Errorf("%w: could not remove invalid batch blocks: %w", payloadErr, err)
 		return invalid
 	}
 	log.WithFields(logrus.Fields{
@@ -433,29 +437,18 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 // removeInvalidBlockAndState removes the invalid block, blob and its corresponding state from the cache and DB.
 // The caller must hold the forkchoice write lock.
 func (s *Service) removeInvalidBlockAndState(ctx context.Context, blkRoots [][32]byte) error {
-	// Forkchoice has already removed these nodes. Preserve the old head's
-	// ancestry separately before its blocks also disappear from the cache/DB.
-	recoveryErr := s.preserveInvalidatedHead(ctx, blkRoots)
-	// Evict all invalid blocks before any fallible cleanup. Otherwise a later
-	// initial-sync flush could write the deleted blocks back to the database.
+	// Quarantine every root before fallible recovery or cleanup. Retain cached
+	// copies privately so a failed ancestry read can retry after cache eviction.
 	s.initSyncBlocksLock.Lock()
+	if s.pendingInvalidBlocks == nil {
+		s.pendingInvalidBlocks = make(map[[32]byte]interfaces.ReadOnlySignedBeaconBlock)
+	}
 	for _, root := range blkRoots {
+		if _, pending := s.pendingInvalidBlocks[root]; !pending {
+			s.pendingInvalidBlocks[root] = s.initSyncBlocks[root]
+		}
 		delete(s.initSyncBlocks, root)
 	}
 	s.initSyncBlocksLock.Unlock()
-	if recoveryErr != nil {
-		return errors.Wrap(recoveryErr, "could not preserve invalidated head ancestry")
-	}
-	for _, root := range blkRoots {
-		if err := s.cfg.StateGen.DeleteStateFromCaches(ctx, root); err != nil {
-			return err
-		}
-		// Delete block also deletes the state as well.
-		if err := s.cfg.BeaconDB.DeleteBlock(ctx, root); err != nil {
-			// TODO(10487): If a caller requests to delete a root that's justified and finalized. We should gracefully shutdown.
-			// This is an irreparable condition, it would me a justified or finalized block has become invalid.
-			return err
-		}
-	}
-	return nil
+	return s.retryInvalidBlockCleanup(ctx)
 }

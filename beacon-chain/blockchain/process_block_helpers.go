@@ -57,7 +57,10 @@ func (s *Service) getBlockPreState(ctx context.Context, b interfaces.ReadOnlyBea
 	}
 
 	// Verify block is later than the finalized epoch slot.
-	if err := s.verifyBlkFinalizedSlot(b); err != nil {
+	s.cfg.ForkChoiceStore.RLock()
+	err = s.verifyBlkFinalizedSlot(b)
+	s.cfg.ForkChoiceStore.RUnlock()
+	if err != nil {
 		return nil, err
 	}
 
@@ -70,6 +73,9 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.ReadOnlyBe
 	defer span.End()
 
 	parentRoot := b.ParentRoot()
+	if err := s.checkInvalidBlock(parentRoot); err != nil {
+		return err
+	}
 	// Loosen the check to HasBlock because state summary gets saved in batches
 	// during initial syncing. There's no risk given a state summary object is just a
 	// subset of the block object.
@@ -92,6 +98,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.ReadOnlyBe
 
 // verifyBlkFinalizedSlot validates input block is not less than or equal
 // to current finalized slot.
+// The caller must hold the forkchoice lock.
 func (s *Service) verifyBlkFinalizedSlot(b interfaces.ReadOnlyBeaconBlock) error {
 	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	finalizedSlot, err := slots.EpochStart(finalized.Epoch)

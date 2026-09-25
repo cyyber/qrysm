@@ -12,6 +12,10 @@ import (
 // the cache keeps in memory (2 epochs worth of blocks) and saves them to DB when it hits this limit.
 func (s *Service) saveInitSyncBlock(ctx context.Context, r [32]byte, b interfaces.ReadOnlySignedBeaconBlock) error {
 	s.initSyncBlocksLock.Lock()
+	if _, pending := s.pendingInvalidBlocks[r]; pending {
+		s.initSyncBlocksLock.Unlock()
+		return invalidBlock{error: ErrInvalidPayload, root: r}
+	}
 	s.initSyncBlocks[r] = b
 	numBlocks := len(s.initSyncBlocks)
 	s.initSyncBlocksLock.Unlock()
@@ -35,7 +39,12 @@ func (s *Service) hasInitSyncBlock(r [32]byte) bool {
 
 // Returns true if a block for root `r` exists in the initial sync blocks cache or the DB.
 func (s *Service) hasBlockInInitSyncOrDB(ctx context.Context, r [32]byte) bool {
-	if s.hasInitSyncBlock(r) {
+	s.initSyncBlocksLock.RLock()
+	defer s.initSyncBlocksLock.RUnlock()
+	if _, pending := s.pendingInvalidBlocks[r]; pending {
+		return false
+	}
+	if _, ok := s.initSyncBlocks[r]; ok {
 		return true
 	}
 	return s.cfg.BeaconDB.HasBlock(ctx, r)
@@ -45,10 +54,13 @@ func (s *Service) hasBlockInInitSyncOrDB(ctx context.Context, r [32]byte) bool {
 // Error is returned if the block is not found in either cache or DB.
 func (s *Service) getBlock(ctx context.Context, r [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	s.initSyncBlocksLock.RLock()
+	defer s.initSyncBlocksLock.RUnlock()
+	if _, pending := s.pendingInvalidBlocks[r]; pending {
+		return nil, invalidBlock{error: ErrInvalidPayload, root: r}
+	}
 
 	// Check cache first because it's faster.
 	b, ok := s.initSyncBlocks[r]
-	s.initSyncBlocksLock.RUnlock()
 	var err error
 	if !ok {
 		b, err = s.cfg.BeaconDB.Block(ctx, r)

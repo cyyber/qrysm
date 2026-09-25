@@ -40,7 +40,7 @@ func (s *Service) preserveInvalidatedHead(ctx context.Context, invalidRoots [][3
 				b = headBlock
 			} else {
 				var err error
-				b, err = s.getBlock(ctx, root)
+				b, err = s.invalidBlockForRecovery(ctx, root)
 				if err != nil {
 					return err
 				}

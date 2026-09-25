@@ -54,6 +54,9 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
 	receivedTime := time.Now()
+	if err := s.checkInvalidBlock(blockRoot); err != nil {
+		return err
+	}
 	// Skip blocks already imported into forkchoice. Without this check a
 	// gossip rebroadcast of an already-processed block would re-run prestate
 	// fetch, block copy, and full state-transition validation.
@@ -115,6 +118,9 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	// The rest of block processing takes a lock on forkchoice.
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
+	if err := s.checkInvalidBlock(blockRoot, blockCopy.Block().ParentRoot()); err != nil {
+		return err
+	}
 	// Finality may have advanced while the state transition and the payload
 	// verification ran without the lock. Re-check before inserting the block.
 	if err := s.verifyBlkFinalizedSlot(blockCopy.Block()); err != nil {

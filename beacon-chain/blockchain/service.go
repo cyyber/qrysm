@@ -57,6 +57,10 @@ type Service struct {
 	// Protected by the forkchoice lock; retains only the removed head ancestry
 	// until its replacement is published and orphaned operations are recovered.
 	invalidatedHeadBlocks map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
+	// Protected by initSyncBlocksLock. Quarantines invalid roots until their
+	// storage cleanup succeeds; values retain any evicted initial-sync blocks
+	// needed to retry recovery of the published head.
+	pendingInvalidBlocks map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
 }
 
 // config options for the service.
