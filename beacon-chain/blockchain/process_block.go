@@ -368,15 +368,17 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 	if err := s.cfg.StateGen.SaveState(ctx, lastBR, preState); err != nil {
 		return err
 	}
+	// Record validated slashings before InsertChain can retain a prefix on
+	// failure. Duplicate imports skip those blocks and cannot repair omissions.
+	for _, b := range blks {
+		s.InsertSlashingsToForkChoiceStore(ctx, b.Block().Body().AttesterSlashings())
+	}
 	// Insert all nodes to forkchoice
 	if err := s.cfg.ForkChoiceStore.InsertChain(ctx, pendingNodes); err != nil {
 		return errors.Wrap(err, "could not insert batch to forkchoice")
 	}
 	if err := s.applyBlockAttestations(ctx, pendingAttestations); err != nil {
 		return errors.Wrap(err, "could not handle batch attestations")
-	}
-	for _, b := range blks {
-		s.InsertSlashingsToForkChoiceStore(ctx, b.Block().Body().AttesterSlashings())
 	}
 	// A VALID payload validates its ancestors, even if later payloads are
 	// SYNCING. Finalization during insertion may already have pruned this prefix.

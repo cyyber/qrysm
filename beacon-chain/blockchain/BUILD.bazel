@@ -111,6 +111,7 @@ go_test(
     srcs = [
         "attestation_retry_test.go",
         "batch_empty_epoch_test.go",
+        "batch_slashings_test.go",
         "blockchain_test.go",
         "chain_info_test.go",
         "checkpoint_lifecycle_test.go",
