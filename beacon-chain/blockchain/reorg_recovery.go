@@ -85,32 +85,39 @@ func (s *Service) commonAncestorForReorg(ctx context.Context, oldRoot, newRoot [
 // commonAncestorFromBlocks finds the fork point of two branches by walking
 // their stored blocks towards genesis, one step at a time from whichever side
 // is higher. It returns ErrUnknownCommonAncestor when a block is missing or
-// the branches never meet.
+// the branches never meet. Read failures are returned so recovery can retry.
 func (s *Service) commonAncestorFromBlocks(ctx context.Context, oldRoot, newRoot [32]byte) ([32]byte, primitives.Slot, error) {
-	oldBlock, err := s.getBlock(ctx, oldRoot)
-	if err != nil {
-		return [32]byte{}, 0, errors.Wrap(forkchoice.ErrUnknownCommonAncestor, err.Error())
+	readBlock := func(root [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
+		b, err := s.getBlock(ctx, root)
+		if errors.Is(err, errBlockNotFoundInCacheOrDB) {
+			return nil, forkchoice.ErrUnknownCommonAncestor
+		}
+		return b, err
 	}
-	newBlock, err := s.getBlock(ctx, newRoot)
+	oldBlock, err := readBlock(oldRoot)
 	if err != nil {
-		return [32]byte{}, 0, errors.Wrap(forkchoice.ErrUnknownCommonAncestor, err.Error())
+		return [32]byte{}, 0, err
+	}
+	newBlock, err := readBlock(newRoot)
+	if err != nil {
+		return [32]byte{}, 0, err
 	}
 	for oldRoot != newRoot {
 		if err := ctx.Err(); err != nil {
 			return [32]byte{}, 0, err
 		}
-		if oldBlock.Block().Slot() == 0 || newBlock.Block().Slot() == 0 {
+		if oldBlock.Block().Slot() == 0 && newBlock.Block().Slot() == 0 {
 			return [32]byte{}, 0, forkchoice.ErrUnknownCommonAncestor
 		}
 		if oldBlock.Block().Slot() >= newBlock.Block().Slot() {
 			oldRoot = oldBlock.Block().ParentRoot()
-			if oldBlock, err = s.getBlock(ctx, oldRoot); err != nil {
-				return [32]byte{}, 0, errors.Wrap(forkchoice.ErrUnknownCommonAncestor, err.Error())
+			if oldBlock, err = readBlock(oldRoot); err != nil {
+				return [32]byte{}, 0, err
 			}
 		} else {
 			newRoot = newBlock.Block().ParentRoot()
-			if newBlock, err = s.getBlock(ctx, newRoot); err != nil {
-				return [32]byte{}, 0, errors.Wrap(forkchoice.ErrUnknownCommonAncestor, err.Error())
+			if newBlock, err = readBlock(newRoot); err != nil {
+				return [32]byte{}, 0, err
 			}
 		}
 	}

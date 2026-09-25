@@ -104,6 +104,9 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	if isReorg {
 		commonRoot, forkSlot, err = s.commonAncestorForReorg(ctx, oldHeadRoot, newHeadRoot)
 		if err != nil {
+			if !errors.Is(err, forkchoice.ErrUnknownCommonAncestor) {
+				return errors.Wrap(err, "could not find common ancestor root")
+			}
 			log.WithError(err).Error("Could not find common ancestor root")
 			commonRoot = params.BeaconConfig().ZeroHash
 		} else {

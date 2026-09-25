@@ -274,13 +274,13 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 		if slots.IsEpochStart(preState.Slot()) {
 			boundaries[b.Root()] = preState.Copy()
 		}
-		// When the next block skips the first slot of an epoch, this block is
-		// that epoch's checkpoint root. Keep its state so fork choice can weigh
-		// the justified checkpoint without replaying blocks that are still only
-		// in the initial-sync cache.
+		// Every epoch start before the next block uses this checkpoint root,
+		// even if the next block starts a later epoch after an empty one. Keep
+		// its state so forkchoice can weigh the checkpoint while the batch's
+		// blocks are still only in the initial-sync cache.
 		if i+1 < len(blks) {
 			next := blks[i+1].Block().Slot()
-			if slots.ToEpoch(next) > slots.ToEpoch(b.Block().Slot()) && !slots.IsEpochStart(next) {
+			if slots.ToEpoch(next-1) > slots.ToEpoch(b.Block().Slot()) {
 				boundaries[b.Root()] = preState.Copy()
 			}
 		}
