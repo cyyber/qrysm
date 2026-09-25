@@ -153,7 +153,18 @@ func (s *Service) setupForkchoiceTree(st state.BeaconState) error {
 
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
-	return s.cfg.ForkChoiceStore.InsertChain(s.ctx, chain)
+	return s.restoreForkchoiceChain(s.ctx, chain)
+}
+
+// restoreForkchoiceChain restores previously validated database blocks and their
+// attester-slashing exclusions. The caller must hold the forkchoice write lock.
+func (s *Service) restoreForkchoiceChain(ctx context.Context, chain []*forkchoicetypes.BlockAndCheckpoints) error {
+	// InsertChain can retain a prefix on failure. Restore exclusions first so
+	// retries that skip those now-known blocks cannot lose their slashings.
+	for _, b := range chain {
+		s.InsertSlashingsToForkChoiceStore(ctx, b.Block.Block().Body().AttesterSlashings())
+	}
+	return s.cfg.ForkChoiceStore.InsertChain(ctx, chain)
 }
 
 func (s *Service) setupForkchoiceFinalizedHead() error {

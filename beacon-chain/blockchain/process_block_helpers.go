@@ -267,7 +267,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 		return ErrNotDescendantOfFinalized
 	}
 	slices.Reverse(pendingNodes)
-	return s.cfg.ForkChoiceStore.InsertChain(ctx, pendingNodes)
+	return s.restoreForkchoiceChain(ctx, pendingNodes)
 }
 
 // inserts finalized deposits into our finalized deposit trie, needs to be
