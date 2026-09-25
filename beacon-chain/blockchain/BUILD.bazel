@@ -110,6 +110,7 @@ go_test(
     shard_count = 4,
     srcs = [
         "attestation_retry_test.go",
+        "batch_attestations_test.go",
         "batch_empty_epoch_test.go",
         "batch_slashings_test.go",
         "blockchain_test.go",

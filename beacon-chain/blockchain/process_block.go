@@ -375,7 +375,19 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 	}
 	// Insert all nodes to forkchoice
 	if err := s.cfg.ForkChoiceStore.InsertChain(ctx, pendingNodes); err != nil {
-		return errors.Wrap(err, "could not insert batch to forkchoice")
+		insertErr := errors.Wrap(err, "could not insert batch to forkchoice")
+		// A completed prefix survives insertion errors and duplicate imports
+		// skip its blocks. Account for its votes even if insertion was cancelled.
+		recoveryCtx := context.WithoutCancel(ctx)
+		for _, b := range blks {
+			if !s.cfg.ForkChoiceStore.HasNode(b.Root()) {
+				continue
+			}
+			if err := s.handleBlockAttestations(recoveryCtx, b.Block()); err != nil {
+				insertErr = fmt.Errorf("%w: could not handle retained block attestations: %w", insertErr, err)
+			}
+		}
+		return insertErr
 	}
 	if err := s.applyBlockAttestations(ctx, pendingAttestations); err != nil {
 		return errors.Wrap(err, "could not handle batch attestations")
