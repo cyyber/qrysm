@@ -126,7 +126,7 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 	default:
 		return nil, false, errors.New("unknown beacon state version")
 	}
-	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, attr)
+	payloadID, err := vs.forkchoiceUpdateForPayload(ctx, f, attr)
 	if err != nil {
 		return nil, false, errors.Wrap(err, "could not prepare payload")
 	}
@@ -139,6 +139,16 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 	}
 	warnIfFeeRecipientDiffers(payload, feeRecipient)
 	return payload, overrideBuilder, nil
+}
+
+// forkchoiceUpdateForPayload can move execution to a proposal's parent after a
+// concurrent reorg. Invalidate both before and after the call so the chain
+// service retries its selected head even if it acknowledged an FCU in between.
+func (vs *Server) forkchoiceUpdateForPayload(ctx context.Context, f *enginev1.ForkchoiceState, attr payloadattribute.Attributer) (*enginev1.PayloadIDBytes, error) {
+	vs.ForkchoiceFetcher.InvalidateForkchoiceUpdate()
+	defer vs.ForkchoiceFetcher.InvalidateForkchoiceUpdate()
+	id, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, attr)
+	return id, err
 }
 
 // warnIfFeeRecipientDiffers logs a warning if the fee recipient in the included payload does not

@@ -505,6 +505,9 @@ func (s *ChainService) IsOptimisticForRoot(_ context.Context, root [32]byte) (bo
 	return s.OptimisticRoots[root], nil
 }
 
+// InvalidateForkchoiceUpdate mocks the same method in the chain service.
+func (*ChainService) InvalidateForkchoiceUpdate() {}
+
 // UpdateHead mocks the same method in the chain service.
 func (s *ChainService) UpdateHead(ctx context.Context, slot primitives.Slot) {
 	ojc := &qrysmpb.Checkpoint{}

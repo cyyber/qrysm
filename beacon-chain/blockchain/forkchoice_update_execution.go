@@ -55,6 +55,17 @@ type executionForkchoice struct {
 	finalizedHash [32]byte
 }
 
+// InvalidateForkchoiceUpdate forgets the engine's last acknowledged forkchoice.
+// External FCU callers must call this before and after their RPC, including on
+// error: an in-flight request can change execution after a chain-service FCU has
+// completed. The next head update must then reconcile the selected head again.
+// The caller must not hold the forkchoice lock.
+func (s *Service) InvalidateForkchoiceUpdate() {
+	s.cfg.ForkChoiceStore.Lock()
+	defer s.cfg.ForkChoiceStore.Unlock()
+	s.lastForkchoiceUpdate = nil
+}
+
 // executionForkchoiceState snapshots the execution update under the caller's
 // forkchoice lock. A beacon head root also identifies its execution payload.
 func (s *Service) executionForkchoiceState(headRoot [32]byte) executionForkchoice {

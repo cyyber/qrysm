@@ -11,6 +11,7 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/execution"
 	mockExecution "github.com/theQRL/qrysm/beacon-chain/execution/testing"
 	"github.com/theQRL/qrysm/beacon-chain/forkchoice"
+	forktypes "github.com/theQRL/qrysm/beacon-chain/forkchoice/types"
 	"github.com/theQRL/qrysm/config/features"
 	payloadattribute "github.com/theQRL/qrysm/consensus-types/payload-attribute"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
@@ -208,4 +209,72 @@ func TestService_ExecutionSafeHashUpdate(t *testing.T) {
 		synctest.Wait()
 		require.Equal(t, 3, len(engine.checkpoints))
 	})
+}
+
+func TestService_ExecutionUpdateAfterProposal(t *testing.T) {
+	for _, reorgDuringRPC := range []bool{false, true} {
+		for _, rpcFailure := range []bool{false, true} {
+			name := map[bool]string{false: "proposal before reorg", true: "proposal finishes after reorg"}[reorgDuringRPC]
+			name += map[bool]string{false: "/VALID", true: "/response lost"}[rpcFailure]
+			t.Run(name, func(t *testing.T) {
+				f := newBatchExecutionFixture(t, 2)
+				f.engine.ErrNewPayload, f.engine.ErrForkchoiceUpdated = nil, nil
+				replacement, _ := emptyBranchBlock(t, f, f.states[1].Copy(), 3, 'r')
+				oldPayload, err := f.blks[1].Block().Body().Execution()
+				require.NoError(t, err)
+				newPayload, err := replacement.Block().Body().Execution()
+				require.NoError(t, err)
+				require.NotEqual(t, bytesutil.ToBytes32(oldPayload.BlockHash()), bytesutil.ToBytes32(newPayload.BlockHash()))
+				engine := &checkpointRecordingEngine{EngineClient: f.engine}
+				f.s.cfg.ExecutionEngineCaller = engine
+				synctest.Test(t, func(t *testing.T) {
+					t.Cleanup(synctest.Wait)
+					driftGenesisTime(f.s, 3, 0)
+					f.s.cfg.ForkChoiceStore.Lock()
+					err := f.s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(f.ctx, &forktypes.Checkpoint{Root: f.s.originBlockRoot})
+					f.s.cfg.ForkChoiceStore.Unlock()
+					require.NoError(t, err)
+					f.s.UpdateHead(f.ctx, 3)
+					require.Equal(t, 1, len(engine.checkpoints))
+					f.s.InvalidateForkchoiceUpdate()
+					reorg := func() {
+						require.NoError(t, f.s.ReceiveBlock(f.ctx, replacement, replacement.Root()))
+						require.Equal(t, replacement.Root(), f.s.CachedHeadRoot())
+					}
+					if reorgDuringRPC {
+						reorg()
+					}
+					if rpcFailure {
+						f.engine.ErrForkchoiceUpdated = errors.New("proposal FCU response lost")
+					}
+					// The proposer uses the same engine independently of head
+					// updates. Its stale parent can be accepted after the reorg.
+					_, _, err = engine.ForkchoiceUpdated(f.ctx, &enginev1.ForkchoiceState{HeadBlockHash: oldPayload.BlockHash()}, nil)
+					if rpcFailure {
+						require.ErrorIs(t, err, f.engine.ErrForkchoiceUpdated)
+					} else {
+						require.NoError(t, err)
+					}
+					f.s.InvalidateForkchoiceUpdate()
+					f.engine.ErrForkchoiceUpdated = nil
+					if !reorgDuringRPC {
+						reorg()
+					}
+					before := len(engine.checkpoints)
+					f.s.UpdateHead(f.ctx, 3)
+					wantCalls := before
+					if reorgDuringRPC {
+						wantCalls++
+					}
+					require.Equal(t, wantCalls, len(engine.checkpoints), "reconcile after a late proposal response")
+					require.Equal(t, bytesutil.ToBytes32(newPayload.BlockHash()), engine.checkpoints[wantCalls-1].head)
+					published, err := f.s.HeadRoot(f.ctx)
+					require.NoError(t, err)
+					require.Equal(t, replacement.Root(), bytesutil.ToBytes32(published))
+					f.s.UpdateHead(f.ctx, 3)
+					require.Equal(t, wantCalls, len(engine.checkpoints), "deduplicate again after successful reconciliation")
+				})
+			})
+		}
+	}
 }

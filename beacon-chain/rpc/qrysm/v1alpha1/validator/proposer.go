@@ -193,9 +193,11 @@ func (vs *Server) getHeadNoReorg(ctx context.Context, slot primitives.Slot, pare
 	if head != nil {
 		return head, nil
 	}
-	head, err := vs.HeadFetcher.HeadState(ctx)
+	// The published head can change after parent selection. Load the state
+	// for that selected root, just as the intentional reorg path does.
+	head, err := vs.StateGen.StateByRoot(ctx, parentRoot)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get parent state: %v", err)
 	}
 	return head, nil
 }
