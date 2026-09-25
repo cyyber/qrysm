@@ -25,11 +25,13 @@ func (c *AttCaches) SaveBlockAttestation(att *qrysmpb.Attestation) error {
 		atts = make([]*qrysmpb.Attestation, 0, 1)
 	}
 
-	// Ensure that this attestation is not already fully contained in an existing attestation.
+	// Pending votes have not been authenticated against their target state
+	// yet. Blocks on branches with different committees can carry the same
+	// data and participant bits with different signatures, of which only one
+	// set is valid there, and a superset can fail where a subset succeeds.
+	// Only an identical entry is a duplicate.
 	for _, a := range atts {
-		if c, err := a.AggregationBits.Contains(att.AggregationBits); err != nil {
-			return err
-		} else if c {
+		if proto.Equal(a, att) {
 			return nil
 		}
 	}
@@ -52,9 +54,22 @@ func (c *AttCaches) BlockAttestations() []*qrysmpb.Attestation {
 	return atts
 }
 
-// DeleteBlockAttestation deletes only the processed attestation. Other votes
-// with the same data can still be waiting for their own validation or retry.
+// DeleteBlockAttestation removes an applied pending vote and marks its
+// participants seen, so gossip for the same data and bits is not processed
+// again. Other votes with the same data keep waiting for their own retry.
 func (c *AttCaches) DeleteBlockAttestation(att *qrysmpb.Attestation) error {
+	return c.removeBlockAttestation(att, true)
+}
+
+// DiscardBlockAttestation removes a pending vote that was never applied,
+// such as one whose signatures failed against the voted target state, without
+// marking its participants seen. Another block or a gossip aggregate may still
+// carry the genuine signatures for the same data and bits.
+func (c *AttCaches) DiscardBlockAttestation(att *qrysmpb.Attestation) error {
+	return c.removeBlockAttestation(att, false)
+}
+
+func (c *AttCaches) removeBlockAttestation(att *qrysmpb.Attestation, markSeen bool) error {
 	if att == nil || att.Data == nil {
 		return nil
 	}
@@ -70,8 +85,10 @@ func (c *AttCaches) DeleteBlockAttestation(att *qrysmpb.Attestation) error {
 		if !proto.Equal(existingAtt, att) {
 			continue
 		}
-		if err := c.insertSeenAggregatedBit(existingAtt); err != nil {
-			return err
+		if markSeen {
+			if err := c.insertSeenAggregatedBit(existingAtt); err != nil {
+				return err
+			}
 		}
 		atts = slices.Delete(atts, i, i+1)
 		if len(atts) == 0 {

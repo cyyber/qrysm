@@ -373,7 +373,13 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 		},
 	}
 
+	// An included vote counts as seen once it has been applied, not while it
+	// is still pending verification against its target state.
 	require.NoError(t, r.cfg.attPool.SaveBlockAttestation(att))
+	require.NoError(t, r.cfg.attPool.DeleteBlockAttestation(att))
+	seen, err := r.cfg.attPool.HasAggregatedAttestation(att)
+	require.NoError(t, err)
+	require.Equal(t, true, seen)
 	if res, err := r.validateAggregateAndProof(context.Background(), "", msg); res == pubsub.ValidationAccept {
 		_ = err
 		t.Error("Expected validate to fail")

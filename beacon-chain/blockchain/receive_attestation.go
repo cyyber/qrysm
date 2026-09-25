@@ -188,13 +188,24 @@ func (s *Service) processAttestations(ctx context.Context, disparity time.Durati
 }
 
 func (s *Service) processAttestationQueue(ctx context.Context, atts []*qrysmpb.Attestation, disparity time.Duration, fromBlock bool) {
+	// Gossip votes were marked seen when the pool prepared them. An included
+	// vote is marked seen only once it has been applied; one that is dropped
+	// unapplied must not shadow the genuine signatures another block or a
+	// gossip aggregate may carry for the same data and bits.
 	deleteAttestation := s.cfg.AttPool.DeleteForkchoiceAttestation
+	discardAttestation := s.cfg.AttPool.DeleteForkchoiceAttestation
 	if fromBlock {
 		deleteAttestation = s.cfg.AttPool.DeleteBlockAttestation
+		discardAttestation = s.cfg.AttPool.DiscardBlockAttestation
 	}
 	remove := func(a *qrysmpb.Attestation) {
 		if err := deleteAttestation(a); err != nil {
 			log.WithError(err).Error("Could not delete processed attestation from pool")
+		}
+	}
+	discard := func(a *qrysmpb.Attestation) {
+		if err := discardAttestation(a); err != nil {
+			log.WithError(err).Error("Could not discard unapplied attestation from pool")
 		}
 	}
 	for _, a := range atts {
@@ -202,11 +213,11 @@ func (s *Service) processAttestationQueue(ctx context.Context, atts []*qrysmpb.A
 			return
 		}
 		if err := helpers.ValidateNilAttestation(a); err != nil {
-			remove(a)
+			discard(a)
 			continue
 		}
 		if err := helpers.ValidateSlotTargetEpoch(a.Data); err != nil {
-			remove(a)
+			discard(a)
 			continue
 		}
 		// Included votes remain useful until finality makes their target
@@ -217,7 +228,7 @@ func (s *Service) processAttestationQueue(ctx context.Context, atts []*qrysmpb.A
 			expired = a.Data.Target.Epoch < s.cfg.ForkChoiceStore.FinalizedCheckpoint().Epoch
 		}
 		if expired {
-			remove(a)
+			discard(a)
 			continue
 		}
 		// Based on the spec, don't process the attestation until the subsequent slot.
@@ -249,12 +260,14 @@ func (s *Service) processAttestationQueue(ctx context.Context, atts []*qrysmpb.A
 				"targetRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(a.Data.Target.Root)),
 				"aggregationCount": a.AggregationBits.Count(),
 			}).WithError(err).Warn("Could not process attestation for fork choice")
-			// Pool preparation marks these votes as seen. Keep dependency
-			// failures queued so later head updates can retry them.
+			// Keep dependency failures queued so later head updates can
+			// retry them. Anything else was rejected and never applied.
 			var dependencyErr attestationDependencyError
 			if errors.As(err, &dependencyErr) {
 				continue
 			}
+			discard(a)
+			continue
 		}
 		remove(a)
 	}

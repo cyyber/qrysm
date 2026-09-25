@@ -307,18 +307,10 @@ func (c *AttCaches) HasAggregatedAttestation(att *qrysmpb.Attestation) (bool, er
 		}
 	}
 
-	c.blockAttLock.RLock()
-	defer c.blockAttLock.RUnlock()
-	if atts, ok := c.blockAtt[r]; ok {
-		for _, a := range atts {
-			if c, err := a.AggregationBits.Contains(att.AggregationBits); err != nil {
-				return false, err
-			} else if c {
-				return true, nil
-			}
-		}
-	}
-
+	// Pending included votes are not consulted: they have not been verified
+	// against their target state, and one carrying invalid signatures must not
+	// suppress a genuine aggregate for the same data and bits. An applied
+	// included vote marks its participants seen when it leaves the pool.
 	seen, err := c.hasSeenAggregatedBit(att)
 	if err != nil {
 		return false, err

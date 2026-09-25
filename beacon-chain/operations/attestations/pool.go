@@ -37,6 +37,7 @@ type Pool interface {
 	SaveBlockAttestation(att *qrysmpb.Attestation) error
 	BlockAttestations() []*qrysmpb.Attestation
 	DeleteBlockAttestation(att *qrysmpb.Attestation) error
+	DiscardBlockAttestation(att *qrysmpb.Attestation) error
 	// For attestations to be passed to fork choice.
 	SaveForkchoiceAttestation(att *qrysmpb.Attestation) error
 	SaveForkchoiceAttestations(atts []*qrysmpb.Attestation) error
