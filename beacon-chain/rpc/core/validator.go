@@ -340,17 +340,41 @@ func (s *Service) GetAttestationData(
 		return nil, &RpcError{Reason: BadRequest, Err: errors.Errorf("invalid request: %v", err)}
 	}
 
-	res, err := s.AttestationCache.Get(ctx, req)
-	if err != nil {
-		return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not retrieve data from attestation cache: %v", err)}
+	for {
+		res, err := s.AttestationCache.Get(ctx, req)
+		if err != nil {
+			return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not retrieve data from attestation cache: %v", err)}
+		}
+		if res != nil {
+			res.CommitteeIndex = req.CommitteeIndex
+			return res, nil
+		}
+		if err := s.AttestationCache.MarkInProgress(req); err != nil {
+			if errors.Is(err, cache.ErrAlreadyInProgress) {
+				// Wait for that producer on the next Get. It may fail or be
+				// invalidated, leaving this request to compute a fresh result.
+				continue
+			}
+			return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not mark attestation as in-progress")}
+		}
+		res, rpcErr := s.computeAttestationData(ctx, req)
+		if rpcErr != nil && errors.Is(rpcErr.Err, cache.ErrAttestationDataStale) {
+			continue
+		}
+		return res, rpcErr
 	}
-	if res != nil {
-		res.CommitteeIndex = req.CommitteeIndex
-		return res, nil
-	}
+}
 
-	// Cache miss: verify the node is not optimistic before producing fresh attestation data.
-	// On cache hit we skip this check because cached entries were already produced from a non-optimistic head.
+// computeAttestationData owns the in-progress cache entry for req until it
+// returns, including when a head change invalidates its result.
+func (s *Service) computeAttestationData(ctx context.Context, req *qrysmpb.AttestationDataRequest) (*qrysmpb.AttestationData, *RpcError) {
+	defer func() {
+		if err := s.AttestationCache.MarkNotInProgress(req); err != nil {
+			log.WithError(err).Error("Could not mark attestation as not-in-progress")
+		}
+	}()
+	// Reject an optimistic node early. The root from the snapshot is checked
+	// separately below, since the head may change after this check.
 	if s.OptimisticModeFetcher != nil {
 		optimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
 		if err != nil {
@@ -361,33 +385,12 @@ func (s *Service) GetAttestationData(
 		}
 	}
 
-	if err := s.AttestationCache.MarkInProgress(req); err != nil {
-		if errors.Is(err, cache.ErrAlreadyInProgress) {
-			res, err := s.AttestationCache.Get(ctx, req)
-			if err != nil {
-				return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not retrieve data from attestation cache: %v", err)}
-			}
-			if res == nil {
-				return nil, &RpcError{Reason: Internal, Err: errors.New("a request was in progress and resolved to nil")}
-			}
-			res.CommitteeIndex = req.CommitteeIndex
-			return res, nil
-		}
-		return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not mark attestation as in-progress: %v", err)}
-	}
-	defer func() {
-		if err := s.AttestationCache.MarkNotInProgress(req); err != nil {
-			log.WithError(err).Error("Could not mark attestation as not-in-progress")
-		}
-	}()
-
-	headState, err := s.HeadFetcher.HeadState(ctx)
+	headState, headRoot, err := s.HeadFetcher.HeadStateAndRoot(ctx)
 	if err != nil {
-		return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not retrieve head state: %v", err)}
+		return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not retrieve head snapshot")}
 	}
-	headRoot, err := s.HeadFetcher.HeadRoot(ctx)
-	if err != nil {
-		return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not retrieve head root: %v", err)}
+	if headState == nil || headState.IsNil() {
+		return nil, &RpcError{Reason: Internal, Err: errors.New("could not lookup parent state from head")}
 	}
 
 	// In the case that we receive an attestation request after a newer state/block has been processed.
@@ -403,6 +406,15 @@ func (s *Service) GetAttestationData(
 	}
 	if headState == nil || headState.IsNil() {
 		return nil, &RpcError{Reason: Internal, Err: errors.New("could not lookup parent state from head")}
+	}
+	if s.OptimisticModeFetcher != nil {
+		optimistic, err := s.OptimisticModeFetcher.IsOptimisticForRoot(ctx, bytesutil.ToBytes32(headRoot))
+		if err != nil {
+			return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not determine if the attested block is optimistic")}
+		}
+		if optimistic {
+			return nil, &RpcError{Reason: Unavailable, Err: errOptimisticMode}
+		}
 	}
 
 	if coreTime.CurrentEpoch(headState) < slots.ToEpoch(req.Slot) {
@@ -430,7 +442,7 @@ func (s *Service) GetAttestationData(
 		}
 	}
 
-	res = &qrysmpb.AttestationData{
+	res := &qrysmpb.AttestationData{
 		Slot:            req.Slot,
 		CommitteeIndex:  req.CommitteeIndex,
 		BeaconBlockRoot: headRoot,
@@ -442,6 +454,9 @@ func (s *Service) GetAttestationData(
 	}
 
 	if err := s.AttestationCache.Put(ctx, req, res); err != nil {
+		if errors.Is(err, cache.ErrAttestationDataStale) {
+			return nil, &RpcError{Reason: Internal, Err: err}
+		}
 		log.WithError(err).Error("Could not store attestation data in cache")
 	}
 	return res, nil

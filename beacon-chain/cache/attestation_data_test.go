@@ -3,6 +3,7 @@ package cache_test
 import (
 	"context"
 	"testing"
+	"testing/synctest"
 
 	"github.com/theQRL/qrysm/beacon-chain/cache"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
@@ -61,4 +62,36 @@ func TestAttestationCache_Clear(t *testing.T) {
 	res, err = c.Get(ctx, req)
 	require.NoError(t, err)
 	require.NotNil(t, res)
+}
+
+func TestAttestationCache_ClearInProgress(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		ctx := context.Background()
+		c := cache.NewAttestationCache()
+		req := &qrysmpb.AttestationDataRequest{Slot: 5}
+		otherCommittee := &qrysmpb.AttestationDataRequest{Slot: 5, CommitteeIndex: 1}
+		require.NoError(t, c.MarkInProgress(req))
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			res, err := c.Get(ctx, otherCommittee)
+			assert.NoError(t, err)
+			assert.Equal(t, (*qrysmpb.AttestationData)(nil), res)
+		}()
+		synctest.Wait()
+		c.Clear()
+		require.ErrorIs(t, c.MarkInProgress(otherCommittee), cache.ErrAlreadyInProgress)
+		require.ErrorIs(t, c.Put(ctx, req, &qrysmpb.AttestationData{Slot: 5}), cache.ErrAttestationDataStale)
+		require.NoError(t, c.MarkNotInProgress(req))
+		<-done
+		// A new producer must be able to populate the same slot after the old
+		// producer has released it, without inheriting the invalidation.
+		require.NoError(t, c.MarkInProgress(otherCommittee))
+		fresh := &qrysmpb.AttestationData{Slot: 5, BeaconBlockRoot: []byte{'n'}}
+		require.NoError(t, c.Put(ctx, otherCommittee, fresh))
+		require.NoError(t, c.MarkNotInProgress(otherCommittee))
+		res, err := c.Get(ctx, req)
+		require.NoError(t, err)
+		require.DeepEqual(t, fresh, res)
+	})
 }

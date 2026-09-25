@@ -138,16 +138,8 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	if err := s.cfg.BeaconDB.SaveHeadBlockRoot(ctx, newHeadRoot); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
 	}
-	s.headLock.Lock()
-	s.head = newHead
-	s.headLock.Unlock()
+	s.publishHead(newHead)
 	s.invalidatedHeadBlocks = nil
-
-	// Attestation data cached for this slot was produced against the previous
-	// head; drop it so the next request sees the new head. (upstream #17143)
-	if c := s.cfg.AttestationCache; c != nil {
-		c.Clear()
-	}
 
 	if isReorg {
 		// A chain re-org occurred, so we fire an event notifying the rest of the services.
@@ -256,21 +248,18 @@ func (s *Service) refreshHeadOptimisticStatus() {
 
 // This sets head view object which is used to track the head slot, root, block, state and optimistic status
 func (s *Service) setHead(newHead *head) error {
-	s.headLock.Lock()
-	defer s.headLock.Unlock()
-
 	// This does a full copy of the block and state.
 	bCp, err := newHead.block.Copy()
 	if err != nil {
 		return err
 	}
-	s.head = &head{
+	s.publishHead(&head{
 		root:       newHead.root,
 		block:      bCp,
 		state:      newHead.state.Copy(),
 		optimistic: newHead.optimistic,
 		slot:       newHead.slot,
-	}
+	})
 	return nil
 }
 
@@ -278,21 +267,32 @@ func (s *Service) setHead(newHead *head) error {
 // state without a copy for the next batch, which may mutate it before validation
 // fails. The cached head must retain the last successfully imported state.
 func (s *Service) setHeadInitialSync(root [32]byte, block interfaces.ReadOnlySignedBeaconBlock, state state.BeaconState, optimistic bool) error {
-	s.headLock.Lock()
-	defer s.headLock.Unlock()
-
 	// Copy both the block and state to isolate the head from later batches.
 	bCp, err := block.Copy()
 	if err != nil {
 		return err
 	}
-	s.head = &head{
+	s.publishHead(&head{
 		root:       root,
 		block:      bCp,
 		state:      state.Copy(),
 		optimistic: optimistic,
-	}
+	})
 	return nil
+}
+
+// publishHead invalidates attestation calculations before exposing a new head.
+// Holding headLock across both operations prevents a reader from observing the
+// replacement while the cache still belongs to its predecessor.
+func (s *Service) publishHead(snapshot *head) {
+	s.headLock.Lock()
+	defer s.headLock.Unlock()
+	if s.head == nil || s.head.root != snapshot.root {
+		if s.cfg != nil && s.cfg.AttestationCache != nil {
+			s.cfg.AttestationCache.Clear()
+		}
+	}
+	s.head = snapshot
 }
 
 // This returns the head slot.

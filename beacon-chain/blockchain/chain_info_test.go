@@ -3,8 +3,10 @@ package blockchain
 import (
 	"context"
 	"testing"
+	"testing/synctest"
 	"time"
 
+	"github.com/theQRL/qrysm/beacon-chain/cache"
 	testDB "github.com/theQRL/qrysm/beacon-chain/db/testing"
 	doublylinkedtree "github.com/theQRL/qrysm/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/theQRL/qrysm/beacon-chain/forkchoice/types"
@@ -293,6 +295,65 @@ func TestHeadState_CanRetrieve(t *testing.T) {
 	headState, err := c.HeadState(context.Background())
 	require.NoError(t, err)
 	assert.DeepEqual(t, headState.ToProtoUnsafe(), s.ToProtoUnsafe(), "Incorrect head state received")
+}
+
+func TestHeadStateAndRoot_Publication(t *testing.T) {
+	for _, batch := range []bool{false, true} {
+		t.Run(map[bool]string{false: "gossip", true: "batch"}[batch], func(t *testing.T) {
+			f := newBatchExecutionFixture(t, 3)
+			f.engine.ErrNewPayload, f.engine.ErrForkchoiceUpdated = nil, nil
+			c := cache.NewAttestationCache()
+			f.s.cfg.AttestationCache = c
+			synctest.Test(t, func(t *testing.T) {
+				t.Cleanup(synctest.Wait)
+				driftGenesisTime(f.s, 3, 0)
+				oldState, oldRoot, err := f.s.HeadStateAndRoot(f.ctx)
+				require.NoError(t, err)
+				req := &qrysmpb.AttestationDataRequest{Slot: 3}
+				oldData := &qrysmpb.AttestationData{Slot: 3, BeaconBlockRoot: oldRoot}
+				require.NoError(t, c.Put(f.ctx, req, oldData))
+				pending := &qrysmpb.AttestationDataRequest{Slot: 2}
+				require.NoError(t, c.MarkInProgress(pending))
+				if batch {
+					require.NoError(t, f.s.ReceiveBlockBatch(f.ctx, f.blks[2:]))
+				} else {
+					require.NoError(t, f.s.ReceiveBlock(f.ctx, f.blks[2], f.blks[2].Root()))
+				}
+				synctest.Wait()
+				stale, err := c.Get(f.ctx, req)
+				require.NoError(t, err)
+				assert.Equal(t, (*qrysmpb.AttestationData)(nil), stale)
+				require.ErrorIs(t, c.Put(f.ctx, pending, oldData), cache.ErrAttestationDataStale)
+				require.NoError(t, c.MarkNotInProgress(pending))
+				st, root, err := f.s.HeadStateAndRoot(f.ctx)
+				require.NoError(t, err)
+				assert.Equal(t, f.blks[2].Root(), bytesutil.ToBytes32(root))
+				hash, err := st.HashTreeRoot(f.ctx)
+				require.NoError(t, err)
+				assert.Equal(t, f.blks[2].Block().StateRoot(), hash)
+				assert.Equal(t, f.blks[1].Root(), bytesutil.ToBytes32(oldRoot))
+				assert.Equal(t, primitives.Slot(2), oldState.Slot())
+				// Both pieces returned to the RPC must be independent copies.
+				root[0] ^= 1
+				require.NoError(t, st.SetSlot(100))
+				st, root, err = f.s.HeadStateAndRoot(f.ctx)
+				require.NoError(t, err)
+				assert.Equal(t, primitives.Slot(3), st.Slot())
+				assert.Equal(t, f.blks[2].Root(), bytesutil.ToBytes32(root))
+				if !batch {
+					// The fallback must load the state for the durable head root,
+					// even when the in-memory head has not been initialized.
+					f.s.head = nil
+					st, root, err = f.s.HeadStateAndRoot(f.ctx)
+					require.NoError(t, err)
+					assert.Equal(t, f.blks[2].Root(), bytesutil.ToBytes32(root))
+					hash, err = st.HashTreeRoot(f.ctx)
+					require.NoError(t, err)
+					assert.Equal(t, f.blks[2].Block().StateRoot(), hash)
+				}
+			})
+		})
+	}
 }
 
 func TestGenesisTime_CanRetrieve(t *testing.T) {

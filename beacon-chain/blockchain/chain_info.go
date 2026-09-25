@@ -71,6 +71,7 @@ type HeadFetcher interface {
 	HeadRoot(ctx context.Context) ([]byte, error)
 	HeadBlock(ctx context.Context) (interfaces.ReadOnlySignedBeaconBlock, error)
 	HeadState(ctx context.Context) (state.BeaconState, error)
+	HeadStateAndRoot(ctx context.Context) (state.BeaconState, []byte, error)
 	HeadStateReadOnly(ctx context.Context) (state.ReadOnlyBeaconState, error)
 	HeadValidatorsIndices(ctx context.Context, epoch primitives.Epoch) ([]primitives.ValidatorIndex, error)
 	HeadGenesisValidatorsRoot() [32]byte
@@ -210,6 +211,30 @@ func (s *Service) HeadState(ctx context.Context) (state.BeaconState, error) {
 	}
 
 	return s.cfg.StateGen.StateByRoot(ctx, s.headRoot())
+}
+
+// HeadStateAndRoot copies the state and root from the same published head.
+// Reading them separately can combine different branches during a reorg.
+func (s *Service) HeadStateAndRoot(ctx context.Context) (state.BeaconState, []byte, error) {
+	s.headLock.RLock()
+	defer s.headLock.RUnlock()
+	if s.hasHeadState() {
+		return s.headState(ctx), bytesutil.SafeCopyBytes(s.head.root[:]), nil
+	}
+	// Resolve the persisted head once, then load the state for that exact root.
+	b, err := s.cfg.BeaconDB.HeadBlock(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := consensus_blocks.BeaconBlockIsNil(b); err != nil {
+		return nil, nil, err
+	}
+	root, err := b.Block().HashTreeRoot()
+	if err != nil {
+		return nil, nil, err
+	}
+	st, err := s.cfg.StateGen.StateByRoot(ctx, root)
+	return st, root[:], err
 }
 
 // HeadStateReadOnly returns the read only head state of the chain.

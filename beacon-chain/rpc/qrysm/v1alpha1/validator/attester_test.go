@@ -23,6 +23,7 @@ import (
 	state_native "github.com/theQRL/qrysm/beacon-chain/state/state-native"
 	"github.com/theQRL/qrysm/beacon-chain/state/stategen"
 	mockSync "github.com/theQRL/qrysm/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/crypto/ml_dsa_87"
@@ -425,6 +426,15 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	// than the head state's slot. The Ethereum consensus spec constraints require the block root the
 	// attestation is referencing be less than or equal to the attestation data slot.
 	// See: https://github.com/prysmaticlabs/prysm/issues/5164
+	params.SetupTestConfigCleanup(t)
+	// This test persists a state. Match its vectors to the compiled SSZ
+	// layout even when TestMain selects minimal runtime parameters.
+	cfg := params.BeaconConfig().Copy()
+	cfg.SlotsPerHistoricalRoot = fieldparams.BlockRootsLength
+	cfg.EpochsPerHistoricalVector = fieldparams.RandaoMixesLength
+	cfg.EpochsPerSlashingsVector = fieldparams.SlashingsLength
+	cfg.SyncCommitteeSize = fieldparams.SyncCommitteeLength
+	params.OverrideBeaconConfig(cfg)
 	ctx := context.Background()
 	db := dbutil.SetupDB(t)
 

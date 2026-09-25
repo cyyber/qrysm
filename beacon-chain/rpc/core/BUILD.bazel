@@ -48,18 +48,26 @@ go_library(
 
 go_test(
     name = "core_test",
-    srcs = ["sync_committee_test.go"],
+    srcs = [
+        "attestation_data_test.go",
+        "sync_committee_test.go",
+    ],
     embed = [":core"],
     deps = [
+        "//beacon-chain/blockchain/testing",
+        "//beacon-chain/cache",
         "//beacon-chain/core/altair",
         "//beacon-chain/core/feed",
         "//beacon-chain/operations/synccommittee",
         "//beacon-chain/p2p/testing",
         "//beacon-chain/rpc/testutil",
+        "//beacon-chain/state",
         "//config/params",
         "//consensus-types/primitives",
+        "//encoding/bytesutil",
         "//proto/qrysm/v1alpha1",
         "//testing/assert",
         "//testing/require",
+        "//testing/util",
     ],
 )

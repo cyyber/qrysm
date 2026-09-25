@@ -303,6 +303,18 @@ func (s *ChainService) HeadState(context.Context) (state.BeaconState, error) {
 	return s.State, nil
 }
 
+// HeadStateAndRoot mocks the published head snapshot.
+func (s *ChainService) HeadStateAndRoot(ctx context.Context) (state.BeaconState, []byte, error) {
+	root, err := s.HeadRoot(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	if s.State == nil || s.State.IsNil() {
+		return s.State, bytesutil.SafeCopyBytes(root), nil
+	}
+	return s.State.Copy(), bytesutil.SafeCopyBytes(root), nil
+}
+
 // HeadStateReadOnly mocks HeadStateReadOnly method in chain service.
 func (s *ChainService) HeadStateReadOnly(context.Context) (state.ReadOnlyBeaconState, error) {
 	if s.HeadStateErr != nil {
