@@ -9,6 +9,7 @@ import (
 	"github.com/theQRL/qrysm/beacon-chain/core/feed"
 	statefeed "github.com/theQRL/qrysm/beacon-chain/core/feed/state"
 	"github.com/theQRL/qrysm/beacon-chain/db"
+	forktypes "github.com/theQRL/qrysm/beacon-chain/forkchoice/types"
 	"github.com/theQRL/qrysm/beacon-chain/operations/slashings"
 	"github.com/theQRL/qrysm/beacon-chain/operations/voluntaryexits"
 	"github.com/theQRL/qrysm/config/params"
@@ -89,6 +90,11 @@ func TestService_ReorgRecoveryAfterPruning(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				t.Cleanup(synctest.Wait)
 				driftGenesisTime(f.s, 21, 0)
+				// Load genesis balances so the timely orphan receives proposer
+				// boost instead of relying on the ordering of zero-weight roots.
+				f.s.cfg.ForkChoiceStore.Lock()
+				require.NoError(t, f.s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(f.ctx, &forktypes.Checkpoint{Root: f.s.originBlockRoot}))
+				f.s.cfg.ForkChoiceStore.Unlock()
 				if tc.parent > 2 {
 					require.NoError(t, f.s.ReceiveBlockBatch(f.ctx, f.blks[2:tc.parent]))
 					synctest.Wait()
