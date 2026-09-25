@@ -172,6 +172,20 @@ func TestKV_Unaggregated_DeleteUnaggregatedAttestation(t *testing.T) {
 		assert.DeepEqual(t, []*qrysmpb.Attestation{}, returned)
 	})
 
+	t.Run("absent attestation is not marked seen", func(t *testing.T) {
+		cache := NewAttCaches()
+		att := util.HydrateAttestation(&qrysmpb.Attestation{Data: &qrysmpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b101}})
+		require.NoError(t, cache.DeleteUnaggregatedAttestation(att))
+		seen, err := cache.hasSeenBit(att)
+		require.NoError(t, err)
+		assert.Equal(t, false, seen, "a block-included vote the pool never authenticated must not be seen")
+		require.NoError(t, cache.SaveUnaggregatedAttestation(att))
+		require.NoError(t, cache.DeleteUnaggregatedAttestation(att))
+		seen, err = cache.hasSeenBit(att)
+		require.NoError(t, err)
+		assert.Equal(t, true, seen)
+	})
+
 	t.Run("deleted when insertSeenBit fails", func(t *testing.T) {
 		att := util.HydrateAttestation(&qrysmpb.Attestation{Data: &qrysmpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b101}})
 		r, err := hashFn(att.Data)

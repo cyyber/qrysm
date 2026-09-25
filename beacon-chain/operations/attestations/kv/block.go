@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/pkg/errors"
+	"github.com/theQRL/qrysm/beacon-chain/core/helpers"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
@@ -55,8 +56,10 @@ func (c *AttCaches) BlockAttestations() []*qrysmpb.Attestation {
 }
 
 // DeleteBlockAttestation removes an applied pending vote and marks its
-// participants seen, so gossip for the same data and bits is not processed
-// again. Other votes with the same data keep waiting for their own retry.
+// participants seen for gossip, so the same vote is not processed again.
+// Proposal deduplication is left to canonical pruning: the containing block
+// may not be canonical, and a recovered copy must stay proposable. Other
+// votes with the same data keep waiting for their own retry.
 func (c *AttCaches) DeleteBlockAttestation(att *qrysmpb.Attestation) error {
 	return c.removeBlockAttestation(att, true)
 }
@@ -67,6 +70,18 @@ func (c *AttCaches) DeleteBlockAttestation(att *qrysmpb.Attestation) error {
 // carry the genuine signatures for the same data and bits.
 func (c *AttCaches) DiscardBlockAttestation(att *qrysmpb.Attestation) error {
 	return c.removeBlockAttestation(att, false)
+}
+
+// MarkAppliedAttestation records that fork choice authenticated an included
+// vote in its target state and applied it. Its participants count as seen for
+// gossip, so the same vote is not processed again. A block only proves its
+// votes valid in its own state, so nothing else may mark them, and as with
+// DeleteBlockAttestation proposal deduplication is left to canonical pruning.
+func (c *AttCaches) MarkAppliedAttestation(att *qrysmpb.Attestation) error {
+	if err := helpers.ValidateNilAttestation(att); err != nil {
+		return err
+	}
+	return c.insertSeenAggregatedBit(att)
 }
 
 func (c *AttCaches) removeBlockAttestation(att *qrysmpb.Attestation, markSeen bool) error {

@@ -657,6 +657,8 @@ func TestSaveOrphanedAtts(t *testing.T) {
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
+	// Recovery authenticates orphaned votes in their target state.
+	require.NoError(t, service.checkpointStateCache.AddCheckpointState(blk1.Block.Body.Attestations[0].Data.Target, st))
 	require.NoError(t, service.saveOrphanedOperations(ctx, r3, r4, st))
 	require.Equal(t, 3, service.cfg.AttPool.AggregatedAttestationCount())
 	wantAtts := []*qrysmpb.Attestation{
@@ -733,6 +735,8 @@ func TestSaveOrphanedOps(t *testing.T) {
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
+	// Recovery authenticates orphaned votes in their target state.
+	require.NoError(t, service.checkpointStateCache.AddCheckpointState(blk1.Block.Body.Attestations[0].Data.Target, st))
 	require.NoError(t, service.saveOrphanedOperations(ctx, r3, r4, st))
 	require.Equal(t, 3, service.cfg.AttPool.AggregatedAttestationCount())
 	wantAtts := []*qrysmpb.Attestation{
@@ -798,6 +802,8 @@ func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
+	// Recovery authenticates orphaned votes in their target state.
+	require.NoError(t, service.checkpointStateCache.AddCheckpointState(blk1.Block.Body.Attestations[0].Data.Target, st))
 	require.NoError(t, service.saveOrphanedOperations(ctx, r2, r4, st))
 	require.Equal(t, 1, service.cfg.AttPool.AggregatedAttestationCount())
 }
@@ -853,6 +859,8 @@ func TestSaveOrphanedAtts_DoublyLinkedTrie(t *testing.T) {
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
+	// Recovery authenticates orphaned votes in their target state.
+	require.NoError(t, service.checkpointStateCache.AddCheckpointState(blk1.Block.Body.Attestations[0].Data.Target, st))
 	require.NoError(t, service.saveOrphanedOperations(ctx, r3, r4, st))
 	require.Equal(t, 3, service.cfg.AttPool.AggregatedAttestationCount())
 	wantAtts := []*qrysmpb.Attestation{
@@ -913,6 +921,8 @@ func TestSaveOrphanedAtts_CanFilter_DoublyLinkedTrie(t *testing.T) {
 		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
+	// Recovery authenticates orphaned votes in their target state.
+	require.NoError(t, service.checkpointStateCache.AddCheckpointState(blk1.Block.Body.Attestations[0].Data.Target, st))
 	require.NoError(t, service.saveOrphanedOperations(ctx, r2, r4, st))
 	require.Equal(t, 0, service.cfg.AttPool.AggregatedAttestationCount())
 }

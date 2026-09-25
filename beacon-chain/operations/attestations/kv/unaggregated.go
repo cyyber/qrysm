@@ -104,19 +104,23 @@ func (c *AttCaches) DeleteUnaggregatedAttestation(att *qrysmpb.Attestation) erro
 		return errors.New("attestation is aggregated")
 	}
 
-	if err := c.insertSeenBit(att); err != nil {
-		log.WithError(err).Debug("Could not insert seen bit of unaggregated attestation. Attestation will be deleted")
-	}
-
 	r, err := hashFn(att)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")
 	}
 
 	c.unAggregateAttLock.Lock()
-	defer c.unAggregateAttLock.Unlock()
+	_, existed := c.unAggregatedAtt[r]
 	delete(c.unAggregatedAtt, r)
+	c.unAggregateAttLock.Unlock()
 
+	// Only an entry that was in the pool is known to have been authenticated
+	// in its target state; att may come from a block valid only in its own.
+	if existed {
+		if err := c.insertSeenBit(att); err != nil {
+			log.WithError(err).Debug("Could not insert seen bit of deleted unaggregated attestation")
+		}
+	}
 	return nil
 }
 

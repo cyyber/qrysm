@@ -123,6 +123,11 @@ func (*PoolMock) DiscardBlockAttestation(_ *qrysmpb.Attestation) error {
 	panic("implement me")
 }
 
+// MarkAppliedAttestation --
+func (*PoolMock) MarkAppliedAttestation(_ *qrysmpb.Attestation) error {
+	panic("implement me")
+}
+
 // SaveForkchoiceAttestation --
 func (*PoolMock) SaveForkchoiceAttestation(_ *qrysmpb.Attestation) error {
 	panic("implement me")

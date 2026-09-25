@@ -108,4 +108,7 @@ func TestKV_BlockAttestation_DiscardDoesNotMarkSeen(t *testing.T) {
 	seen, err = cache.hasSeenAggregatedBit(applied)
 	require.NoError(t, err)
 	require.Equal(t, true, seen)
+	seen, err = cache.hasSeenBit(applied)
+	require.NoError(t, err)
+	require.Equal(t, false, seen, "proposal deduplication is left to canonical pruning")
 }

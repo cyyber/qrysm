@@ -254,25 +254,23 @@ func (c *AttCaches) DeleteAggregatedAttestation(att *qrysmpb.Attestation) error 
 		return errors.Wrap(err, "could not tree hash attestation data")
 	}
 
-	if err := c.insertSeenBit(att); err != nil {
-		return err
-	}
-	if err := c.insertSeenAggregatedBit(att); err != nil {
-		return err
-	}
-
 	c.aggregatedAttLock.Lock()
-	defer c.aggregatedAttLock.Unlock()
 	attList, ok := c.aggregatedAtt[r]
 	if !ok {
+		c.aggregatedAttLock.Unlock()
 		return nil
 	}
-
 	filtered := make([]*qrysmpb.Attestation, 0)
+	removed := make([]*qrysmpb.Attestation, 0)
 	for _, a := range attList {
-		if c, err := att.AggregationBits.Contains(a.AggregationBits); err != nil {
+		covered, err := att.AggregationBits.Contains(a.AggregationBits)
+		if err != nil {
+			c.aggregatedAttLock.Unlock()
 			return err
-		} else if !c {
+		}
+		if covered {
+			removed = append(removed, a)
+		} else {
 			filtered = append(filtered, a)
 		}
 	}
@@ -281,7 +279,17 @@ func (c *AttCaches) DeleteAggregatedAttestation(att *qrysmpb.Attestation) error 
 	} else {
 		c.aggregatedAtt[r] = filtered
 	}
+	c.aggregatedAttLock.Unlock()
 
+	// Every entry in the pool was authenticated in its target state before it
+	// was saved, so the removed entries are seen. att itself may only have
+	// been validated in the state of a block that included it; fork choice
+	// marks it through MarkAppliedAttestation once it verifies the vote.
+	for _, a := range removed {
+		if err := c.markSeen(a); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

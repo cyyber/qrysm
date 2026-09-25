@@ -517,6 +517,11 @@ func (s *Service) applyBlockAttestations(ctx context.Context, atts []*qrysmpb.At
 				continue
 			}
 			s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indices, r, a.Data.Target.Epoch)
+			// The vote is authenticated in its target state: later gossip for
+			// these participants adds nothing, and the pool may skip it.
+			if err := s.cfg.AttPool.MarkAppliedAttestation(a); err != nil {
+				log.WithError(err).Debug("Could not mark applied included vote as seen")
+			}
 		} else if err := s.cfg.AttPool.SaveBlockAttestation(a); err != nil {
 			return err
 		}
@@ -557,6 +562,10 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interface
 }
 
 // This removes the attestations in block `b` from the attestation mem pool.
+// Only the pool entries they cover are marked seen: those were authenticated
+// in their target state, whereas a block only proves its votes valid in its
+// own state. applyBlockAttestations marks an included vote once fork choice
+// verifies it, so a vote rejected there never shadows a genuine one.
 func (s *Service) pruneAttsFromPool(headBlock interfaces.ReadOnlySignedBeaconBlock) error {
 	atts := headBlock.Block().Body().Attestations()
 	for _, att := range atts {

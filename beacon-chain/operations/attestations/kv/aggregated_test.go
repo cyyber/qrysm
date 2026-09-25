@@ -285,6 +285,64 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 	})
 }
 
+func TestKV_Aggregated_DeleteMarksOnlyRemovedEntriesSeen(t *testing.T) {
+	cache := NewAttCaches()
+	pooled := recoveryAttestation(0b10101)
+	require.NoError(t, cache.SaveAggregatedAttestation(pooled))
+
+	// A block-included aggregate covers the pooled entry but also carries a
+	// participant the pool never authenticated.
+	included := recoveryAttestation(0b10111)
+	require.NoError(t, cache.DeleteAggregatedAttestation(included))
+	require.Equal(t, 0, cache.AggregatedAttestationCount())
+	seen, err := cache.hasSeenBit(pooled)
+	require.NoError(t, err)
+	assert.Equal(t, true, seen)
+	seen, err = cache.hasSeenAggregatedBit(pooled)
+	require.NoError(t, err)
+	assert.Equal(t, true, seen)
+	extra := recoveryAttestation(0b10010)
+	seen, err = cache.hasSeenBit(extra)
+	require.NoError(t, err)
+	assert.Equal(t, false, seen, "a participant only the block vouched for must not be seen")
+	seen, err = cache.HasAggregatedAttestation(extra)
+	require.NoError(t, err)
+	assert.Equal(t, false, seen)
+
+	// Deleting something that never was in the pool marks nothing.
+	absent := recoveryAttestation(0b11010)
+	require.NoError(t, cache.DeleteAggregatedAttestation(absent))
+	seen, err = cache.hasSeenBit(absent)
+	require.NoError(t, err)
+	assert.Equal(t, false, seen)
+}
+
+func TestKV_MarkAppliedAttestation(t *testing.T) {
+	cache := NewAttCaches()
+	applied := recoveryAttestation(0b10011)
+	require.ErrorContains(t, "attestation can't be nil", cache.MarkAppliedAttestation(nil))
+	require.NoError(t, cache.MarkAppliedAttestation(applied))
+
+	seen, err := cache.HasAggregatedAttestation(applied)
+	require.NoError(t, err)
+	assert.Equal(t, true, seen)
+	require.NoError(t, cache.SaveAggregatedAttestation(applied))
+	assert.Equal(t, 0, cache.AggregatedAttestationCount())
+	subset := recoveryAttestation(0b10001)
+	seen, err = cache.HasAggregatedAttestation(subset)
+	require.NoError(t, err)
+	assert.Equal(t, true, seen, "gossip for a subset of applied participants adds nothing")
+	other := recoveryAttestation(0b10100)
+	seen, err = cache.HasAggregatedAttestation(other)
+	require.NoError(t, err)
+	assert.Equal(t, false, seen)
+	// The containing block may not be canonical: proposal deduplication is
+	// left to canonical pruning.
+	seen, err = cache.hasSeenBit(applied)
+	require.NoError(t, err)
+	assert.Equal(t, false, seen)
+}
+
 func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 	tests := []struct {
 		name     string

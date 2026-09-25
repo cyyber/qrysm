@@ -496,13 +496,30 @@ func (s *Service) saveOrphanedOperations(ctx context.Context, orphanedRoot [32]b
 		// Slashings and exits can remain valid after the attestation inclusion
 		// window expires. Walk the whole orphaned branch, filtering only atts.
 		for _, a := range orphanedBlk.Block().Body().Attestations() {
+			if helpers.ValidateNilAttestation(a) != nil {
+				continue
+			}
 			// Execution-invalid blocks can contain reusable votes, but votes
 			// for the removed branch must not return to the attestation pool.
-			if invalidated && (helpers.ValidateNilAttestation(a) != nil || s.verifyAttestationForkchoice(a) != nil) {
+			if invalidated && s.verifyAttestationForkchoice(a) != nil {
 				continue
 			}
 			// if the attestation is one epoch older, it wouldn't been useful to save it.
 			if a.Data.Slot+params.BeaconConfig().SlotsPerEpoch < s.CurrentSlot() {
+				continue
+			}
+			// The orphaned block only proves the vote valid in its own state.
+			// The pool it joins gates gossip and proposals on every entry
+			// having been authenticated in the voted target state, so verify
+			// it here like any other entry. Committees are fixed two epochs
+			// ahead, so this is also what makes it includable on the new
+			// branch. The age check above bounds this work to one epoch.
+			targetState, err := s.getAttPreState(ctx, a.Data.Target)
+			if err != nil {
+				log.WithError(err).Debug("Could not get target state of orphaned attestation")
+				continue
+			}
+			if _, err := verifiedAttestingIndices(ctx, targetState, a); err != nil {
 				continue
 			}
 			if err := s.cfg.AttPool.RecoverAttestation(a); err != nil {

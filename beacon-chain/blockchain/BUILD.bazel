@@ -114,6 +114,7 @@ go_test(
         "batch_empty_epoch_test.go",
         "batch_slashings_test.go",
         "blockchain_test.go",
+        "canonical_vote_suppression_test.go",
         "chain_info_test.go",
         "checkpoint_lifecycle_test.go",
         "deferred_included_votes_test.go",

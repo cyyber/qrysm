@@ -85,3 +85,14 @@ func hasSeenBit(seenCache *cache.Cache, att *qrysmpb.Attestation) (bool, error) 
 	}
 	return false, nil
 }
+
+// markSeen records att's participants as seen for both pool saves and gossip
+// deduplication. Only a vote authenticated in its target state may be marked:
+// the markers suppress every later attestation with the same data whose bits
+// they cover, including the genuine one when att itself was not genuine.
+func (c *AttCaches) markSeen(att *qrysmpb.Attestation) error {
+	if err := c.insertSeenBit(att); err != nil {
+		return err
+	}
+	return c.insertSeenAggregatedBit(att)
+}

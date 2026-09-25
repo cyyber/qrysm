@@ -76,9 +76,11 @@ func TestKV_RecoverAttestation(t *testing.T) {
 
 func TestKV_RecoverAttestation_PreservesOtherParticipants(t *testing.T) {
 	c := NewAttCaches()
-	// Both seen caches contain a larger aggregate with orphaned participants
-	// 0 and 1, plus unrelated participants 2 and 3.
-	require.NoError(t, c.DeleteAggregatedAttestation(recoveryAttestation(0b11111)))
+	// Canonical pruning of a pooled aggregate marks both seen caches with the
+	// orphaned participants 0 and 1, plus unrelated participants 2 and 3.
+	included := recoveryAttestation(0b11111)
+	require.NoError(t, c.SaveAggregatedAttestation(included))
+	require.NoError(t, c.DeleteAggregatedAttestation(included))
 	orphan := recoveryAttestation(0b10011)
 	require.NoError(t, c.RecoverAttestation(orphan))
 	other := recoveryAttestation(0b11100)
@@ -106,6 +108,7 @@ func TestKV_RecoverAttestation_CanAggregate(t *testing.T) {
 				// The same participants may have been processed as an aggregate
 				// before their individual votes are recovered from the orphaned branch.
 				aggregate := recoveryAttestation(0b10011)
+				require.NoError(t, c.SaveAggregatedAttestation(aggregate))
 				require.NoError(t, c.DeleteAggregatedAttestation(aggregate))
 				require.NoError(t, c.RecoverAttestation(recoveryAttestation(0b10001)))
 				require.NoError(t, c.RecoverAttestation(recoveryAttestation(0b10010)))
@@ -127,6 +130,7 @@ func TestKV_RecoverAttestation_CanAggregate(t *testing.T) {
 func TestKV_RecoverAttestation_RejectsMalformed(t *testing.T) {
 	c := NewAttCaches()
 	att := recoveryAttestation(0b10011)
+	require.NoError(t, c.SaveAggregatedAttestation(att))
 	require.NoError(t, c.DeleteAggregatedAttestation(att))
 	invalid := qrysmpb.CopyAttestation(att)
 	invalid.Signatures[0] = []byte{1}
