@@ -13,6 +13,8 @@ import (
 // are used by proposer actor. Unaggregated attestations are used by
 // aggregator actor.
 type Pool interface {
+	// RecoverAttestation restores an orphaned vote for block inclusion.
+	RecoverAttestation(att *qrysmpb.Attestation) error
 	// For Aggregated attestations
 	AggregateUnaggregatedAttestations(ctx context.Context) error
 	SaveAggregatedAttestation(att *qrysmpb.Attestation) error

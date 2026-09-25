@@ -27,6 +27,7 @@ type AttCaches struct {
 	forkchoiceAtt      map[[32]byte]*qrysmpb.Attestation
 	blockAttLock       sync.RWMutex
 	blockAtt           map[[32]byte][]*qrysmpb.Attestation
+	seenAttLock        sync.RWMutex
 	seenAtt            *cache.Cache
 	seenAggregatedAtt  *cache.Cache
 }

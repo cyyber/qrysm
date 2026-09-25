@@ -12,6 +12,11 @@ type PoolMock struct {
 	AggregatedAtts []*qrysmpb.Attestation
 }
 
+// RecoverAttestation --
+func (*PoolMock) RecoverAttestation(_ *qrysmpb.Attestation) error {
+	panic("implement me")
+}
+
 // AggregateUnaggregatedAttestations --
 func (*PoolMock) AggregateUnaggregatedAttestations(_ context.Context) error {
 	panic("implement me")

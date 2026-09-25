@@ -8,10 +8,14 @@ import (
 )
 
 func (c *AttCaches) insertSeenBit(att *qrysmpb.Attestation) error {
+	c.seenAttLock.Lock()
+	defer c.seenAttLock.Unlock()
 	return insertSeenBit(c.seenAtt, att)
 }
 
 func (c *AttCaches) insertSeenAggregatedBit(att *qrysmpb.Attestation) error {
+	c.seenAttLock.Lock()
+	defer c.seenAttLock.Unlock()
 	return insertSeenBit(c.seenAggregatedAtt, att)
 }
 
@@ -48,10 +52,14 @@ func insertSeenBit(seenCache *cache.Cache, att *qrysmpb.Attestation) error {
 }
 
 func (c *AttCaches) hasSeenBit(att *qrysmpb.Attestation) (bool, error) {
+	c.seenAttLock.RLock()
+	defer c.seenAttLock.RUnlock()
 	return hasSeenBit(c.seenAtt, att)
 }
 
 func (c *AttCaches) hasSeenAggregatedBit(att *qrysmpb.Attestation) (bool, error) {
+	c.seenAttLock.RLock()
+	defer c.seenAttLock.RUnlock()
 	return hasSeenBit(c.seenAggregatedAtt, att)
 }
 

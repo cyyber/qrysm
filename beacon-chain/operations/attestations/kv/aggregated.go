@@ -58,7 +58,10 @@ func (c *AttCaches) aggregateUnaggregatedAtts(ctx context.Context, unaggregatedA
 				return errors.New("could not aggregate unaggregated attestations")
 			}
 			if helpers.IsAggregated(aggregated) {
-				if err := c.SaveAggregatedAttestations([]*qrysmpb.Attestation{aggregated}); err != nil {
+				// These votes passed the proposal pool's seen check. A copy
+				// in forkchoice, or its processing history, must not discard
+				// votes that were recovered after a reorg.
+				if err := c.saveAggregatedAttestation(aggregated); err != nil {
 					return err
 				}
 			} else {
@@ -111,7 +114,7 @@ func (c *AttCaches) aggregateParallel(atts map[[32]byte][]*qrysmpb.Attestation, 
 					continue
 				}
 				if helpers.IsAggregated(aggregated) {
-					if err := c.SaveAggregatedAttestations([]*qrysmpb.Attestation{aggregated}); err != nil {
+					if err := c.saveAggregatedAttestation(aggregated); err != nil {
 						log.WithError(err).Error("Could not save aggregated attestation")
 						continue
 					}
@@ -163,6 +166,12 @@ func (c *AttCaches) SaveAggregatedAttestation(att *qrysmpb.Attestation) error {
 		return nil
 	}
 
+	return c.saveAggregatedAttestation(att)
+}
+
+// saveAggregatedAttestation merges a vote into the proposal pool without
+// consulting inclusion history or the independent forkchoice queue.
+func (c *AttCaches) saveAggregatedAttestation(att *qrysmpb.Attestation) error {
 	r, err := hashFn(att.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")

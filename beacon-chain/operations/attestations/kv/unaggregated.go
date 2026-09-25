@@ -28,6 +28,10 @@ func (c *AttCaches) SaveUnaggregatedAttestation(att *qrysmpb.Attestation) error 
 		return nil
 	}
 
+	return c.saveUnaggregatedAttestation(att)
+}
+
+func (c *AttCaches) saveUnaggregatedAttestation(att *qrysmpb.Attestation) error {
 	r, err := hashFn(att)
 	if err != nil {
 		return errors.Wrap(err, "could not tree hash attestation")

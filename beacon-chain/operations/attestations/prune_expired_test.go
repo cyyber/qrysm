@@ -57,7 +57,16 @@ func TestPruneExpired_Ticker(t *testing.T) {
 	// Rewind back two epochs worth of time to cover the EIP-7045 inclusion window.
 	s.genesisTime = uint64(qrysmTime.Now().Unix()) - uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot*2))
 
-	go s.pruneAttsPool()
+	pruneDone := make(chan struct{})
+	go func() {
+		defer close(pruneDone)
+		s.pruneAttsPool()
+	}()
+	// Stop the worker before cleanup restores the shared beacon configuration.
+	t.Cleanup(func() {
+		cancel()
+		<-pruneDone
+	})
 
 	done := make(chan struct{}, 1)
 	async.RunEvery(ctx, 500*time.Millisecond, func() {

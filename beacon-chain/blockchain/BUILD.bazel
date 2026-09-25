@@ -138,6 +138,7 @@ go_test(
         "proposer_head_test.go",
         "receive_attestation_test.go",
         "receive_block_test.go",
+        "reorg_recovery_attestations_test.go",
         "reorg_recovery_finality_test.go",
         "reorg_recovery_inclusion_test.go",
         "reorg_recovery_test.go",
