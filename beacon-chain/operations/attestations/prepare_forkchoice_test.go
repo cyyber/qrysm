@@ -101,15 +101,9 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 	}
 	require.NoError(t, s.batchForkChoiceAtts(context.Background()))
 
-	wanted, err := attaggregation.Aggregate([]*qrysmpb.Attestation{aggregatedAtts[0], blockAtts[0]})
-	require.NoError(t, err)
-	aggregated, err := attaggregation.Aggregate([]*qrysmpb.Attestation{aggregatedAtts[1], blockAtts[1]})
-	require.NoError(t, err)
-	wanted = append(wanted, aggregated...)
-	aggregated, err = attaggregation.Aggregate([]*qrysmpb.Attestation{aggregatedAtts[2], blockAtts[2]})
-	require.NoError(t, err)
-
-	wanted = append(wanted, aggregated...)
+	// The single unaggregated vote at each slot stays unaggregated. Only
+	// gossip aggregates enter this queue; included participants remain separate.
+	wanted := aggregatedAtts
 	require.NoError(t, s.cfg.Pool.AggregateUnaggregatedAttestations(context.Background()))
 	received := s.cfg.Pool.ForkchoiceAttestations()
 
@@ -121,6 +115,7 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 	})
 
 	assert.DeepSSZEqual(t, wanted, received)
+	require.Equal(t, len(blockAtts), len(s.cfg.Pool.BlockAttestations()), "included votes keep their own retry queue")
 }
 
 func TestBatchAttestations_Single(t *testing.T) {
@@ -157,16 +152,16 @@ func TestBatchAttestations_Single(t *testing.T) {
 	for _, att := range blockAtts {
 		require.NoError(t, s.cfg.Pool.SaveBlockAttestation(att))
 	}
+	pending := s.cfg.Pool.BlockAttestations()
 	require.NoError(t, s.batchForkChoiceAtts(context.Background()))
 
-	wanted, err := attaggregation.Aggregate(append(aggregatedAtts, unaggregatedAtts...))
-	require.NoError(t, err)
-
-	wanted, err = attaggregation.Aggregate(append(wanted, blockAtts...))
+	// Both unaggregated participants are already in the first gossip aggregate.
+	wanted, err := attaggregation.Aggregate(aggregatedAtts)
 	require.NoError(t, err)
 
 	got := s.cfg.Pool.ForkchoiceAttestations()
 	assert.DeepEqual(t, wanted, got)
+	require.DeepSSZEqual(t, pending, s.cfg.Pool.BlockAttestations())
 }
 
 func TestAggregateAndSaveForkChoiceAtts_Single(t *testing.T) {

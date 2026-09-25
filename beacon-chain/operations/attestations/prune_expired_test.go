@@ -82,10 +82,8 @@ func TestPruneExpired_Ticker(t *testing.T) {
 				return
 			}
 		}
-		for _, attestation := range s.cfg.Pool.BlockAttestations() {
-			if attestation.Data.Slot == 0 {
-				return
-			}
+		if len(s.cfg.Pool.BlockAttestations()) != 2 {
+			return
 		}
 		if s.cfg.Pool.UnaggregatedAttestationCount() != 1 || s.cfg.Pool.AggregatedAttestationCount() != 1 {
 			return
@@ -117,22 +115,19 @@ func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 	for _, att := range atts {
 		require.NoError(t, s.cfg.Pool.SaveBlockAttestation(att))
 	}
+	pending := s.cfg.Pool.BlockAttestations()
 
 	// Rewind back two epochs worth of time to cover the EIP-7045 inclusion window.
 	s.genesisTime = uint64(qrysmTime.Now().Unix()) - uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot*2))
 
 	s.pruneExpiredAtts()
-	// All the attestations on slot 0 should be pruned.
+	// Proposal candidates expire, but already included votes must survive for forkchoice retry.
 	for _, attestation := range s.cfg.Pool.AggregatedAttestations() {
 		if attestation.Data.Slot == 0 {
 			t.Error("Should be pruned")
 		}
 	}
-	for _, attestation := range s.cfg.Pool.BlockAttestations() {
-		if attestation.Data.Slot == 0 {
-			t.Error("Should be pruned")
-		}
-	}
+	require.DeepSSZEqual(t, pending, s.cfg.Pool.BlockAttestations())
 }
 
 func TestPruneExpired_Expired(t *testing.T) {

@@ -56,3 +56,20 @@ func TestKV_BlockAttestation_CanDelete(t *testing.T) {
 	wanted := []*qrysmpb.Attestation{att2}
 	assert.DeepEqual(t, wanted, returned)
 }
+
+func TestKV_BlockAttestation_DeletePreservesPendingParticipants(t *testing.T) {
+	cache := NewAttCaches()
+	processed := recoveryAttestation(0b10001)
+	pending := recoveryAttestation(0b10010)
+	require.NoError(t, cache.SaveBlockAttestation(processed))
+	require.NoError(t, cache.SaveBlockAttestation(pending))
+	for range 2 {
+		require.NoError(t, cache.DeleteBlockAttestation(processed))
+		require.DeepSSZEqual(t, []*qrysmpb.Attestation{pending}, cache.BlockAttestations(), "a later retry must still see unprocessed participants with the same data")
+		seen, err := cache.hasSeenAggregatedBit(pending)
+		require.NoError(t, err)
+		require.Equal(t, false, seen, "deletion must only mark the processed participants seen")
+	}
+	require.NoError(t, cache.DeleteBlockAttestation(pending))
+	require.Equal(t, 0, len(cache.BlockAttestations()))
+}

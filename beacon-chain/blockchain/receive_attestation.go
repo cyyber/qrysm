@@ -181,23 +181,43 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 
 // This processes fork choice attestations from the pool to account for validator votes and fork choice.
 func (s *Service) processAttestations(ctx context.Context, disparity time.Duration) {
-	atts := s.cfg.AttPool.ForkchoiceAttestations()
+	// Included votes keep their own queue: aggregation with gossip would
+	// otherwise either expire them or exempt unincluded participants from age checks.
+	s.processAttestationQueue(ctx, s.cfg.AttPool.BlockAttestations(), 0, true)
+	s.processAttestationQueue(ctx, s.cfg.AttPool.ForkchoiceAttestations(), disparity, false)
+}
+
+func (s *Service) processAttestationQueue(ctx context.Context, atts []*qrysmpb.Attestation, disparity time.Duration, fromBlock bool) {
+	deleteAttestation := s.cfg.AttPool.DeleteForkchoiceAttestation
+	if fromBlock {
+		deleteAttestation = s.cfg.AttPool.DeleteBlockAttestation
+	}
+	remove := func(a *qrysmpb.Attestation) {
+		if err := deleteAttestation(a); err != nil {
+			log.WithError(err).Error("Could not delete processed attestation from pool")
+		}
+	}
 	for _, a := range atts {
 		if ctx.Err() != nil {
 			return
 		}
 		if err := helpers.ValidateNilAttestation(a); err != nil {
-			s.deleteForkchoiceAttestation(a)
+			remove(a)
 			continue
 		}
 		if err := helpers.ValidateSlotTargetEpoch(a.Data); err != nil {
-			s.deleteForkchoiceAttestation(a)
+			remove(a)
 			continue
 		}
-		// Expire queued votes even if their block or state never became available.
+		// Included votes remain useful until finality makes their target
+		// obsolete. Gossip votes expire with the current/previous epoch window.
 		currentEpoch := slots.ToEpoch(s.CurrentSlot())
-		if currentEpoch > 1 && a.Data.Target.Epoch < currentEpoch-1 {
-			s.deleteForkchoiceAttestation(a)
+		expired := currentEpoch > 1 && a.Data.Target.Epoch < currentEpoch-1
+		if fromBlock {
+			expired = a.Data.Target.Epoch < s.cfg.ForkChoiceStore.FinalizedCheckpoint().Epoch
+		}
+		if expired {
+			remove(a)
 			continue
 		}
 		// Based on the spec, don't process the attestation until the subsequent slot.
@@ -214,11 +234,11 @@ func (s *Service) processAttestations(ctx context.Context, disparity time.Durati
 			continue
 		}
 
-		if !helpers.VerifyCheckpointEpoch(a.Data.Target, s.genesisTime) {
+		if !fromBlock && !helpers.VerifyCheckpointEpoch(a.Data.Target, s.genesisTime) {
 			continue
 		}
 
-		if err := s.receiveAttestationNoPubsub(ctx, a, disparity); err != nil {
+		if err := s.onAttestation(ctx, a, disparity, fromBlock); err != nil {
 			if ctx.Err() != nil {
 				return
 			}
@@ -236,13 +256,7 @@ func (s *Service) processAttestations(ctx context.Context, disparity time.Durati
 				continue
 			}
 		}
-		s.deleteForkchoiceAttestation(a)
-	}
-}
-
-func (s *Service) deleteForkchoiceAttestation(a *qrysmpb.Attestation) {
-	if err := s.cfg.AttPool.DeleteForkchoiceAttestation(a); err != nil {
-		log.WithError(err).Error("Could not delete fork choice attestation in pool")
+		remove(a)
 	}
 }
 

@@ -40,6 +40,12 @@ import (
 //	 # Update latest messages for attesting indices
 //	 update_latest_messages(store, indexed_attestation.attesting_indices, attestation)
 func (s *Service) OnAttestation(ctx context.Context, a *qrysmpb.Attestation, disparity time.Duration) error {
+	return s.onAttestation(ctx, a, disparity, false)
+}
+
+// onAttestation retains the block-inclusion exemption from the gossip age
+// limit while checking the same ancestry and target-state signatures.
+func (s *Service) onAttestation(ctx context.Context, a *qrysmpb.Attestation, disparity time.Duration, fromBlock bool) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onAttestation")
 	defer span.End()
 
@@ -50,6 +56,10 @@ func (s *Service) OnAttestation(ctx context.Context, a *qrysmpb.Attestation, dis
 		return err
 	}
 	tgt := qrysmpb.CopyCheckpoint(a.Data.Target)
+	if fromBlock && (!s.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(tgt.Root)) ||
+		!s.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(a.Data.BeaconBlockRoot))) {
+		return attestationDependencyError{errors.New("included attestation blocks are unknown to forkchoice")}
+	}
 
 	// Retrieve attestation's data beacon block pre state. Advance pre state to latest epoch if necessary and
 	// save it to the cache.
@@ -63,9 +73,11 @@ func (s *Service) OnAttestation(ctx context.Context, a *qrysmpb.Attestation, dis
 
 	genesisTime := uint64(s.genesisTime.Unix())
 
-	// Verify attestation target is from current epoch or previous epoch.
-	if err := verifyAttTargetEpoch(ctx, genesisTime, uint64(time.Now().Add(disparity).Unix()), tgt); err != nil {
-		return err
+	// Only gossip attestations must target the current or previous epoch.
+	if !fromBlock {
+		if err := verifyAttTargetEpoch(ctx, genesisTime, uint64(time.Now().Add(disparity).Unix()), tgt); err != nil {
+			return err
+		}
 	}
 
 	// Verify attestation beacon block is known and not from the future.

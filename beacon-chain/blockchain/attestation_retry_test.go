@@ -55,6 +55,14 @@ func (d *attestationReadFailureDB) State(ctx context.Context, root [32]byte) (st
 }
 
 func TestService_AttestationProcessingRetry(t *testing.T) {
+	for _, included := range []bool{false, true} {
+		t.Run(map[bool]string{false: "gossip", true: "included"}[included], func(t *testing.T) {
+			testAttestationProcessingRetry(t, included)
+		})
+	}
+}
+
+func testAttestationProcessingRetry(t *testing.T, included bool) {
 	setupEpochTransitionTest(t)
 	for _, mode := range []string{
 		"healthy", "block read failures", "state read failures", "cancelled before processing",
@@ -94,7 +102,13 @@ func TestService_AttestationProcessingRetry(t *testing.T) {
 				require.NoError(t, f.s.ReceiveBlock(f.ctx, b, b.Root()))
 				synctest.Wait()
 				require.Equal(t, b.Root(), f.s.CachedHeadRoot())
-				require.NoError(t, f.s.cfg.AttPool.SaveForkchoiceAttestations(atts))
+				pendingCount := f.s.cfg.AttPool.ForkchoiceAttestationCount
+				if included {
+					require.NoError(t, f.s.cfg.AttPool.SaveBlockAttestation(atts[0]))
+					pendingCount = func() int { return len(f.s.cfg.AttPool.BlockAttestations()) }
+				} else {
+					require.NoError(t, f.s.cfg.AttPool.SaveForkchoiceAttestations(atts))
+				}
 				d := &attestationReadFailureDB{HeadAccessDatabase: f.s.cfg.BeaconDB, root: a.Root()}
 				f.s.cfg.BeaconDB = d
 				if mode == "block read failures" || mode == "expired dependency" {
@@ -125,25 +139,33 @@ func TestService_AttestationProcessingRetry(t *testing.T) {
 				if mode == "healthy" || mode == "invalid signature" {
 					wantPending = 0
 				}
-				require.Equal(t, wantPending, f.s.cfg.AttPool.ForkchoiceAttestationCount())
+				require.Equal(t, wantPending, pendingCount())
 				if mode == "block read failures" || mode == "state read failures" {
 					f.s.processAttestations(f.ctx, 0)
-					require.Equal(t, 1, f.s.cfg.AttPool.ForkchoiceAttestationCount(), "repeated read failures must preserve the vote")
+					require.Equal(t, 1, pendingCount(), "repeated read failures must preserve the vote")
 				}
 				if mode == "future vote" {
 					driftGenesisTime(f.s, 7, -30)
 				}
 				if mode == "expired dependency" || mode == "expired unknown block" {
-					// Epoch-1 votes expire when epoch 3 starts, even if their
-					// block/state still cannot be read.
+					// Only gossip votes expire when epoch 3 starts. Included
+					// votes must survive until their dependency is available.
 					driftGenesisTime(f.s, 18, -30)
 				}
 				f.s.processAttestations(f.ctx, 0)
-				require.Equal(t, 0, f.s.cfg.AttPool.ForkchoiceAttestationCount())
+				if included && mode == "expired dependency" {
+					require.Equal(t, 1, pendingCount(), "included votes survive repeated read failures after the gossip window")
+					f.s.processAttestations(f.ctx, 0)
+				}
+				wantPending = 0
+				if included && mode == "expired unknown block" {
+					wantPending = 1
+				}
+				require.Equal(t, wantPending, pendingCount())
 				head, err := f.s.cfg.ForkChoiceStore.Head(f.ctx)
 				require.NoError(t, err)
 				wantHead := a.Root()
-				if mode == "invalid signature" || mode == "expired dependency" || mode == "expired unknown block" {
+				if mode == "invalid signature" || (!included && mode == "expired dependency") || mode == "expired unknown block" {
 					wantHead = b.Root()
 				}
 				require.Equal(t, wantHead, head)
@@ -152,6 +174,11 @@ func TestService_AttestationProcessingRetry(t *testing.T) {
 				}
 				if mode == "state read failures" {
 					require.Equal(t, 3, d.stateReads)
+				}
+				if included && mode == "expired unknown block" {
+					require.NoError(t, f.s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(&forktypes.Checkpoint{Epoch: 2, Root: a.Root()}))
+					f.s.processAttestations(f.ctx, 0)
+					require.Equal(t, 0, pendingCount(), "finality expires obsolete included votes even when their dependency never arrives")
 				}
 			})
 		})

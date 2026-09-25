@@ -140,9 +140,9 @@ func TestService_IncludedAttestationTargetSignatures(t *testing.T) {
 						require.NoError(t, f.s.ReceiveBlockBatch(f.ctx, bBranch))
 						synctest.Wait()
 						require.NoError(t, f.s.VerifyLmdFfgConsistency(f.ctx, att))
-						require.NoError(t, f.s.cfg.AttPool.SaveForkchoiceAttestations(pending))
 						f.s.UpdateHead(f.ctx, 21)
 						synctest.Wait()
+						require.Equal(t, 0, len(f.s.cfg.AttPool.BlockAttestations()))
 					}
 					weight, err := f.s.cfg.ForkChoiceStore.Weight(bHead)
 					require.NoError(t, err)

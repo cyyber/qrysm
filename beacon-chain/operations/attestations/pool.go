@@ -32,7 +32,8 @@ type Pool interface {
 	DeleteUnaggregatedAttestation(att *qrysmpb.Attestation) error
 	DeleteSeenUnaggregatedAttestations() (int, error)
 	UnaggregatedAttestationCount() int
-	// For attestations that were included in the block.
+	// Included attestations awaiting forkchoice processing. The chain service
+	// retries these independently of gossip aggregation and age limits.
 	SaveBlockAttestation(att *qrysmpb.Attestation) error
 	BlockAttestations() []*qrysmpb.Attestation
 	DeleteBlockAttestation(att *qrysmpb.Attestation) error

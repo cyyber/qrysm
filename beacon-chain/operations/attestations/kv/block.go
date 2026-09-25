@@ -1,8 +1,11 @@
 package kv
 
 import (
+	"slices"
+
 	"github.com/pkg/errors"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
+	"google.golang.org/protobuf/proto"
 )
 
 // SaveBlockAttestation saves an block attestation in cache.
@@ -49,7 +52,8 @@ func (c *AttCaches) BlockAttestations() []*qrysmpb.Attestation {
 	return atts
 }
 
-// DeleteBlockAttestation deletes a block attestation in cache.
+// DeleteBlockAttestation deletes only the processed attestation. Other votes
+// with the same data can still be waiting for their own validation or retry.
 func (c *AttCaches) DeleteBlockAttestation(att *qrysmpb.Attestation) error {
 	if att == nil || att.Data == nil {
 		return nil
@@ -61,14 +65,22 @@ func (c *AttCaches) DeleteBlockAttestation(att *qrysmpb.Attestation) error {
 
 	c.blockAttLock.Lock()
 	defer c.blockAttLock.Unlock()
-	if atts, ok := c.blockAtt[r]; ok {
-		for _, existingAtt := range atts {
-			if err := c.insertSeenAggregatedBit(existingAtt); err != nil {
-				return err
-			}
+	atts := c.blockAtt[r]
+	for i, existingAtt := range atts {
+		if !proto.Equal(existingAtt, att) {
+			continue
 		}
+		if err := c.insertSeenAggregatedBit(existingAtt); err != nil {
+			return err
+		}
+		atts = slices.Delete(atts, i, i+1)
+		if len(atts) == 0 {
+			delete(c.blockAtt, r)
+		} else {
+			c.blockAtt[r] = atts
+		}
+		break
 	}
-	delete(c.blockAtt, r)
 
 	return nil
 }

@@ -57,15 +57,8 @@ func (s *Service) pruneExpiredAtts() {
 		}
 	}
 
-	blockAtts := s.cfg.Pool.BlockAttestations()
-	for _, att := range blockAtts {
-		if s.expired(att.Data.Slot) {
-			if err := s.cfg.Pool.DeleteBlockAttestation(att); err != nil {
-				log.WithError(err).Error("Could not delete expired block attestation")
-			}
-			expiredBlockAtts.Inc()
-		}
-	}
+	// Included attestations do not expire by wall-clock age. The chain
+	// service consumes them after retry or drops them once finality advances.
 }
 
 // Return true if the input slot has been expired.

@@ -109,10 +109,14 @@ func TestService_IncludedAttestationForkchoiceValidation(t *testing.T) {
 						require.Equal(t, 1, len(pending))
 						require.NoError(t, f.s.ReceiveBlock(f.ctx, branch, branch.Root()))
 						synctest.Wait()
-						require.NoError(t, f.s.cfg.AttPool.SaveForkchoiceAttestations(pending))
 						f.s.UpdateHead(f.ctx, 5)
 						synctest.Wait()
 						require.Equal(t, 0, len(f.s.cfg.AttPool.ForkchoiceAttestations()))
+						wantPending := 0
+						if kind == "unknown target" {
+							wantPending = 1
+						}
+						require.Equal(t, wantPending, len(f.s.cfg.AttPool.BlockAttestations()))
 					}
 					weight, err := f.s.cfg.ForkChoiceStore.Weight(branch.Root())
 					require.NoError(t, err)
