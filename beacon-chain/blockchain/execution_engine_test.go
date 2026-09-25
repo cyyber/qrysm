@@ -467,7 +467,9 @@ func Test_NotifyForkchoiceUpdateRecursive_DoublyLinkedTree(t *testing.T) {
 	}
 	_, err = service.notifyForkchoiceUpdate(ctx, a)
 	require.Equal(t, true, IsInvalidBlock(err))
-	require.Equal(t, brf, InvalidBlockRoot(err))
+	// Keep the original rejected head and every branch removed during recovery.
+	require.Equal(t, brg, InvalidBlockRoot(err))
+	require.DeepEqual(t, [][32]byte{brg, brf}, InvalidAncestorRoots(err))
 
 	// Ensure Head is D
 	headRoot, err = fcs.Head(ctx)

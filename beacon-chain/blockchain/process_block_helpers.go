@@ -88,10 +88,9 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.ReadOnlyBe
 		return err
 	}
 	if !has {
-		if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+		if err := s.saveInitSyncBlocks(ctx, true); err != nil {
 			return errors.Wrap(err, "could not save initial sync blocks")
 		}
-		s.clearInitSyncBlocks()
 	}
 	return nil
 }
@@ -147,10 +146,9 @@ func (s *Service) updateFinalized(ctx context.Context, cp *qrysmpb.Checkpoint) (
 
 	// Blocks need to be saved so that we can retrieve finalized block from
 	// DB when migrating states.
-	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+	if err := s.saveInitSyncBlocks(ctx, true); err != nil {
 		return false, err
 	}
-	s.clearInitSyncBlocks()
 
 	if err := s.cfg.BeaconDB.SaveFinalizedCheckpoint(ctx, cp); err != nil {
 		return false, err

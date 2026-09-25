@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -156,7 +157,16 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				headBlock: b.Block(),
 			})
 			if err != nil {
-				return nil, err // Returning err because it's recursive here.
+				// Recovery must retain the original rejection even if a later
+				// checkpoint read fails or another branch is also invalidated.
+				invalid.error = fmt.Errorf("%w: could not notify replacement head: %w", ErrInvalidPayload, err)
+				additionalRoots := append([][32]byte{InvalidBlockRoot(err)}, InvalidAncestorRoots(err)...)
+				for _, root := range additionalRoots {
+					if root != [32]byte{} && !slices.Contains(invalid.invalidAncestorRoots, root) {
+						invalid.invalidAncestorRoots = append(invalid.invalidAncestorRoots, root)
+					}
+				}
+				return nil, invalid
 			}
 
 			if err := s.saveHead(ctx, r, b, st); err != nil {

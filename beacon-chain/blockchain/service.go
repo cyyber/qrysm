@@ -52,6 +52,9 @@ type Service struct {
 	clockWaiter          startup.ClockWaiter
 	syncComplete         chan struct{}
 	blockBeingSynced     *currentlySyncingBlock
+	// Serializes cache snapshot writes with invalid-block deletion. Acquire
+	// before initSyncBlocksLock when both locks are needed.
+	initSyncBlocksSaveLock sync.Mutex
 	// Protected by the forkchoice lock; records the last validated engine update.
 	lastForkchoiceUpdate *executionForkchoice
 	// Protected by the forkchoice lock; retains only the removed head ancestry
@@ -151,7 +154,7 @@ func (s *Service) Stop() error {
 		s.headLock.RUnlock()
 	}
 	// Save initial sync cached blocks to the DB before stop.
-	return s.cfg.BeaconDB.SaveBlocks(s.ctx, s.getInitSyncBlocks())
+	return s.saveInitSyncBlocks(s.ctx, false)
 }
 
 // Status always returns nil unless there is an error condition that causes

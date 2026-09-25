@@ -35,6 +35,12 @@ func (s *Service) retryInvalidBlockCleanup(ctx context.Context) error {
 	if len(roots) == 0 {
 		return nil
 	}
+	// Quarantine is already visible to readers. Let any older cache write
+	// finish before deletion, and prevent later writes from taking a stale
+	// snapshot while cleanup is in progress.
+	s.initSyncBlocksSaveLock.Lock()
+	defer s.initSyncBlocksSaveLock.Unlock()
+
 	// Preserve the whole removed head prefix before deleting any of it. A
 	// failed ancestry read leaves both the quarantine and cached copies intact.
 	if err := s.preserveInvalidatedHead(ctx, roots); err != nil {

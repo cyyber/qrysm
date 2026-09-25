@@ -212,7 +212,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []blocks.ROBlock
 		reportSlotMetrics(b.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 	}
 
-	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+	if err := s.saveInitSyncBlocks(ctx, false); err != nil {
 		return err
 	}
 	finalized := s.cfg.ForkChoiceStore.FinalizedCheckpoint()

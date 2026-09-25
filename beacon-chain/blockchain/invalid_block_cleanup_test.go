@@ -66,7 +66,7 @@ func TestService_InvalidBlockCleanupInterruptedRecovery(t *testing.T) {
 		require.DeepEqual(t, f.blks[1].Block().Body().Attestations()[0], atts[0])
 		require.Equal(t, 0, len(f.s.pendingInvalidBlocks))
 		require.Equal(t, 0, len(f.s.invalidatedHeadBlocks))
-		require.NoError(t, f.s.cfg.BeaconDB.SaveBlocks(f.ctx, f.s.getInitSyncBlocks()))
+		require.NoError(t, f.s.saveInitSyncBlocks(f.ctx, false))
 		require.Equal(t, false, f.s.cfg.BeaconDB.HasBlock(f.ctx, root))
 	})
 }
