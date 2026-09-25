@@ -245,3 +245,17 @@ func TestCommitteeCache_InProgressMembershipIsolation(t *testing.T) {
 	_, err = cache.ActiveIndices(ctx, a)
 	require.NoError(t, err)
 }
+
+// Entries are shaped by the configuration, so the key must change with the
+// parameters that shape committees even when the seed and indices do not.
+func TestCommitteeKey_CommitsToConfiguration(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	seed := [32]byte{1}
+	indices := []primitives.ValidatorIndex{1, 2, 3}
+	base := NewCommitteeKey(seed, indices)
+	require.Equal(t, base, NewCommitteeKey(seed, indices))
+	cfg := params.BeaconConfig().Copy()
+	cfg.SlotsPerEpoch = cfg.SlotsPerEpoch / 2
+	params.OverrideBeaconConfig(cfg)
+	require.NotEqual(t, base, NewCommitteeKey(seed, indices))
+}

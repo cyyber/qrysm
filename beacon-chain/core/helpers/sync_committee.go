@@ -59,6 +59,11 @@ func CurrentPeriodPositions(st state.BeaconState, indices []primitives.Validator
 // 1. Checks if the public key exists in the sync committee cache
 // 2. If 1 fails, checks if the public key exists in the input current sync committee object
 func IsCurrentPeriodSyncCommittee(st state.BeaconState, valIdx primitives.ValidatorIndex) (bool, error) {
+	// Reject an unknown validator index before consulting the cache, so the
+	// answer does not depend on whether the period's positions were cached.
+	if _, err := st.ValidatorAtIndexReadOnly(valIdx); err != nil {
+		return false, err
+	}
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
 		return false, err
@@ -96,6 +101,11 @@ func IsCurrentPeriodSyncCommittee(st state.BeaconState, valIdx primitives.Valida
 func IsNextPeriodSyncCommittee(
 	st state.BeaconState, valIdx primitives.ValidatorIndex,
 ) (bool, error) {
+	// Reject an unknown validator index before consulting the cache, so the
+	// answer does not depend on whether the period's positions were cached.
+	if _, err := st.ValidatorAtIndexReadOnly(valIdx); err != nil {
+		return false, err
+	}
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
 		return false, err
@@ -123,6 +133,11 @@ func IsNextPeriodSyncCommittee(
 func CurrentPeriodSyncSubcommitteeIndices(
 	st state.BeaconState, valIdx primitives.ValidatorIndex,
 ) ([]primitives.CommitteeIndex, error) {
+	// Reject an unknown validator index before consulting the cache, so the
+	// answer does not depend on whether the period's positions were cached.
+	if _, err := st.ValidatorAtIndexReadOnly(valIdx); err != nil {
+		return nil, err
+	}
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
 		return nil, err
@@ -157,6 +172,11 @@ func CurrentPeriodSyncSubcommitteeIndices(
 func NextPeriodSyncSubcommitteeIndices(
 	st state.BeaconState, valIdx primitives.ValidatorIndex,
 ) ([]primitives.CommitteeIndex, error) {
+	// Reject an unknown validator index before consulting the cache, so the
+	// answer does not depend on whether the period's positions were cached.
+	if _, err := st.ValidatorAtIndexReadOnly(valIdx); err != nil {
+		return nil, err
+	}
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
 		return nil, err
