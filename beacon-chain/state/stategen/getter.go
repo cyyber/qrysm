@@ -225,9 +225,19 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 		return cachedInfo.state, nil
 	}
 
-	// Short circuit if the state is already in the DB.
+	// Short circuit if the state is already in the DB. The state can be removed
+	// between the existence check and the read (invalid-block pruning, or the
+	// hot-state DB mode being switched off), and the database then reports a
+	// nil state without an error. Treat that as a miss and regenerate below
+	// rather than hand a nil state to the caller.
 	if s.beaconDB.HasState(ctx, blockRoot) {
-		return s.beaconDB.State(ctx, blockRoot)
+		st, err := s.beaconDB.State(ctx, blockRoot)
+		if err != nil {
+			return nil, err
+		}
+		if st != nil && !st.IsNil() {
+			return st, nil
+		}
 	}
 
 	summary, err := s.stateSummary(ctx, blockRoot)
@@ -334,15 +344,19 @@ func (s *State) latestAncestorAndBlockRootsForSlot(
 			return cachedInfo.state, roots, nil
 		}
 
-		// Does the state exists in DB.
+		// Does the state exist in DB. A state removed between the existence
+		// check and the read comes back nil without an error; keep walking to
+		// an older ancestor instead of returning the nil state.
 		if s.beaconDB.HasState(ctx, parentRoot) {
 			ancestor, err := s.beaconDB.State(ctx, parentRoot)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "failed to retrieve state from db")
 			}
-			appendCurrentRoot()
-			reverseBlockRoots(roots)
-			return ancestor, roots, nil
+			if ancestor != nil && !ancestor.IsNil() {
+				appendCurrentRoot()
+				reverseBlockRoots(roots)
+				return ancestor, roots, nil
+			}
 		}
 
 		appendCurrentRoot()

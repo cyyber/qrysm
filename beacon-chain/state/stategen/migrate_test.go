@@ -222,11 +222,15 @@ func TestMigrateToCold_ParallelCalls(t *testing.T) {
 	service.saveHotStateDB.blockRootsOfSavedStates = [][32]byte{r1, r4, r7}
 
 	// Run the migration routines concurrently for 2 different finalized roots.
+	// Join the goroutine before asserting: it must not report its result, or
+	// run against the closed database, after the test has completed.
+	parallelErr := make(chan error, 1)
 	go func() {
-		require.NoError(t, service.MigrateToCold(ctx, r4))
+		parallelErr <- service.MigrateToCold(ctx, r4)
 	}()
 
 	require.NoError(t, service.MigrateToCold(ctx, r7))
+	require.NoError(t, <-parallelErr)
 
 	s1, err := service.beaconDB.State(ctx, r1)
 	require.NoError(t, err)

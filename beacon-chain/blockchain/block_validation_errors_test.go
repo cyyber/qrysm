@@ -47,7 +47,10 @@ func TestReceiveBlockBatch_ContextErrorsAreNotInvalid(t *testing.T) {
 				defer cancel()
 				before := func() { cancel() }
 				if deadline {
-					before = func() { time.Sleep(time.Second) }
+					// Sleep past the deadline on the bubble clock: at exactly the
+					// deadline the timer and the sleeper wake at the same instant
+					// and the import could observe a still-live context.
+					before = func() { time.Sleep(2 * time.Second) }
 				}
 				// Cancel after retrieving the parent state, just before the
 				// consensus transition starts, to exercise its error handling.

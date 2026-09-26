@@ -48,7 +48,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b interfaces.ReadOnlyBea
 		return nil, errors.Wrapf(err, "could not get pre state for slot %d", b.Slot())
 	}
 	if preState == nil || preState.IsNil() {
-		return nil, errors.Wrapf(err, "nil pre state for slot %d", b.Slot())
+		return nil, errors.Errorf("nil pre state for slot %d", b.Slot())
 	}
 
 	// Verify block slot time is not from the future.

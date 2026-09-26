@@ -266,6 +266,9 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 	if err != nil {
 		return err
 	}
+	if parentState == nil || parentState.IsNil() {
+		return errors.New("parent state is unavailable")
+	}
 
 	// Deliberately not marking the block as bad on a signature failure: the
 	// block root does not cover the signature, so doing so would let anyone
