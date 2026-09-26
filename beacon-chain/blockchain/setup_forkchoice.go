@@ -156,15 +156,35 @@ func (s *Service) setupForkchoiceTree(st state.BeaconState) error {
 	return s.restoreForkchoiceChain(s.ctx, chain)
 }
 
-// restoreForkchoiceChain restores previously validated database blocks and their
-// attester-slashing exclusions. The caller must hold the forkchoice write lock.
+// restoreForkchoiceChain restores previously validated database blocks, their
+// votes, and slashing exclusions. The caller must hold the forkchoice write lock.
 func (s *Service) restoreForkchoiceChain(ctx context.Context, chain []*forkchoicetypes.BlockAndCheckpoints) error {
 	// InsertChain can retain a prefix on failure. Restore exclusions first so
 	// retries that skip those now-known blocks cannot lose their slashings.
 	for _, b := range chain {
 		s.InsertSlashingsToForkChoiceStore(ctx, b.Block.Block().Body().AttesterSlashings())
 	}
-	return s.cfg.ForkChoiceStore.InsertChain(ctx, chain)
+	restoreErr := s.cfg.ForkChoiceStore.InsertChain(ctx, chain)
+	if restoreErr != nil {
+		ctx = context.WithoutCancel(ctx)
+	}
+	// Restored ancestors are skipped by later imports. Recover votes from
+	// every retained block, including a prefix left by failed insertion.
+	// The regular included-vote handler authenticates them against their
+	// target states and queues votes whose dependencies are still unavailable.
+	for _, b := range chain {
+		if !s.cfg.ForkChoiceStore.HasNode(b.Block.Root()) {
+			continue
+		}
+		if err := s.handleBlockAttestations(ctx, b.Block.Block()); err != nil {
+			if restoreErr == nil {
+				restoreErr = errors.Wrap(err, "could not handle restored block attestations")
+			} else {
+				restoreErr = fmt.Errorf("%w: could not handle restored block attestations: %w", restoreErr, err)
+			}
+		}
+	}
+	return restoreErr
 }
 
 func (s *Service) setupForkchoiceFinalizedHead() error {
