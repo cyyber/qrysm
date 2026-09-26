@@ -18,6 +18,7 @@ type ForkChoice struct {
 	justifiedBalances   []uint64                    // tracks individual validator's last justified balances.
 	numActiveValidators uint64                      // tracks the total number of active validators.
 	balancesByRoot      forkchoice.BalancesByRooter // handler to obtain the balances of the justified checkpoint state
+	lastProcessedEpoch  primitives.Epoch            // last epoch whose checkpoint realization and pruning completed
 	pendingEpoch        *primitives.Epoch           // epoch transition awaiting successful realization and pruning
 }
 

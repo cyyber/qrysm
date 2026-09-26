@@ -409,7 +409,7 @@ func Test_NotifyForkchoiceUpdateRecursive_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, fcs.UpdateJustifiedCheckpoint(ctx, &forkchoicetypes.Checkpoint{}))
 	ojc := &qrysmpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &qrysmpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
-	state, blkRoot, err := prepareForkchoiceState(ctx, 1, bra, [32]byte{}, [32]byte{'A'}, ojc, ofc)
+	state, blkRoot, err := prepareForkchoiceState(ctx, 0, bra, [32]byte{}, [32]byte{'A'}, ojc, ofc)
 	require.NoError(t, err)
 
 	bState, _ := util.DeterministicGenesisStateZond(t, 10)

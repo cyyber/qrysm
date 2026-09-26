@@ -197,16 +197,18 @@ func TestNode_LeadsToViableTip(t *testing.T) {
 func TestNode_LeadsToViableTip_InternalNodeNeedsViableChild(t *testing.T) {
 	f := setup(3, 2)
 	ctx := context.Background()
+	e := params.BeaconConfig().SlotsPerEpoch
+	driftGenesisTime(f, 5*e, 30)
 	parent, child, rival := indexToHash(1), indexToHash(2), indexToHash(3)
-	state, blkRoot, err := prepareForkchoiceState(ctx, 1, parent, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 3, 2)
+	state, blkRoot, err := prepareForkchoiceState(ctx, 4*e+1, parent, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 3, 2)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	// The child's pulled-up justification fell back to epoch 2, which is
 	// stale at the current epoch.
-	state, blkRoot, err = prepareForkchoiceState(ctx, 2, child, parent, params.BeaconConfig().ZeroHash, 2, 2)
+	state, blkRoot, err = prepareForkchoiceState(ctx, 4*e+2, child, parent, params.BeaconConfig().ZeroHash, 2, 2)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	state, blkRoot, err = prepareForkchoiceState(ctx, 3, rival, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 3, 2)
+	state, blkRoot, err = prepareForkchoiceState(ctx, 4*e+3, rival, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 3, 2)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	f.justifiedBalances = []uint64{100, 100, 100, 10}

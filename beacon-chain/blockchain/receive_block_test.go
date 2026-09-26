@@ -791,11 +791,16 @@ func newBatchExecutionFixture(t *testing.T, blockCount int) *batchExecutionFixtu
 		f.states = append(f.states, post)
 	}
 	// A is validated and B is imported optimistically; the rest are pending.
+	// Import the prefix before later epochs have been processed. Individual
+	// tests then advance the clock to their own epoch boundary scenarios.
+	driftGenesisTime(s, 3, 0)
 	require.NoError(t, s.ReceiveBlockBatch(tr.ctx, f.blks[:1]))
 	engine.ErrNewPayload = execution.ErrAcceptedSyncingPayloadStatus
 	engine.ErrForkchoiceUpdated = execution.ErrAcceptedSyncingPayloadStatus
 	require.NoError(t, s.ReceiveBlockBatch(tr.ctx, f.blks[1:2]))
 	require.Equal(t, f.blks[1].Root(), s.CachedHeadRoot())
+	s.SetGenesisTime(time.Unix(int64(genesisTime), 0))
+	s.cfg.ForkChoiceStore.SetGenesisTime(genesisTime)
 	return f
 }
 

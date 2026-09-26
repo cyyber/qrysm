@@ -47,7 +47,8 @@ func (f *ForkChoice) NodeCount() int {
 }
 
 // Head returns the head root from fork choice store.
-// It firsts computes validator's balance changes then recalculates block tree from leaves to root.
+// It realizes pending epoch transitions, computes validator balance changes,
+// then recalculates the block tree from leaves to root.
 func (f *ForkChoice) Head(
 	ctx context.Context,
 ) ([32]byte, error) {
@@ -56,14 +57,17 @@ func (f *ForkChoice) Head(
 
 	calledHeadCount.Inc()
 
+	// Proposal requests can run before the slot ticker. Advance checkpoints
+	// and their balances before weighting the tree or selecting its head.
+	currentSlot := slots.CurrentSlot(f.store.genesisTime)
+	if err := f.NewSlot(ctx, currentSlot); err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not process new slot")
+	}
+
 	if err := f.updateBalances(); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not update balances")
 	}
 
-	// Head can run before the slot ticker, including during proposal requests.
-	// Expire the previous slot's boost before applying scores to the tree.
-	currentSlot := slots.CurrentSlot(f.store.genesisTime)
-	f.store.expireProposerBoost(currentSlot)
 	if err := f.applyProposerBoostScore(); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not apply proposer boost score")
 	}

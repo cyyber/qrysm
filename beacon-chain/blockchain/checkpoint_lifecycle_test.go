@@ -101,10 +101,13 @@ func TestService_LaterExecutionValidation(t *testing.T) {
 func TestService_TickCheckpointPersistence(t *testing.T) {
 	setupEpochTransitionTest(t)
 	for _, tc := range []struct {
-		name                                           string
-		tickFirst, importNextBlock, batch, unsavedTick bool
+		name                                                      string
+		tickFirst, headFirst, importNextBlock, batch, unsavedTick bool
+		tickOffset                                                primitives.Slot
 	}{
 		{name: "block before tick control", importNextBlock: true},
+		{name: "head before epoch tick", headFirst: true},
+		{name: "first tick after epoch boundary", tickOffset: 1},
 		{name: "tick before gossip block", tickFirst: true, importNextBlock: true},
 		{name: "gossip repairs unsaved tick", tickFirst: true, importNextBlock: true, unsavedTick: true},
 		{name: "tick without next block", tickFirst: true},
@@ -130,6 +133,11 @@ func TestService_TickCheckpointPersistence(t *testing.T) {
 				sub := f.s.cfg.StateNotifier.StateFeed().Subscribe(events)
 				defer sub.Unsubscribe()
 				driftGenesisTime(f.s, 24, 0)
+				if tc.headFirst {
+					f.s.UpdateHead(f.ctx, 24)
+					require.Equal(t, primitives.Epoch(3), f.s.cfg.ForkChoiceStore.JustifiedCheckpoint().Epoch)
+					require.Equal(t, primitives.Epoch(2), f.s.cfg.ForkChoiceStore.FinalizedCheckpoint().Epoch)
+				}
 				if tc.tickFirst {
 					if tc.unsavedTick {
 						// Model an earlier tick whose DB write did not complete.
@@ -150,7 +158,8 @@ func TestService_TickCheckpointPersistence(t *testing.T) {
 					}
 				}
 				if !tc.tickFirst {
-					require.NoError(t, f.s.NewSlot(f.ctx, 24))
+					driftGenesisTime(f.s, int64(24+tc.tickOffset), 0)
+					require.NoError(t, f.s.NewSlot(f.ctx, 24+tc.tickOffset))
 				}
 				synctest.Wait()
 				jc, fc := *f.s.cfg.ForkChoiceStore.JustifiedCheckpoint(), *f.s.cfg.ForkChoiceStore.FinalizedCheckpoint()
