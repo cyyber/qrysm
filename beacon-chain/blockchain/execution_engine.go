@@ -274,6 +274,9 @@ func (s *Service) notifyNewPayload(ctx context.Context,
 			error:         ErrInvalidPayload,
 			lastValidHash: lvh,
 		}
+	case execution.ErrInvalidBlockHashPayloadStatus:
+		// A malformed hash rejects this block without blaming its ancestors.
+		return false, ErrInvalidBlockHashPayloadStatus
 	default:
 		return false, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 	}

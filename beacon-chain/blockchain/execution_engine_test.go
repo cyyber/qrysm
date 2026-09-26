@@ -736,8 +736,9 @@ func Test_NotifyNewPayload(t *testing.T) {
 				require.NoError(t, err)
 				return b
 			}(),
-			newPayloadErr: ErrInvalidBlockHashPayloadStatus,
+			newPayloadErr: execution.ErrInvalidBlockHashPayloadStatus,
 			errString:     ErrInvalidBlockHashPayloadStatus.Error(),
+			invalidBlock:  true,
 		},
 	}
 	for _, tt := range tests {

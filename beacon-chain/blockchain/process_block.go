@@ -274,6 +274,10 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
+			// Local cancellation must not mark valid peer data as invalid.
+			if ctx.Err() != nil {
+				return err
+			}
 			return invalidBlock{error: err}
 		}
 		// Authenticate votes against their target states after the batch is

@@ -41,7 +41,7 @@ func TestService_HeadAggregatorSelectionSeed(t *testing.T) {
 	// A replacement head at the same slot must replace the seed, even if the
 	// sync committee cache still contains the state from the old branch.
 	t.Cleanup(func() { syncCommitteeHeadStateCache = cache.NewSyncCommitteeHeadState() })
-	require.NoError(t, syncCommitteeHeadStateCache.Put(slot, st))
+	require.NoError(t, syncCommitteeHeadStateCache.Put(c.head.root, slot, st))
 	replacement := st.Copy()
 	lookahead := (epoch + params.BeaconConfig().EpochsPerHistoricalVector - params.BeaconConfig().MinSeedLookahead - 1) % params.BeaconConfig().EpochsPerHistoricalVector
 	require.NoError(t, replacement.UpdateRandaoMixesAtIndex(uint64(lookahead), [32]byte{42}))
@@ -198,11 +198,12 @@ func TestSyncCommitteeHeadStateCache_RoundTrip(t *testing.T) {
 	})
 	beaconState, _ := util.DeterministicGenesisStateZond(t, 100)
 	require.NoError(t, beaconState.SetSlot(100))
-	cachedState, err := c.Get(101)
+	root := [32]byte{1}
+	cachedState, err := c.Get(root, 101)
 	require.ErrorContains(t, cache.ErrNotFound.Error(), err)
 	require.Equal(t, nil, cachedState)
-	require.NoError(t, c.Put(101, beaconState))
-	cachedState, err = c.Get(101)
+	require.NoError(t, c.Put(root, 101, beaconState))
+	cachedState, err = c.Get(root, 101)
 	require.NoError(t, err)
 	require.DeepEqual(t, beaconState, cachedState)
 }
@@ -249,7 +250,7 @@ func TestService_HeadSyncCommitteeIndices_BlocklessPeriodBoundary(t *testing.T) 
 	// boundary, which rotates the committees and writes the position cache.
 	_, err = c.HeadSyncCommitteeDomain(ctx, boundary)
 	require.NoError(t, err)
-	advanced, err := syncCommitteeHeadStateCache.Get(boundary)
+	advanced, err := syncCommitteeHeadStateCache.Get(root, boundary)
 	require.NoError(t, err)
 	rotatedNext, err := advanced.NextSyncCommittee()
 	require.NoError(t, err)
