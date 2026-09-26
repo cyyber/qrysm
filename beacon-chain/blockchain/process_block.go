@@ -122,7 +122,7 @@ func (s *Service) postBlockProcess(ctx context.Context, roblock consensusblocks.
 	// verify conditions for FCU, notifies FCU, and saves the new head.
 	// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
 	if _, err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
-		return err
+		return classifyForkchoiceError(err, []consensusblocks.ROBlock{roblock})
 	}
 
 	// FCU can invalidate and remove a block that was inserted successfully.
@@ -427,7 +427,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 		headBlock: headBlock.Block(),
 	}
 	if _, err := s.notifyForkchoiceUpdate(ctx, arg); err != nil {
-		return err
+		return classifyForkchoiceError(err, blks)
 	}
 	// Persist the accepted store checkpoints, including changes observed by
 	// the first block or pulled up from older epochs. Execution processing must

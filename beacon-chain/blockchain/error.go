@@ -2,9 +2,11 @@ package blockchain
 
 import (
 	stderrors "errors"
+	"slices"
 
 	"github.com/pkg/errors"
 	"github.com/theQRL/qrysm/beacon-chain/verification"
+	"github.com/theQRL/qrysm/consensus-types/blocks"
 )
 
 var (
@@ -50,6 +52,39 @@ type attestationDependencyError struct {
 
 func (e attestationDependencyError) Unwrap() error {
 	return e.error
+}
+
+// unrelatedBlockError retains an execution rejection's diagnostics and roots
+// for sync cleanup, without blaming the peer supplying a different branch.
+type unrelatedBlockError struct {
+	error
+}
+
+// There is deliberately no Unwrap method: traversing the original error would
+// expose its verification marker again. Forward all other Is and As queries.
+func (e unrelatedBlockError) Is(target error) bool {
+	return target != verification.ErrInvalid && stderrors.Is(e.error, target)
+}
+
+func (e unrelatedBlockError) As(target any) bool {
+	return stderrors.As(e.error, target)
+}
+
+// classifyForkchoiceError limits peer penalties to rejected imports. FCU may
+// instead reject a previously imported head on another branch, including more
+// branches rejected recursively while selecting a replacement.
+func classifyForkchoiceError(err error, imported []blocks.ROBlock) error {
+	root := InvalidBlockRoot(err)
+	if root == [32]byte{} {
+		return err
+	}
+	invalidRoots := InvalidAncestorRoots(err)
+	for _, b := range imported {
+		if b.Root() == root || slices.Contains(invalidRoots, b.Root()) {
+			return err
+		}
+	}
+	return unrelatedBlockError{error: err}
 }
 
 // An invalid block is the block that fails state transition based on the core protocol rules.
