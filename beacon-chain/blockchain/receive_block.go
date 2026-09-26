@@ -140,12 +140,12 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	}
 	s.reportEpochMetrics(postState, currentEpoch)
 	newFinalized, err := s.updateCheckpoints(ctx)
+	// Persisted finality still needs notification if its validation write failed.
+	if newFinalized {
+		s.notifyFinalized()
+	}
 	if err != nil {
 		return errors.Wrap(err, "could not update checkpoints")
-	}
-	// Send finalized events and finalized deposits in the background
-	if newFinalized {
-		s.notifyFinalized(ctx)
 	}
 
 	// If slasher is configured, forward the attestations in the block via an event feed for processing.
@@ -320,7 +320,7 @@ func (s *Service) validateStateTransition(ctx context.Context, preState state.Be
 
 // notifyFinalized starts finalization notifications and deposit processing.
 // The caller must hold the forkchoice lock and have persisted new finality.
-func (s *Service) notifyFinalized(ctx context.Context) {
+func (s *Service) notifyFinalized() {
 	finalized := *s.cfg.ForkChoiceStore.FinalizedCheckpoint()
 	// Snapshot this checkpoint's execution status under the store lock;
 	// the head and finalization may advance before the event goroutine runs.
@@ -329,7 +329,9 @@ func (s *Service) notifyFinalized(ctx context.Context) {
 		log.WithError(err).Error("Could not get finalized checkpoint optimistic status")
 		optimistic = true
 	}
-	go s.sendNewFinalizedEvent(ctx, &finalized, optimistic)
+	// A request deadline cannot undo persisted finality. Let its notification
+	// finish under the service context, just like state migration.
+	go s.sendNewFinalizedEvent(s.ctx, &finalized, optimistic)
 	depCtx, cancel := context.WithTimeout(context.Background(), depositDeadline)
 	go func() {
 		defer cancel()

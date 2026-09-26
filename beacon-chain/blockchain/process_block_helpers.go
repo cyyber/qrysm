@@ -113,7 +113,8 @@ func (s *Service) verifyBlkFinalizedSlot(b interfaces.ReadOnlyBeaconBlock) error
 
 // updateCheckpoints reconciles accepted forkchoice checkpoints with the DB.
 // Blocks and ticks can both advance them. The caller must hold the forkchoice
-// write lock. The result reports whether persisted finality advanced.
+// write lock. The result reports whether persisted finality advanced, even if
+// its separate execution-validation marker could not be saved.
 func (s *Service) updateCheckpoints(ctx context.Context) (bool, error) {
 	justified := s.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	savedJustified, err := s.cfg.BeaconDB.JustifiedCheckpoint(ctx)
@@ -131,7 +132,8 @@ func (s *Service) updateCheckpoints(ctx context.Context) (bool, error) {
 
 // updateFinalized persists finality and migrates old states to cold storage.
 // Validation can advance independently, including at unchanged finality. The
-// caller must hold the forkchoice lock. The result reports new finality only.
+// caller must hold the forkchoice lock. The result reports new persisted
+// finality even when updating its execution-validation marker fails.
 func (s *Service) updateFinalized(ctx context.Context, cp *qrysmpb.Checkpoint) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.updateFinalized")
 	defer span.End()
@@ -157,9 +159,8 @@ func (s *Service) updateFinalized(ctx context.Context, cp *qrysmpb.Checkpoint) (
 		s.checkpointStateCache.EvictUpTo(cp.Epoch)
 	}
 
-	if err := s.updateLastValidatedCheckpoint(ctx, cp); err != nil {
-		return true, err
-	}
+	// Finality is durable now. Start migration regardless of a later failure
+	// to save its validation marker: retries at this epoch take the path above.
 	fRoot := bytesutil.ToBytes32(cp.Root)
 	go func() {
 		// We do not pass in the parent context from the method as this method call
@@ -169,7 +170,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *qrysmpb.Checkpoint) (
 			log.WithError(err).Error("could not migrate to cold")
 		}
 	}()
-	return true, nil
+	return true, s.updateLastValidatedCheckpoint(ctx, cp)
 }
 
 // updateLastValidatedCheckpoint persists execution validation of a saved

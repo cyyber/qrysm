@@ -496,6 +496,14 @@ func (s *Service) applyBlockAttestations(ctx context.Context, atts []*qrysmpb.At
 		if a.Data.Target.Epoch < s.cfg.ForkChoiceStore.FinalizedCheckpoint().Epoch {
 			continue
 		}
+		// The containing block is already in forkchoice, so a duplicate import
+		// will not replay its votes. Keep every unprocessed vote on cancellation.
+		if ctx.Err() != nil {
+			if err := s.cfg.AttPool.SaveBlockAttestation(a); err != nil {
+				return err
+			}
+			continue
+		}
 		r := bytesutil.ToBytes32(a.Data.BeaconBlockRoot)
 		if s.cfg.ForkChoiceStore.HasNode(r) {
 			if err := s.verifyAttestationForkchoice(a); err != nil {
@@ -514,6 +522,13 @@ func (s *Service) applyBlockAttestations(ctx context.Context, atts []*qrysmpb.At
 			}
 			indices, err := verifiedAttestingIndices(ctx, targetState, a)
 			if err != nil {
+				// Committee lookups can observe cancellation after target-state
+				// retrieval succeeds. Such votes still need authentication later.
+				if ctx.Err() != nil {
+					if err := s.cfg.AttPool.SaveBlockAttestation(a); err != nil {
+						return err
+					}
+				}
 				continue
 			}
 			s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indices, r, a.Data.Target.Epoch)

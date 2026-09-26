@@ -68,13 +68,10 @@ func (s *Service) NewSlot(ctx context.Context, slot primitives.Slot) error {
 		return err
 	}
 	newFinalized, err := s.updateCheckpoints(ctx)
-	if err != nil {
-		return err
-	}
 	if newFinalized {
-		s.notifyFinalized(ctx)
+		s.notifyFinalized()
 	}
-	return nil
+	return err
 }
 
 // ProposerBoost wraps the corresponding method from forkchoice
