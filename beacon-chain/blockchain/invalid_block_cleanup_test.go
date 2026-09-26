@@ -6,17 +6,129 @@ import (
 	"fmt"
 	"testing"
 	"testing/synctest"
+	"time"
 
 	"github.com/theQRL/go-qrl/common"
 	"github.com/theQRL/qrysm/beacon-chain/db"
 	"github.com/theQRL/qrysm/beacon-chain/execution"
 	mockExecution "github.com/theQRL/qrysm/beacon-chain/execution/testing"
+	"github.com/theQRL/qrysm/beacon-chain/forkchoice"
 	"github.com/theQRL/qrysm/consensus-types/interfaces"
+	payloadattribute "github.com/theQRL/qrysm/consensus-types/payload-attribute"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/encoding/bytesutil"
+	enginev1 "github.com/theQRL/qrysm/proto/engine/v1"
 	"github.com/theQRL/qrysm/testing/assert"
 	"github.com/theQRL/qrysm/testing/require"
 )
+
+type interruptImportLock struct {
+	forkchoice.ForkChoicer
+	interrupt func()
+}
+
+func (f *interruptImportLock) Lock() {
+	if f.interrupt != nil {
+		interrupt := f.interrupt
+		f.interrupt = nil
+		interrupt()
+	}
+	f.ForkChoicer.Lock()
+}
+
+type interruptInvalidResponse struct {
+	*mockExecution.EngineClient
+	interrupt func()
+}
+
+func (e *interruptInvalidResponse) NewPayload(ctx context.Context, p interfaces.ExecutionData, hashes []common.Hash, root *common.Hash) ([]byte, error) {
+	lvh, err := e.EngineClient.NewPayload(ctx, p, hashes, root)
+	if errors.Is(err, execution.ErrInvalidPayloadStatus) {
+		e.interrupt()
+	}
+	return lvh, err
+}
+
+func (e *interruptInvalidResponse) ForkchoiceUpdated(ctx context.Context, fcs *enginev1.ForkchoiceState, attr payloadattribute.Attributer) (*enginev1.PayloadIDBytes, []byte, error) {
+	pid, lvh, err := e.EngineClient.ForkchoiceUpdated(ctx, fcs, attr)
+	if errors.Is(err, execution.ErrInvalidPayloadStatus) {
+		e.interrupt()
+	}
+	return pid, lvh, err
+}
+
+func TestService_InvalidationSurvivesImportCancellation(t *testing.T) {
+	for _, mode := range []string{"gossip", "batch NewPayload", "batch ForkchoiceUpdated"} {
+		for _, deadline := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/deadline=%v", mode, deadline), func(t *testing.T) {
+				f := newBatchExecutionFixture(t, 3)
+				validPayload, err := f.blks[0].Block().Body().Execution()
+				require.NoError(t, err)
+				synctest.Test(t, func(t *testing.T) {
+					t.Cleanup(synctest.Wait)
+					driftGenesisTime(f.s, 5, 0)
+					ctx, cancel := context.WithCancel(f.ctx)
+					wantErr := context.Canceled
+					if deadline {
+						cancel()
+						ctx, cancel = context.WithTimeout(f.ctx, time.Second)
+						wantErr = context.DeadlineExceeded
+					}
+					defer cancel()
+					interrupt := func() { cancel() }
+					if deadline {
+						interrupt = func() { time.Sleep(2 * time.Second) }
+					}
+					fc := f.s.cfg.ForkChoiceStore
+					if mode == "batch ForkchoiceUpdated" {
+						f.engine.ErrForkchoiceUpdated = execution.ErrInvalidPayloadStatus
+						f.engine.ForkChoiceUpdatedResp = validPayload.BlockHash()
+					} else {
+						f.engine.ErrNewPayload = execution.ErrInvalidPayloadStatus
+						f.engine.NewPayloadResp = validPayload.BlockHash()
+					}
+					if mode == "gossip" {
+						// Consensus and the INVALID response have completed before
+						// cancellation races acquisition of the import's write lock.
+						f.s.cfg.ForkChoiceStore = &interruptImportLock{ForkChoicer: fc, interrupt: interrupt}
+						err = f.s.ReceiveBlock(ctx, f.blks[2], f.blks[2].Root())
+						f.s.cfg.ForkChoiceStore = fc
+					} else {
+						// Batches already hold the lock. Cancel as the engine's
+						// rejection arrives, before applying its invalidation.
+						f.s.cfg.ExecutionEngineCaller = &interruptInvalidResponse{EngineClient: f.engine, interrupt: interrupt}
+						err = f.s.ReceiveBlockBatch(ctx, f.blks[2:])
+						f.s.cfg.ExecutionEngineCaller = f.engine
+					}
+					require.Equal(t, true, IsInvalidBlock(err))
+					require.ErrorIs(t, err, wantErr)
+					require.Equal(t, f.blks[2].Root(), InvalidBlockRoot(err))
+					require.Equal(t, bytesutil.ToBytes32(validPayload.BlockHash()), InvalidBlockLVH(err))
+					root := f.blks[1].Root()
+					found := false
+					for _, invalidRoot := range InvalidAncestorRoots(err) {
+						found = found || invalidRoot == root
+					}
+					require.Equal(t, true, found, "retain invalid ancestors in the error")
+					require.Equal(t, false, f.s.InForkchoice(root), "cancellation must not preserve a known-invalid branch")
+					require.Equal(t, false, f.s.HasBlock(f.ctx, root), "quarantine the block before cancelable storage work")
+					require.Equal(t, true, f.s.cfg.BeaconDB.HasBlock(f.ctx, root), "storage cleanup remains retryable")
+					_, pending := f.s.pendingInvalidBlocks[root]
+					require.Equal(t, true, pending)
+					f.engine.ErrNewPayload, f.engine.ErrForkchoiceUpdated = nil, nil
+					f.s.UpdateHead(f.ctx, 5)
+					synctest.Wait()
+					require.Equal(t, false, f.s.cfg.BeaconDB.HasBlock(f.ctx, root))
+					require.Equal(t, 0, len(f.s.pendingInvalidBlocks))
+					require.Equal(t, 0, len(f.s.invalidatedHeadBlocks))
+					published, err := f.s.HeadRoot(f.ctx)
+					require.NoError(t, err)
+					require.Equal(t, f.blks[0].Root(), bytesutil.ToBytes32(published))
+				})
+			})
+		}
+	}
+}
 
 type invalidCleanupRetryDB struct {
 	db.HeadAccessDatabase

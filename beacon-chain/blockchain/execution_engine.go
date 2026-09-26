@@ -113,7 +113,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			if len(lastValidHash) == 0 {
 				lastValidHash = defaultLatestValidHash
 			}
-			invalidRoots, err := s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, headRoot, headBlk.ParentRoot(), bytesutil.ToBytes32(lastValidHash))
+			// An INVALID verdict outlives the request that obtained it. Finish
+			// removing the branch even if cancellation races the engine response.
+			invalidRoots, err := s.cfg.ForkChoiceStore.SetOptimisticToInvalid(context.WithoutCancel(ctx), headRoot, headBlk.ParentRoot(), bytesutil.ToBytes32(lastValidHash))
 			invalid := invalidBlock{
 				error:                ErrInvalidPayload,
 				root:                 headRoot,
@@ -291,7 +293,10 @@ func (s *Service) notifyNewPayload(ctx context.Context,
 // which would otherwise self-deadlock on the non-reentrant lock.
 func (s *Service) pruneInvalidBlock(ctx context.Context, root, parentRoot, lvh [32]byte) error {
 	newPayloadInvalidNodeCount.Inc()
-	invalidRoots, err := s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, root, parentRoot, lvh)
+	// Complete the in-memory removal independently of the import's deadline.
+	// Storage cleanup below keeps the request context and quarantines roots for
+	// retry if it is canceled, so the INVALID verdict cannot be lost.
+	invalidRoots, err := s.cfg.ForkChoiceStore.SetOptimisticToInvalid(context.WithoutCancel(ctx), root, parentRoot, lvh)
 	invalid := invalidBlock{
 		error:                ErrInvalidPayload,
 		root:                 root,
@@ -337,7 +342,9 @@ func (s *Service) handleInvalidBatchExecutionError(ctx context.Context, payloadE
 		}
 		known := s.cfg.ForkChoiceStore.HasNode(b.Root())
 		if known || s.cfg.ForkChoiceStore.HasNode(b.Block().ParentRoot()) {
-			roots, err := s.cfg.ForkChoiceStore.SetOptimisticToInvalid(ctx, b.Root(), b.Block().ParentRoot(), lvh)
+			// As in single-block imports, cancellation must not discard a
+			// completed execution rejection before quarantine is established.
+			roots, err := s.cfg.ForkChoiceStore.SetOptimisticToInvalid(context.WithoutCancel(ctx), b.Root(), b.Block().ParentRoot(), lvh)
 			if err != nil {
 				invalid.error = fmt.Errorf("%w: could not invalidate batch ancestors: %v", payloadErr, err)
 				return invalid

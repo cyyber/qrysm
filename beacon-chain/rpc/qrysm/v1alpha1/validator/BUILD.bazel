@@ -184,6 +184,7 @@ go_test(
         "aggregator_test.go",
         "assignments_test.go",
         "attester_test.go",
+        "blocks_stream_test.go",
         "blocks_test.go",
         "exit_test.go",
         "proposer_altair_test.go",
