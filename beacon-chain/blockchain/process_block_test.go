@@ -46,6 +46,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 	ctx := tr.ctx
 
 	st, keys := util.DeterministicGenesisStateZond(t, 64)
+	service.genesisTime = time.Unix(int64(st.GenesisTime()), 0)
 	require.NoError(t, service.saveGenesisData(ctx, st))
 	bState := st.Copy()
 

@@ -212,12 +212,15 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 		return errors.New("no blocks provided")
 	}
 
-	// Blocks at or before the first slot of the finalized epoch cannot be
-	// canonical: on_block requires block.slot > finalized_slot. The gossip
-	// path checks this while fetching the pre-state; a batch must too.
+	// Check every block's time and finalized slot before processing the batch.
+	// StateByRootInitialSync can return a mutable cached pre-state, so even a
+	// future block later in the batch must be rejected before retrieving it.
 	for _, blk := range blks {
 		if err := consensusblocks.BeaconBlockIsNil(blk); err != nil {
 			return invalidBlock{error: err}
+		}
+		if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), blk.Block().Slot(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+			return err
 		}
 		if err := s.verifyBlkFinalizedSlot(blk.Block()); err != nil {
 			return err

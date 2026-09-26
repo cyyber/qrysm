@@ -516,10 +516,18 @@ func (s *Service) saveOrphanedOperations(ctx context.Context, orphanedRoot [32]b
 			// branch. The age check above bounds this work to one epoch.
 			targetState, err := s.getAttPreState(ctx, a.Data.Target)
 			if err != nil {
-				log.WithError(err).Debug("Could not get target state of orphaned attestation")
-				continue
+				if errors.Is(err, ErrNotCheckpoint) {
+					continue
+				}
+				// Keep the old head and its ancestry until recovery can finish.
+				// Publishing the replacement would prevent later head updates
+				// from retrying this attestation after a temporary read failure.
+				return errors.Wrap(err, "could not get target state of orphaned attestation")
 			}
 			if _, err := verifiedAttestingIndices(ctx, targetState, a); err != nil {
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
 				continue
 			}
 			if err := s.cfg.AttPool.RecoverAttestation(a); err != nil {
