@@ -122,6 +122,14 @@ func (s *Service) postBlockProcess(ctx context.Context, roblock consensusblocks.
 	// verify conditions for FCU, notifies FCU, and saves the new head.
 	// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
 	if _, err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
+		// FCU may instead reject a previously imported head on another branch,
+		// or fail to publish the head. This block then stays imported, and may
+		// even have become the head, so it must still be announced. A rejection
+		// of this block removes it from forkchoice before this point.
+		if s.cfg.ForkChoiceStore.HasNode(roblock.Root()) {
+			reportAttestationInclusion(roblock.Block())
+			s.sendStateFeedOnBlock(roblock)
+		}
 		return classifyForkchoiceError(err, []consensusblocks.ROBlock{roblock})
 	}
 
@@ -427,6 +435,13 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 		headBlock: headBlock.Block(),
 	}
 	if _, err := s.notifyForkchoiceUpdate(ctx, arg); err != nil {
+		// A rejection of another branch leaves this batch imported. Announce it;
+		// a rejection within the batch removes its tail from forkchoice first.
+		if s.cfg.ForkChoiceStore.HasNode(lastBR) {
+			if announceErr := s.sendStateFeedOnBatch(blks, lastValidIndex); announceErr != nil {
+				log.WithError(announceErr).Error("Could not announce imported batch")
+			}
+		}
 		return classifyForkchoiceError(err, blks)
 	}
 	// Persist the accepted store checkpoints, including changes observed by

@@ -70,6 +70,17 @@ func (e unrelatedBlockError) As(target any) bool {
 	return stderrors.As(e.error, target)
 }
 
+// IsUnrelatedBlockError reports whether err carries an execution rejection of
+// another branch, met while importing blocks that were themselves accepted.
+// Callers can record the rejected roots yet treat their own import as done.
+func IsUnrelatedBlockError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var u unrelatedBlockError
+	return stderrors.As(err, &u)
+}
+
 // classifyForkchoiceError limits peer penalties to rejected imports. FCU may
 // instead reject a previously imported head on another branch, including more
 // branches rejected recursively while selecting a replacement.

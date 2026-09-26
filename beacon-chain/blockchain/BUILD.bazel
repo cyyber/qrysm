@@ -119,6 +119,7 @@ go_test(
         "canonical_vote_suppression_test.go",
         "chain_info_test.go",
         "checkpoint_lifecycle_test.go",
+        "competing_head_invalidation_test.go",
         "deferred_included_votes_test.go",
         "deferred_vote_collision_test.go",
         "checktags_test.go",

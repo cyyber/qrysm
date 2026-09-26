@@ -316,7 +316,12 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *qrysmpb.GenericSi
 	}).Debug("Broadcasting block")
 
 	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
-		return nil, fmt.Errorf("could not process beacon block: %v", err)
+		if !blockchain.IsUnrelatedBlockError(err) {
+			return nil, fmt.Errorf("could not process beacon block: %v", err)
+		}
+		// The execution rejection concerns another branch. This block was
+		// imported, so the proposal succeeded.
+		log.WithError(err).WithField("slot", blk.Block().Slot()).Warn("Proposed block imported while another branch was invalidated")
 	}
 
 	log.WithField("slot", blk.Block().Slot()).Debugf(
