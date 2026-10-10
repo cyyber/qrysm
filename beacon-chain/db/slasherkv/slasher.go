@@ -264,8 +264,28 @@ func (s *Store) SaveAttestationRecordsForValidators(
 			attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 			signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 			for i, att := range attestationsBatch {
-				if err := attRecordsBkt.Put(att.SigningRoot[:], encodedRecordsBatch[i]); err != nil {
-					return err
+				record := encodedRecordsBatch[i]
+				// Records are keyed by the attestation data root, which every
+				// attestation for the same data shares. Merge the attesting
+				// indices (and their signatures) into the stored record instead
+				// of overwriting it: the per-validator index points at this root,
+				// and a slashing built from a record that lacks the validator
+				// has no slashable index.
+				if existing := attRecordsBkt.Get(att.SigningRoot[:]); existing != nil {
+					merged, changed, err := mergeAttestationRecord(existing, att)
+					if err != nil {
+						return err
+					}
+					if !changed {
+						record = nil
+					} else {
+						record = merged
+					}
+				}
+				if record != nil {
+					if err := attRecordsBkt.Put(att.SigningRoot[:], record); err != nil {
+						return err
+					}
 				}
 				for _, valIdx := range att.IndexedAttestation.AttestingIndices {
 					encIdx := encodeValidatorIndex(primitives.ValidatorIndex(valIdx))

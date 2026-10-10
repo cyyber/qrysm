@@ -5,8 +5,10 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/theQRL/qrysm/beacon-chain/state"
+	"github.com/theQRL/qrysm/consensus-types/blocks"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	"github.com/theQRL/qrysm/encoding/bytesutil"
 	"go.opencensus.io/trace"
@@ -32,6 +34,9 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 	fBlock, err := s.beaconDB.Block(ctx, fRoot)
 	if err != nil {
 		return err
+	}
+	if err := blocks.BeaconBlockIsNil(fBlock); err != nil {
+		return errors.Wrapf(err, "finalized block %#x not found", fRoot)
 	}
 	fSlot := fBlock.Block().Slot()
 	if oldFSlot > fSlot {
@@ -67,15 +72,20 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 			var aRoot [32]byte
 			var aState state.BeaconState
 
-			// When the epoch boundary state is not in cache due to skip slot scenario,
-			// we have to regenerate the state which will represent epoch boundary.
-			// By finding the highest available canonical block below epoch boundary slot,
-			// we generate the state for that block root.
+			// When the epoch boundary state is not in cache (skipped slot, cache
+			// eviction, or a non-canonical entry holding the slot key), regenerate
+			// the state which represents the epoch boundary from the highest
+			// canonical block at or below the boundary slot. The slot itself must be
+			// considered: after a restart the boundary cache is empty, and when the
+			// boundary coincides with the finalized slot the migration resumed from
+			// (the floor below), the finalized block is the block to archive. Looking
+			// only strictly below it trips the floor check and, because the finalized
+			// info is then never advanced, stalls every later migration.
 			if exists {
 				aRoot = cached.root
 				aState = cached.state
 			} else {
-				aRoot, err = s.canonicalRootAtOrBelow(ctx, slot-1, oldFSlot)
+				aRoot, err = s.canonicalRootAtOrBelow(ctx, slot, oldFSlot)
 				if err != nil {
 					return err
 				}
@@ -89,10 +99,15 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				}
 			}
 
+			// The existence check and the removal from the hot-state list form one
+			// critical section with DisableSaveHotStateToDB, which deletes the
+			// listed states under the same lock. Checked outside it, the state
+			// could be deleted between the check and the removal: the archived
+			// point would be skipped here while its state is gone.
+			s.saveHotStateDB.lock.Lock()
 			if s.beaconDB.HasState(ctx, aRoot) {
 				// If you are migrating a state and its already part of the hot state cache saved to the db,
 				// you can just remove it from the hot state cache as it becomes redundant.
-				s.saveHotStateDB.lock.Lock()
 				roots := s.saveHotStateDB.blockRootsOfSavedStates
 				for i := range roots {
 					if aRoot == roots[i] {
@@ -105,6 +120,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				s.saveHotStateDB.lock.Unlock()
 				continue
 			}
+			s.saveHotStateDB.lock.Unlock()
 
 			// aState is only generated when the first HasState check above missed. A
 			// concurrent DeleteStates (e.g. DisableSaveHotStateToDB on the block-import

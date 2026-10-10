@@ -193,8 +193,11 @@ func (s *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 		bkt := tx.Bucket(blocksBucket)
 		exists = bkt.Get(blockRoot[:]) != nil
 		return nil
-	}); err != nil { // This view never returns an error, but we'll handle anyway for sanity.
-		panic(err) // lint:nopanic
+	}); err != nil {
+		// Only a closed database fails a read-only view, which can happen to a
+		// background routine during shutdown. Report no block rather than panic.
+		log.WithError(err).Error("Could not check for a block")
+		return false
 	}
 	return exists
 }
@@ -247,18 +250,38 @@ func (s *Store) DeleteBlock(ctx context.Context, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlock")
 	defer span.End()
 
-	if err := s.DeleteState(ctx, root); err != nil {
-		return err
-	}
+	// Exclude a concurrent state summary flush: its snapshot could otherwise be
+	// written back after this deletion and resurrect the block's summary.
+	s.stateSummaryCache.flushLock.Lock()
+	defer s.stateSummaryCache.flushLock.Unlock()
+	s.blockWriteLock.Lock()
+	defer s.blockWriteLock.Unlock()
 
-	if err := s.deleteStateSummary(root); err != nil {
-		return err
-	}
-
-	return s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(finalizedBlockRootsIndexBucket)
-		if b := bkt.Get(root[:]); b != nil {
+	// The state, the state summary, a finalized-index sentinel, the indices and
+	// the block itself are removed in one transaction: a refused deletion leaves
+	// all of the block's data in place, and a crash cannot leave a block behind
+	// without its state and summary.
+	if err := s.db.Update(func(tx *bolt.Tx) error {
+		// Refuse a finalized canonical block. Blocks of the latest finalized
+		// epoch only carry a sentinel in the index until the next checkpoint
+		// settles their status; such a block can still be invalidated or lose
+		// fork choice and must remain deletable.
+		if isFinalizedCanonicalInIndex(tx, root) {
 			return ErrDeleteJustifiedAndFinalized
+		}
+		if err := s.deleteStateTx(ctx, tx, root); err != nil {
+			return err
+		}
+		if err := tx.Bucket(stateSummaryBucket).Delete(root[:]); err != nil {
+			return err
+		}
+		// Drop a "finalized epoch, canonical status pending" sentinel with the
+		// block instead of leaving it behind until the next finalization.
+		idx := tx.Bucket(finalizedBlockRootsIndexBucket)
+		if idx.Get(root[:]) != nil {
+			if err := idx.Delete(root[:]); err != nil {
+				return err
+			}
 		}
 
 		// Look up the block to find its slot and parent root for index cleanup.
@@ -290,12 +313,15 @@ func (s *Store) DeleteBlock(ctx context.Context, root [32]byte) error {
 			return err
 		}
 
-		if err := tx.Bucket(blocksBucket).Delete(root[:]); err != nil {
-			return err
-		}
-		s.blockCache.Del(string(root[:]))
-		return nil
-	})
+		return tx.Bucket(blocksBucket).Delete(root[:])
+	}); err != nil {
+		return err
+	}
+	// Caches are updated once the deletion is durable. A cached summary that
+	// was never flushed must survive a refused deletion.
+	s.stateSummaryCache.delete(root)
+	s.blockCache.Del(string(root[:]))
+	return nil
 }
 
 // SaveBlock to the db.
@@ -333,6 +359,16 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.ReadOnlySigned
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlocks")
 	defer span.End()
 
+	saveBlinded, err := s.shouldSaveBlinded(ctx)
+	if err != nil {
+		return err
+	}
+	return s.saveBlocks(ctx, blks, saveBlinded)
+}
+
+// saveBlocks stores the blocks in the given format: blinded (execution payload
+// header only) or with the full execution payload.
+func (s *Store) saveBlocks(ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, saveBlinded bool) error {
 	// Performing marshaling, hashing, and indexing outside the bolt transaction
 	// to minimize the time we hold the DB lock.
 	blockRoots := make([][]byte, len(blks))
@@ -343,7 +379,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.ReadOnlySigned
 		if err != nil {
 			return err
 		}
-		enc, err := s.marshalBlock(ctx, blk)
+		enc, err := marshalBlockWithFormat(ctx, blk, saveBlinded)
 		if err != nil {
 			return err
 		}
@@ -352,11 +388,15 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.ReadOnlySigned
 		indicesByBucket := createBlockIndicesFromBlock(ctx, blk.Block())
 		indicesForBlocks[i] = indicesByBucket
 	}
-	saveBlinded, err := s.shouldSaveBlinded(ctx)
-	if err != nil {
-		return err
+	type cachedBlock struct {
+		root string
+		blk  interfaces.ReadOnlySignedBeaconBlock
+		cost int64
 	}
-	return s.db.Update(func(tx *bolt.Tx) error {
+	toCache := make([]cachedBlock, 0, len(blks))
+	s.blockWriteLock.Lock()
+	defer s.blockWriteLock.Unlock()
+	if err := s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
 		for i, blk := range blks {
 			if existingBlock := bkt.Get(blockRoots[i]); existingBlock != nil {
@@ -375,13 +415,21 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.ReadOnlySigned
 					blk = blindedBlock
 				}
 			}
-			s.blockCache.Set(string(blockRoots[i]), blk, int64(len(encodedBlocks[i])))
 			if err := bkt.Put(blockRoots[i], encodedBlocks[i]); err != nil {
 				return err
 			}
+			toCache = append(toCache, cachedBlock{root: string(blockRoots[i]), blk: blk, cost: int64(len(encodedBlocks[i]))})
 		}
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+	// Cache only committed blocks. A cached block from a failed commit would
+	// make SaveBlock and HasBlock treat it as stored even though it is not.
+	for _, c := range toCache {
+		s.blockCache.Set(c.root, c.blk, c.cost)
+	}
+	return nil
 }
 
 // SaveHeadBlockRoot to the db.
@@ -390,14 +438,19 @@ func (s *Store) SaveHeadBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	defer span.End()
 	hasStateSummary := s.HasStateSummary(ctx, blockRoot)
 	return s.db.Update(func(tx *bolt.Tx) error {
-		hasStateInDB := tx.Bucket(stateBucket).Get(blockRoot[:]) != nil
-		if !(hasStateInDB || hasStateSummary) {
-			return errors.New("no state or state summary found with head block root")
-		}
-
-		bucket := tx.Bucket(blocksBucket)
-		return bucket.Put(headBlockRootKey, blockRoot[:])
+		return saveHeadBlockRootTx(tx, blockRoot, hasStateSummary)
 	})
+}
+
+// saveHeadBlockRootTx is SaveHeadBlockRoot within an open write transaction.
+// hasStateSummary is the cached state summary lookup, which cannot be done
+// inside the transaction.
+func saveHeadBlockRootTx(tx *bolt.Tx, blockRoot [32]byte, hasStateSummary bool) error {
+	hasStateInDB := tx.Bucket(stateBucket).Get(blockRoot[:]) != nil
+	if !(hasStateInDB || hasStateSummary) {
+		return errors.New("no state or state summary found with head block root")
+	}
+	return tx.Bucket(blocksBucket).Put(headBlockRootKey, blockRoot[:])
 }
 
 // GenesisBlock retrieves the genesis block of the beacon chain.
@@ -659,7 +712,10 @@ func blockRootsByFilter(ctx context.Context, tx *bolt.Tx, f *filters.QueryFilter
 	// lookup index, we find the intersection across all of them and use
 	// that list of roots to lookup the block. These block will
 	// meet the filter criteria.
-	indices := lookupValuesForIndices(ctx, indicesByBucket, tx)
+	indices, err := lookupValuesForIndices(ctx, indicesByBucket, tx)
+	if err != nil {
+		return nil, err
+	}
 	keys := rootsBySlotRange
 	if len(indices) > 0 {
 		// If we have found indices that meet the filter criteria, and there are also
@@ -730,7 +786,13 @@ func blockRootsBySlotRange(
 	if endSlot < startSlot {
 		return nil, errInvalidSlotRange
 	}
+	// Preallocate for the expected number of slots, but bound it: the range can
+	// span the whole chain (the finalized index rebuild after a checkpoint
+	// import), and the cursor only visits slots that hold blocks anyway.
 	rootsRange := endSlot.SubSlot(startSlot).Div(step)
+	if rootsRange > maxRootsPreallocation {
+		rootsRange = maxRootsPreallocation
+	}
 	roots := make([][]byte, 0, rootsRange)
 	c := bkt.Cursor()
 	for k, v := c.Seek(min); conditional(k, max); k, v = c.Next() {
@@ -739,6 +801,9 @@ func blockRootsBySlotRange(
 			if slot.SubSlot(startSlot).Mod(step) != 0 {
 				continue
 			}
+		}
+		if len(v)%32 != 0 {
+			return nil, errors.Wrapf(errMisalignedRootList, "corrupt value in block slot index for key %#x len=%d", k, len(v))
 		}
 		numOfRoots := len(v) / 32
 		splitRoots := make([][]byte, 0, numOfRoots)
@@ -749,6 +814,9 @@ func blockRootsBySlotRange(
 	}
 	return roots, nil
 }
+
+// maxRootsPreallocation caps the up-front allocation of a slot range query.
+const maxRootsPreallocation = 4096
 
 // blockRootsBySlot retrieves the block roots by slot
 func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot primitives.Slot) ([][32]byte, error) {
@@ -850,15 +918,14 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.ReadOnlySignedBea
 	return blocks.NewSignedBeaconBlock(rawBlock)
 }
 
-func (s *Store) marshalBlock(
+// marshalBlockWithFormat encodes a block for storage, blinded or with its full
+// execution payload.
+func marshalBlockWithFormat(
 	ctx context.Context,
 	blk interfaces.ReadOnlySignedBeaconBlock,
+	blinded bool,
 ) ([]byte, error) {
-	shouldBlind, err := s.shouldSaveBlinded(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if shouldBlind {
+	if blinded {
 		return marshalBlockBlinded(ctx, blk)
 	}
 	return marshalBlockFull(ctx, blk)

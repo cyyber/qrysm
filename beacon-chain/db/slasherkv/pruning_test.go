@@ -7,8 +7,11 @@ import (
 
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	slashertypes "github.com/theQRL/qrysm/beacon-chain/slasher/types"
+	fieldparams "github.com/theQRL/qrysm/config/fieldparams"
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
+	"github.com/theQRL/qrysm/encoding/bytesutil"
+	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/time/slots"
 	bolt "go.etcd.io/bbolt"
@@ -206,4 +209,66 @@ func TestStore_PruneAttestations_OK(t *testing.T) {
 			require.NoError(t, err)
 		}
 	})
+}
+
+func TestPruneAttestationsAtEpoch_CancelledContextCommitsProgress(t *testing.T) {
+	ctx := context.Background()
+	db := setupDB(t)
+
+	atts := make([]*slashertypes.IndexedAttestationWrapper, 0, 5)
+	for i := uint64(0); i < 5; i++ {
+		root := bytesutil.PadTo([]byte{byte(i + 1)}, 32)
+		atts = append(atts, createAttestationWrapper(primitives.Epoch(i), primitives.Epoch(i+1), []uint64{i}, root))
+	}
+	require.NoError(t, db.SaveAttestationRecordsForValidators(ctx, atts))
+
+	// A deadline that has already passed deletes nothing, reports the timeout
+	// and, above all, does not fail the transaction.
+	cancelled, cancel := context.WithCancel(ctx)
+	cancel()
+	numPruned, err := db.PruneAttestationsAtEpoch(cancelled, 10)
+	require.ErrorIs(t, err, errTimeOut)
+	require.Equal(t, uint(0), numPruned)
+	for i := uint64(0); i < 5; i++ {
+		record, err := db.AttestationRecordForValidator(ctx, primitives.ValidatorIndex(i), primitives.Epoch(i+1))
+		require.NoError(t, err)
+		require.NotNil(t, record)
+	}
+
+	// Without a deadline everything at or below the epoch is pruned.
+	numPruned, err = db.PruneAttestationsAtEpoch(ctx, 3)
+	require.NoError(t, err)
+	require.Equal(t, uint(3), numPruned)
+	record, err := db.AttestationRecordForValidator(ctx, 4, 5)
+	require.NoError(t, err)
+	require.NotNil(t, record)
+}
+
+func TestPruneProposalsAtEpoch_CancelledContextCommitsNothing(t *testing.T) {
+	ctx := context.Background()
+	db := setupDB(t)
+	proposals := []*slashertypes.SignedBlockHeaderWrapper{
+		{
+			SignedBeaconBlockHeader: &qrysmpb.SignedBeaconBlockHeader{
+				Header: &qrysmpb.BeaconBlockHeader{
+					Slot:          2,
+					ProposerIndex: 1,
+					ParentRoot:    make([]byte, 32),
+					StateRoot:     make([]byte, 32),
+					BodyRoot:      make([]byte, 32),
+				},
+				Signature: make([]byte, fieldparams.MLDSA87SignatureLength),
+			},
+			SigningRoot: [32]byte{1},
+		},
+	}
+	require.NoError(t, db.SaveBlockProposals(ctx, proposals))
+	cancelled, cancel := context.WithCancel(ctx)
+	cancel()
+	numPruned, err := db.PruneProposalsAtEpoch(cancelled, 10)
+	require.ErrorIs(t, err, context.Canceled)
+	require.Equal(t, uint(0), numPruned)
+	record, err := db.BlockProposalForValidator(ctx, 1, 2)
+	require.NoError(t, err)
+	require.NotNil(t, record)
 }

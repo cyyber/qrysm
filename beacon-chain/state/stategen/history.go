@@ -54,6 +54,16 @@ func (c *CanonicalHistory) BlockRootForSlot(ctx context.Context, target primitiv
 	if currentSlot := c.cs.CurrentSlot(); target > currentSlot {
 		return [32]byte{}, errors.Wrap(ErrFutureSlotRequested, fmt.Sprintf("requested=%d, current=%d", target, currentSlot))
 	}
+	covered, err := c.slotCovered(ctx, target)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	if !covered {
+		// Without this check the search below finds no canonical block, falls
+		// through to genesis, and the replay fabricates a state from the genesis
+		// state and empty slots.
+		return [32]byte{}, errors.Wrapf(ErrNoDataForSlot, "slot %d not in db due to checkpoint sync", target)
+	}
 
 	slotAbove := target + 1
 	// don't bother searching for candidate roots when we know the target slot is genesis
@@ -87,6 +97,53 @@ func (c *CanonicalHistory) BlockRootForSlot(ctx context.Context, target primitiv
 	}
 
 	return c.h.GenesisBlockRoot(ctx)
+}
+
+// slotCovered reports whether the node holds canonical history for the slot. A
+// node started from a checkpoint has no blocks between the backfill position
+// and the origin block, so no state can be replayed for a slot in that gap.
+// This mirrors backfill.Status.SlotCovered using the persisted roots. Note for a
+// future backfill implementation: blocks it stores must also be canonical for
+// the CanonicalChecker (the finalized index) before slots at or below the
+// backfill position may be served from them.
+func (c *CanonicalHistory) slotCovered(ctx context.Context, slot primitives.Slot) (bool, error) {
+	originRoot, err := c.h.OriginCheckpointBlockRoot(ctx)
+	if err != nil {
+		if errors.Is(err, db.ErrNotFoundOriginBlockRoot) {
+			return true, nil // synced from genesis
+		}
+		return false, errors.Wrap(err, "could not read the origin checkpoint root")
+	}
+	originSlot, err := c.slotOfBlock(ctx, originRoot)
+	if err != nil {
+		return false, errors.Wrap(err, "could not read the origin checkpoint block")
+	}
+	if slot >= originSlot {
+		return true, nil
+	}
+	backfillRoot, err := c.h.BackfillBlockRoot(ctx)
+	if err != nil {
+		if errors.Is(err, db.ErrNotFoundBackfillBlockRoot) {
+			return false, nil // nothing backfilled yet
+		}
+		return false, errors.Wrap(err, "could not read the backfill block root")
+	}
+	backfillSlot, err := c.slotOfBlock(ctx, backfillRoot)
+	if err != nil {
+		return false, errors.Wrap(err, "could not read the backfill block")
+	}
+	return slot <= backfillSlot, nil
+}
+
+func (c *CanonicalHistory) slotOfBlock(ctx context.Context, root [32]byte) (primitives.Slot, error) {
+	b, err := c.h.Block(ctx, root)
+	if err != nil {
+		return 0, err
+	}
+	if err := blocks.BeaconBlockIsNil(b); err != nil {
+		return 0, errors.Wrapf(db.ErrNotFound, "block %#x", root)
+	}
+	return b.Block().Slot(), nil
 }
 
 // bestForSlot encapsulates several messy realities of the underlying db code, looping through multiple blocks,

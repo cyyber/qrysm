@@ -883,3 +883,62 @@ func TestStore_RegistrationsByValidatorID(t *testing.T) {
 	want := errors.Wrap(ErrNotFoundFeeRecipient, "validator id 3")
 	require.Equal(t, want.Error(), err.Error())
 }
+
+func TestStore_DeleteBlock_FinalizedKeepsStateAndSummary(t *testing.T) {
+	ctx := context.Background()
+	db := setupDB(t)
+	mk := func(slot primitives.Slot, parent [32]byte) [32]byte {
+		b := util.NewBeaconBlockZond()
+		b.Block.Slot = slot
+		b.Block.ParentRoot = parent[:]
+		w, err := blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+		r, err := w.Block().HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, w))
+		return r
+	}
+	gRoot := mk(0, [32]byte{})
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
+	r1 := mk(1, gRoot)
+	r2 := mk(2, r1)
+	st, err := util.NewBeaconStateZond()
+	require.NoError(t, err)
+	require.NoError(t, st.SetSlot(1))
+	require.NoError(t, db.SaveState(ctx, st, r1))
+	require.NoError(t, db.SaveStateSummary(ctx, &qrysmpb.StateSummary{Slot: 1, Root: r1[:]}))
+	require.NoError(t, db.SaveStateSummary(ctx, &qrysmpb.StateSummary{Slot: 2, Root: r2[:]}))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, &qrysmpb.Checkpoint{Epoch: 0, Root: r2[:]}))
+	require.Equal(t, true, db.IsFinalizedBlock(ctx, r1))
+
+	// r1 is finalized but not the checkpoint root, so DeleteState alone would not refuse it.
+	require.ErrorIs(t, db.DeleteBlock(ctx, r1), ErrDeleteJustifiedAndFinalized)
+	require.Equal(t, true, db.HasBlock(ctx, r1))
+	require.Equal(t, true, db.HasState(ctx, r1), "state of a finalized block must survive a refused deletion")
+	require.Equal(t, true, db.HasStateSummary(ctx, r1), "summary of a finalized block must survive a refused deletion")
+}
+
+func TestDeleteBlock_RemovesStateAndSummary(t *testing.T) {
+	ctx := context.Background()
+	db := setupDB(t)
+	b := util.NewBeaconBlockZond()
+	b.Block.Slot = 7
+	wsb, err := blocks.NewSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err := wsb.Block().HashTreeRoot()
+	require.NoError(t, err)
+	st, err := util.NewBeaconStateZond()
+	require.NoError(t, err)
+	require.NoError(t, st.SetSlot(7))
+	require.NoError(t, db.SaveBlock(ctx, wsb))
+	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.SaveStateSummary(ctx, &qrysmpb.StateSummary{Slot: 7, Root: root[:]}))
+
+	require.NoError(t, db.DeleteBlock(ctx, root))
+	require.Equal(t, false, db.HasBlock(ctx, root))
+	require.Equal(t, false, db.HasState(ctx, root))
+	require.Equal(t, false, db.HasStateSummary(ctx, root))
+	has, _, err := db.BlockRootsBySlot(ctx, 7)
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+}

@@ -16,6 +16,11 @@ var errTimeOut = errors.New("operation timed out")
 
 // PruneAttestationsAtEpoch deletes all attestations from the slasher DB with target epoch
 // less than or equal to the specified epoch.
+//
+// The deletion is bounded in time. When the deadline passes, the deletes made so
+// far are committed (returning an error from the transaction would roll all of
+// them back and make no progress at all) and the next pruning tick continues
+// from the lowest remaining epoch.
 func (s *Store) PruneAttestationsAtEpoch(
 	ctx context.Context, maxEpoch primitives.Epoch,
 ) (numPruned uint, err error) {
@@ -57,6 +62,8 @@ func (s *Store) PruneAttestationsAtEpoch(
 		return
 	}
 
+	var deleted uint
+	var timedOut bool
 	err = s.db.Update(func(tx *bolt.Tx) error {
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
@@ -65,8 +72,9 @@ func (s *Store) PruneAttestationsAtEpoch(
 		// We begin a pruning iteration starting from the first item in the bucket.
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			if ctx.Err() != nil {
-				// Exit the routine if the context has expired.
-				return errTimeOut
+				// Deadline reached: commit what was deleted so far.
+				timedOut = true
+				return nil
 			}
 
 			// We check the epoch from the current key in the database.
@@ -86,27 +94,28 @@ func (s *Store) PruneAttestationsAtEpoch(
 			if err := attRecordsBkt.Delete(v); err != nil {
 				return errors.Wrap(err, "delete attestation record")
 			}
-			slasherAttestationsPrunedTotal.Inc()
-			numPruned++
+			deleted++
 		}
 		return nil
 	})
-
-	if errors.Is(err, errTimeOut) {
-		log.Warning("Aborting pruning routine")
-		return
-	}
-
 	if err != nil {
 		log.WithError(err).Error("Failed to prune attestations")
 		return
 	}
 
+	// Only committed deletions count.
+	numPruned = deleted
+	slasherAttestationsPrunedTotal.Add(float64(deleted))
+	if timedOut {
+		log.WithField("numPruned", deleted).Warning("Pruning deadline reached, committed partial progress; continuing on the next tick")
+		err = errTimeOut
+	}
 	return
 }
 
 // PruneProposalsAtEpoch deletes all proposals from the slasher DB with epoch
-// less than or equal to the specified epoch.
+// less than or equal to the specified epoch. A cancelled context commits the
+// deletes made so far instead of rolling them back.
 func (s *Store) PruneProposalsAtEpoch(
 	ctx context.Context, maxEpoch primitives.Epoch,
 ) (numPruned uint, err error) {
@@ -147,13 +156,16 @@ func (s *Store) PruneProposalsAtEpoch(
 		return
 	}
 
+	var deleted uint
+	var cancelled bool
 	if err = s.db.Update(func(tx *bolt.Tx) error {
 		proposalBkt := tx.Bucket(proposalRecordsBucket)
 		c := proposalBkt.Cursor()
 		// We begin a pruning iteration starting from the first item in the bucket.
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
 			if ctx.Err() != nil {
-				return ctx.Err()
+				cancelled = true
+				return nil
 			}
 			// We check the slot from the current key in the database.
 			// If we have hit a slot that is greater than the end slot of the pruning process,
@@ -170,12 +182,16 @@ func (s *Store) PruneProposalsAtEpoch(
 			if err := proposalBkt.Delete(k); err != nil {
 				return err
 			}
-			slasherProposalsPrunedTotal.Inc()
-			numPruned++
+			deleted++
 		}
 		return nil
 	}); err != nil {
 		return
+	}
+	numPruned = deleted
+	slasherProposalsPrunedTotal.Add(float64(deleted))
+	if cancelled {
+		err = ctx.Err()
 	}
 	return
 }

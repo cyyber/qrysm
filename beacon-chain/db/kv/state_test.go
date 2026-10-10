@@ -2,11 +2,14 @@ package kv
 
 import (
 	"context"
+	crand "crypto/rand"
 	"encoding/binary"
 	"math/rand"
+	"path"
 	"testing"
 	"time"
 
+	"github.com/dgraph-io/ristretto"
 	"github.com/theQRL/qrysm/beacon-chain/state"
 	"github.com/theQRL/qrysm/config/features"
 	field_params "github.com/theQRL/qrysm/config/fieldparams"
@@ -127,6 +130,10 @@ func TestState_CanSaveRetrieveValidatorEntriesFromCache(t *testing.T) {
 	ctx := context.Background()
 	require.NoError(t, db.SaveState(ctx, st, r))
 	assert.Equal(t, true, db.HasState(context.Background(), r))
+
+	// The cache is populated once the transaction has committed, and ristretto
+	// applies Set asynchronously: drain its buffer before inspecting the cache.
+	db.validatorEntryCache.Wait()
 
 	// check if the state is in cache
 	for i := range stateValidators {
@@ -890,3 +897,118 @@ func BenchmarkState_CheckStateSaveTime_10(b *testing.B) { checkStateSaveTime(b, 
 
 func BenchmarkState_CheckStateReadTime_1(b *testing.B)  { checkStateReadTime(b, 1) }
 func BenchmarkState_CheckStateReadTime_10(b *testing.B) { checkStateReadTime(b, 10) }
+
+func TestStore_CleanUpDirtyStates_EveryRootAtSlot(t *testing.T) {
+	ctx := context.Background()
+	db := setupDB(t)
+	genesisState, err := util.NewBeaconStateZond()
+	require.NoError(t, err)
+	genesisRoot := [32]byte{'a'}
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisRoot))
+	require.NoError(t, db.SaveState(ctx, genesisState, genesisRoot))
+
+	// Two states at the same slot: the chain forked at slot 5.
+	forkState, err := util.NewBeaconStateZond()
+	require.NoError(t, err)
+	require.NoError(t, forkState.SetSlot(5))
+	rA, rB := [32]byte{'b'}, [32]byte{'c'}
+	require.NoError(t, db.SaveState(ctx, forkState, rA))
+	require.NoError(t, db.SaveState(ctx, forkState, rB))
+
+	fb := util.NewBeaconBlockZond()
+	fb.Block.Slot = 64
+	fb.Block.ParentRoot = genesisRoot[:]
+	wfb, err := blocks.NewSignedBeaconBlock(fb)
+	require.NoError(t, err)
+	fRoot, err := wfb.Block().HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wfb))
+	finalizedState, err := util.NewBeaconStateZond()
+	require.NoError(t, err)
+	require.NoError(t, finalizedState.SetSlot(64))
+	require.NoError(t, db.SaveState(ctx, finalizedState, fRoot))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, &qrysmpb.Checkpoint{Epoch: 2, Root: fRoot[:]}))
+
+	require.NoError(t, db.CleanUpDirtyStates(ctx, 128))
+	require.Equal(t, false, db.HasState(ctx, rA))
+	require.Equal(t, false, db.HasState(ctx, rB), "the second state at the slot must be cleaned up too")
+	require.Equal(t, true, db.HasState(ctx, fRoot))
+	require.Equal(t, true, db.HasState(ctx, genesisRoot))
+}
+
+func TestGenesisState_NoNestedReadTransaction(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.ConfigName = "no-embedded-genesis"
+	params.OverrideBeaconConfig(cfg)
+	resetCfg := features.InitWithReset(&features.Flags{EnableHistoricalSpaceRepresentation: false})
+	defer resetCfg()
+
+	ctx := context.Background()
+	dir := t.TempDir()
+	// bbolt's default mmap sizing doubles from 32KB as the file grows, so a
+	// small write load produces many remap events.
+	boltDB, err := bolt.Open(path.Join(dir, DatabaseFileName), params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{Timeout: time.Second})
+	require.NoError(t, err)
+	blockCache, err := ristretto.NewCache(&ristretto.Config{NumCounters: 1000, MaxCost: BlockCacheSize, BufferItems: 64})
+	require.NoError(t, err)
+	valCache, err := ristretto.NewCache(&ristretto.Config{NumCounters: NumOfValidatorEntries, MaxCost: ValidatorEntryMaxCost, BufferItems: 64})
+	require.NoError(t, err)
+	store := &Store{db: boltDB, databasePath: dir, blockCache: blockCache, validatorEntryCache: valCache, stateSummaryCache: newStateSummaryCache(), ctx: ctx}
+	require.NoError(t, boltDB.Update(func(tx *bolt.Tx) error { return createBuckets(tx, Buckets...) }))
+
+	st, err := util.NewBeaconStateZond()
+	require.NoError(t, err)
+	gRoot := [32]byte{'g'}
+	require.NoError(t, store.SaveState(ctx, st, gRoot))
+	require.NoError(t, store.SaveGenesisBlockRoot(ctx, gRoot))
+	got, err := store.GenesisState(ctx)
+	require.NoError(t, err)
+	require.Equal(t, false, got == nil || got.IsNil(), "genesis must come from the DB in this test")
+
+	readerDone := make(chan error, 1)
+	writerDone := make(chan error, 1)
+	go func() {
+		for i := 0; i < 1500; i++ {
+			if _, err := store.GenesisState(ctx); err != nil {
+				readerDone <- err
+				return
+			}
+		}
+		readerDone <- nil
+	}()
+	go func() {
+		val := make([]byte, 64*1024)
+		for i := 0; i < 200; i++ {
+			if _, err := crand.Read(val); err != nil {
+				writerDone <- err
+				return
+			}
+			err := boltDB.Update(func(tx *bolt.Tx) error {
+				return tx.Bucket(chainMetadataBucket).Put([]byte{'w', byte(i >> 8), byte(i)}, val)
+			})
+			if err != nil {
+				writerDone <- err
+				return
+			}
+		}
+		writerDone <- nil
+	}()
+
+	deadline := time.After(60 * time.Second)
+	for done := 0; done < 2; done++ {
+		select {
+		case err := <-readerDone:
+			require.NoError(t, err)
+		case err := <-writerDone:
+			require.NoError(t, err)
+		case <-deadline:
+			t.Fatal("deadlock between GenesisState and a writer that remaps the database")
+		}
+	}
+	require.NoError(t, boltDB.Close())
+}
+
+// An interrupted validator-schema migration followed by a restart without the
+// flag used to serve the already migrated states without validators. The
+// migration now resumes whenever migrated states exist, flag or not.

@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/theQRL/qrysm/beacon-chain/state"
-	"github.com/theQRL/qrysm/consensus-types/primitives"
-
 	"github.com/pkg/errors"
+	testDB "github.com/theQRL/qrysm/beacon-chain/db/testing"
+	"github.com/theQRL/qrysm/beacon-chain/state"
+	consensusblocks "github.com/theQRL/qrysm/consensus-types/blocks"
+	"github.com/theQRL/qrysm/consensus-types/primitives"
+	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/testing/require"
+	"github.com/theQRL/qrysm/testing/util"
 )
 
 func TestBlockForSlotFuture(t *testing.T) {
@@ -561,4 +564,90 @@ func mockRoots(n int, iter func(int, chan uint32)) [][32]byte {
 		roots = append(roots, root)
 	}
 	return roots
+}
+
+// A node started from a checkpoint has no history between the backfill
+// position and the origin block. The slot replayer must refuse such slots
+// instead of falling through to genesis and fabricating a state from the
+// genesis state and empty slots.
+func TestBlockRootForSlot_RefusesSlotsBeforeOrigin(t *testing.T) {
+	ctx := context.Background()
+	var backfilled, origin, head primitives.Slot = 20, 100, 150
+	specs := []mockHistorySpec{
+		{slot: backfilled, canonicalBlock: true},
+		{slot: origin, canonicalBlock: true, savedState: true},
+		{slot: head, canonicalBlock: true},
+	}
+	hist := newMockHistory(t, specs, head+1)
+	originRoot := hist.slotMap[origin]
+	hist.originRoot = &originRoot
+	backfillRoot := hist.slotMap[backfilled]
+	hist.backfillRoot = &backfillRoot
+	ch := &CanonicalHistory{h: hist, cc: hist, cs: hist}
+
+	for _, slot := range []primitives.Slot{backfilled + 1, origin - 1} {
+		_, err := ch.BlockRootForSlot(ctx, slot)
+		require.ErrorIs(t, err, ErrNoDataForSlot)
+		_, err = ch.ReplayerForSlot(slot).ReplayBlocks(ctx)
+		require.ErrorIs(t, err, ErrNoDataForSlot)
+	}
+	for _, c := range []struct {
+		slot primitives.Slot
+		root [32]byte
+	}{
+		{slot: 0, root: hist.slotMap[0]},
+		{slot: backfilled, root: backfillRoot},
+		{slot: origin, root: originRoot},
+		{slot: origin + 1, root: originRoot},
+		{slot: head, root: hist.slotMap[head]},
+	} {
+		r, err := ch.BlockRootForSlot(ctx, c.slot)
+		require.NoError(t, err)
+		require.Equal(t, c.root, r)
+	}
+}
+
+// Same guarantee against the real database after a checkpoint import: the
+// origin and backfill roots written by SaveOrigin bound the served history.
+func TestReplayer_CheckpointSyncedDBRefusesPreOriginSlots(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	genesisState, _ := util.DeterministicGenesisStateZond(t, 8)
+	require.NoError(t, beaconDB.SaveGenesisData(ctx, genesisState))
+	genesisRoot, err := beaconDB.GenesisBlockRoot(ctx)
+	require.NoError(t, err)
+
+	originSlot := primitives.Slot(64)
+	originState := genesisState.Copy()
+	require.NoError(t, originState.SetSlot(originSlot))
+	blk := util.NewBeaconBlockZond()
+	blk.Block.Slot = originSlot
+	blk.Block.ParentRoot = genesisRoot[:]
+	bodyRoot, err := blk.Block.Body.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, originState.SetLatestBlockHeader(&qrysmpb.BeaconBlockHeader{
+		Slot:          originSlot,
+		ProposerIndex: blk.Block.ProposerIndex,
+		ParentRoot:    genesisRoot[:],
+		StateRoot:     make([]byte, 32),
+		BodyRoot:      bodyRoot[:],
+	}))
+	sb, err := originState.MarshalSSZ()
+	require.NoError(t, err)
+	wb, err := consensusblocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	bb, err := wb.MarshalSSZ()
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveOrigin(ctx, sb, bb))
+
+	ch := NewCanonicalHistory(beaconDB, &mockCanonicalChecker{is: true}, &mockCurrentSlotter{Slot: 200})
+	_, err = ch.ReplayerForSlot(10).ReplayBlocks(ctx)
+	require.ErrorIs(t, err, ErrNoDataForSlot)
+	st, err := ch.ReplayerForSlot(originSlot).ReplayBlocks(ctx)
+	require.NoError(t, err)
+	require.Equal(t, originSlot, st.Slot())
+	// Genesis itself is covered.
+	st, err = ch.ReplayerForSlot(0).ReplayBlocks(ctx)
+	require.NoError(t, err)
+	require.Equal(t, primitives.Slot(0), st.Slot())
 }

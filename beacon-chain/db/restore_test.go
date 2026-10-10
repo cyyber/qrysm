@@ -69,3 +69,91 @@ func TestRestore(t *testing.T) {
 	assert.LogsContain(t, logHook, "Restore completed successfully")
 
 }
+
+// Restoring a database onto itself used to truncate it before a byte was read.
+func TestRestore_RefusesToCopyDatabaseOntoItself(t *testing.T) {
+	dataDir := t.TempDir()
+	dbDir := path.Join(dataDir, kv.BeaconNodeDbDirName)
+	store, err := kv.NewKVStore(context.Background(), dbDir)
+	require.NoError(t, err)
+	require.NoError(t, store.Close())
+	dbFile := path.Join(dbDir, kv.DatabaseFileName)
+
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(cmd.RestoreSourceFileFlag.Name, "", "")
+	set.String(cmd.RestoreTargetDirFlag.Name, "", "")
+	require.NoError(t, set.Set(cmd.RestoreSourceFileFlag.Name, dbFile))
+	require.NoError(t, set.Set(cmd.RestoreTargetDirFlag.Name, dataDir))
+	cliCtx := cli.NewContext(&app, set, nil)
+
+	require.ErrorContains(t, "the restore source is the database file in the target directory", Restore(cliCtx))
+
+	// The database is intact.
+	store, err = kv.NewKVStore(context.Background(), dbDir)
+	require.NoError(t, err)
+	require.NoError(t, store.Close())
+}
+
+// A source living in the target directory under a temporary-looking name (a
+// leftover of an interrupted restore) must be copied, not truncated: the
+// restore uses a fresh temporary file of its own.
+
+func TestRestore_SourceInTargetDirectoryIsNotTruncated(t *testing.T) {
+	dataDir := t.TempDir()
+	dbDir := path.Join(dataDir, kv.BeaconNodeDbDirName)
+	store, err := kv.NewKVStore(context.Background(), dbDir)
+	require.NoError(t, err)
+	head := util.NewBeaconBlockZond()
+	head.Block.Slot = 77
+	wsb, err := blocks.NewSignedBeaconBlock(head)
+	require.NoError(t, err)
+	require.NoError(t, store.SaveBlock(context.Background(), wsb))
+	root, err := head.Block.HashTreeRoot()
+	require.NoError(t, err)
+	st, err := util.NewBeaconStateZond()
+	require.NoError(t, err)
+	require.NoError(t, store.SaveState(context.Background(), st, root))
+	require.NoError(t, store.SaveHeadBlockRoot(context.Background(), root))
+	require.NoError(t, store.Close())
+	// The only copy of the database sits under a leftover temporary name.
+	source := path.Join(dbDir, kv.DatabaseFileName+".restore.tmp")
+	require.NoError(t, os.Rename(path.Join(dbDir, kv.DatabaseFileName), source))
+
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(cmd.RestoreSourceFileFlag.Name, "", "")
+	set.String(cmd.RestoreTargetDirFlag.Name, "", "")
+	require.NoError(t, set.Set(cmd.RestoreSourceFileFlag.Name, source))
+	require.NoError(t, set.Set(cmd.RestoreTargetDirFlag.Name, dataDir))
+	cliCtx := cli.NewContext(&app, set, nil)
+	require.NoError(t, Restore(cliCtx))
+
+	restored, err := kv.NewKVStore(context.Background(), dbDir)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, restored.Close()) }()
+	headBlock, err := restored.HeadBlock(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, primitives.Slot(77), headBlock.Block().Slot())
+	info, err := os.Stat(source)
+	require.NoError(t, err)
+	require.NotEqual(t, int64(0), info.Size(), "the source was truncated")
+}
+
+// A source that is not a database is refused before the target is touched.
+
+func TestRestore_RefusesNonDatabaseSource(t *testing.T) {
+	dataDir := t.TempDir()
+	source := path.Join(t.TempDir(), "not-a-db")
+	require.NoError(t, os.WriteFile(source, []byte("hello"), 0o600))
+
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(cmd.RestoreSourceFileFlag.Name, "", "")
+	set.String(cmd.RestoreTargetDirFlag.Name, "", "")
+	require.NoError(t, set.Set(cmd.RestoreSourceFileFlag.Name, source))
+	require.NoError(t, set.Set(cmd.RestoreTargetDirFlag.Name, dataDir))
+	cliCtx := cli.NewContext(&app, set, nil)
+
+	require.ErrorContains(t, "not a readable database file", Restore(cliCtx))
+}

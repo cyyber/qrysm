@@ -43,15 +43,6 @@ type ServiceConfig struct {
 	ClockWaiter             startup.ClockWaiter
 }
 
-// SlashingChecker is an interface for defining services that the beacon node may interact with to provide slashing data.
-type SlashingChecker interface {
-	IsSlashableBlock(ctx context.Context, proposal *qrysmpb.SignedBeaconBlockHeader) (*qrysmpb.ProposerSlashing, error)
-	IsSlashableAttestation(ctx context.Context, attestation *qrysmpb.IndexedAttestation) ([]*qrysmpb.AttesterSlashing, error)
-	HighestAttestations(
-		ctx context.Context, indices []primitives.ValidatorIndex,
-	) ([]*qrysmpb.HighestAttestation, error)
-}
-
 // Service defining a slasher implementation as part of
 // the beacon node, able to detect consensus slashable offenses.
 type Service struct {
@@ -68,7 +59,13 @@ type Service struct {
 	blocksSlotTicker               *slots.SlotTicker
 	pruningSlotTicker              *slots.SlotTicker
 	latestEpochWrittenForValidator map[primitives.ValidatorIndex]primitives.Epoch
-	wg                             sync.WaitGroup
+	// lastEpochWrittenPersisted is the epoch at which latestEpochWrittenForValidator
+	// was last flushed to disk by the attestation processing routine.
+	lastEpochWrittenPersisted primitives.Epoch
+	// proposalRetries counts, per header signing root, how often a conflicting
+	// proposal whose signature could not be checked was queued again.
+	proposalRetries map[[32]byte]uint8
+	wg              sync.WaitGroup
 }
 
 // New instantiates a new slasher from configuration values.
@@ -90,12 +87,26 @@ func New(ctx context.Context, srvCfg *ServiceConfig) (*Service, error) {
 // Start listening for received indexed attestations and blocks
 // and perform slashing detection on them.
 func (s *Service) Start() {
-	go s.run() // Start functions must be non-blocking.
+	// run holds a count on the wait group for its whole life, so that Stop
+	// waits for it as well: the worker goroutines are added to the wait group
+	// from inside run, and a Stop that ran before them would otherwise return
+	// while run still starts workers and writes the service's maps.
+	s.wg.Add(1)
+	go func() { // Start functions must be non-blocking.
+		defer s.wg.Done()
+		s.run()
+	}()
 }
 
 func (s *Service) run() {
-	s.waitForChainInitialization()
+	if err := s.waitForChainInitialization(); err != nil {
+		// A shutdown before the chain started; there is nothing to run.
+		return
+	}
 	s.waitForSync(s.genesisTime)
+	if s.ctx.Err() != nil {
+		return
+	}
 
 	log.Info("Completed chain sync, starting slashing detection")
 
@@ -186,15 +197,20 @@ func (*Service) Status() error {
 	return nil
 }
 
-func (s *Service) waitForChainInitialization() {
+// waitForChainInitialization blocks until the chain clock is known. It returns
+// an error when the service is stopped first; the clock is nil then and must
+// not be used.
+func (s *Service) waitForChainInitialization() error {
 	clock, err := s.serviceCfg.ClockWaiter.WaitForClock(s.ctx)
 	if err != nil {
 		log.WithError(err).Error("Could not receive chain start notification")
+		return err
 	}
 	s.genesisTime = clock.GenesisTime()
 	log.WithField("genesisTime", s.genesisTime).Info(
 		"Slasher received chain initialization event",
 	)
+	return nil
 }
 
 func (s *Service) waitForSync(genesisTime time.Time) {

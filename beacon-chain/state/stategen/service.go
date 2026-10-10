@@ -6,6 +6,7 @@ package stategen
 import (
 	"context"
 	stderrors "errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -69,7 +70,8 @@ type saveHotStateDbConfig struct {
 }
 
 // This tracks the finalized point. It's also the point where slot and the block root of
-// cold and hot sections of the DB splits.
+// cold and hot sections of the DB splits: slot is the cold-state migration cursor,
+// MigrateToCold archives the points from it up to the next finalized slot.
 type finalizedInfo struct {
 	slot  primitives.Slot
 	root  [32]byte
@@ -143,7 +145,26 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 		}
 	}()
 
-	s.finalizedInfo = &finalizedInfo{slot: fState.Slot(), root: fRoot, state: fState.Copy()}
+	// The migration cursor lives only in memory and MigrateToCold runs in the
+	// background, so a shutdown or crash can lose the archived points between
+	// the last completed migration and the finalized slot restarted from. Resume
+	// the cursor from the last archived point that is actually in the DB; the
+	// migration skips points whose state already exists, so this is cheap.
+	cursor, err := s.lastArchivedPointAtOrBelow(ctx, fState.Slot())
+	if err != nil {
+		return nil, errors.Wrap(err, "could not find the last archived point")
+	}
+	if cursor < fState.Slot() {
+		log.WithField("finalizedSlot", fState.Slot()).WithField("resumeFrom", cursor).
+			Info("Resuming cold state migration from the last archived point")
+	}
+	// Update the fields under the lock rather than replacing the struct: other
+	// services may already be serving requests that read the finalized info.
+	s.finalizedInfo.lock.Lock()
+	s.finalizedInfo.slot = cursor
+	s.finalizedInfo.root = fRoot
+	s.finalizedInfo.state = fState.Copy()
+	s.finalizedInfo.lock.Unlock()
 
 	// Pre-populate the pubkey cache with the validator public keys from the finalized state.
 	// This process takes about 30 seconds on mainnet with 450,000 validators.
@@ -164,6 +185,36 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 	})
 
 	return fState, nil
+}
+
+// lastArchivedPointAtOrBelow returns the highest archived point at or below slot
+// whose state in the DB belongs to a finalized (canonical) block, or 0 when
+// there is none above genesis. A slot can also hold the state of a block that
+// lost fork choice (hot states are saved at every 128th slot, which includes
+// every archived slot, and such states are kept by the dirty-state cleanup);
+// resuming the migration from such a slot would stall it for good, because the
+// canonical chain may have no block at that slot and the migration never looks
+// below its cursor.
+func (s *State) lastArchivedPointAtOrBelow(ctx context.Context, slot primitives.Slot) (primitives.Slot, error) {
+	interval := s.slotsPerArchivedPoint
+	if interval == 0 {
+		return slot, nil
+	}
+	for point := slot - slot%interval; point > 0; point -= interval {
+		if err := ctx.Err(); err != nil {
+			return 0, err
+		}
+		if !s.beaconDB.HasArchivedPoint(ctx, point) {
+			continue
+		}
+		root := s.beaconDB.ArchivedPointRoot(ctx, point)
+		if s.beaconDB.IsFinalizedBlock(ctx, root) {
+			return point, nil
+		}
+		log.WithField("slot", point).WithField("root", fmt.Sprintf("%#x", root)).
+			Debug("Skipping an archived point whose state belongs to a non-canonical block")
+	}
+	return 0, nil
 }
 
 // SaveFinalizedState saves the finalized slot, root and state into memory to be used by state gen service.

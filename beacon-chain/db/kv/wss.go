@@ -1,17 +1,57 @@
 package kv
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/theQRL/qrysm/beacon-chain/core/helpers"
+	"github.com/theQRL/qrysm/beacon-chain/state"
 	"github.com/theQRL/qrysm/config/params"
+	"github.com/theQRL/qrysm/consensus-types/interfaces"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
+	"github.com/theQRL/qrysm/encoding/bytesutil"
 	"github.com/theQRL/qrysm/encoding/ssz/detect"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/runtime/version"
+	bolt "go.etcd.io/bbolt"
 )
+
+// errOriginBlockMismatch is returned when the checkpoint block is not the block
+// recorded in the checkpoint state's latest block header.
+var errOriginBlockMismatch = errors.New("checkpoint block does not match the checkpoint state")
+
+// errOriginOnSyncedDatabase is returned when a checkpoint import is attempted on a
+// database that already holds finalized chain data beyond genesis.
+var errOriginOnSyncedDatabase = errors.New("checkpoint sync requires a database without finalized chain data; clear the database to sync from a checkpoint")
+
+// verifyOriginBlockMatchesState checks that the checkpoint block is the block the
+// checkpoint state was produced by. A mismatched pair would otherwise be persisted
+// as origin, head, justified and finalized checkpoint, after which the node could
+// never process a block.
+func verifyOriginBlockMatchesState(blk interfaces.ReadOnlyBeaconBlock, st state.ReadOnlyBeaconState) error {
+	hdr := st.LatestBlockHeader()
+	if hdr == nil {
+		return errors.Wrap(errOriginBlockMismatch, "state has no latest block header")
+	}
+	bodyRoot, err := blk.Body().HashTreeRoot()
+	if err != nil {
+		return errors.Wrap(err, "could not compute checkpoint block body root")
+	}
+	parentRoot := blk.ParentRoot()
+	switch {
+	case blk.Slot() != hdr.Slot:
+		return errors.Wrapf(errOriginBlockMismatch, "block slot %d, state latest block header slot %d", blk.Slot(), hdr.Slot)
+	case blk.ProposerIndex() != hdr.ProposerIndex:
+		return errors.Wrapf(errOriginBlockMismatch, "block proposer %d, state latest block header proposer %d", blk.ProposerIndex(), hdr.ProposerIndex)
+	case !bytes.Equal(parentRoot[:], hdr.ParentRoot):
+		return errors.Wrapf(errOriginBlockMismatch, "block parent root %#x, state latest block header parent root %#x", parentRoot, hdr.ParentRoot)
+	case !bytes.Equal(bodyRoot[:], hdr.BodyRoot):
+		return errors.Wrapf(errOriginBlockMismatch, "block body root %#x, state latest block header body root %#x", bodyRoot, hdr.BodyRoot)
+	}
+	return nil
+}
 
 // SaveOrigin loads an ssz serialized Block & BeaconState from an io.Reader
 // (ex: an open file) prepares the database so that the beacon node can begin
@@ -24,6 +64,18 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 			return errors.Wrap(err, "genesis block root not found: genesis must be provided for checkpoint sync")
 		}
 		return errors.Wrap(err, "genesis block root query error: checkpoint sync must verify genesis to proceed")
+	}
+	// A checkpoint can only become the origin of an otherwise empty chain. On a
+	// database that already finalized past genesis the finalized index would be
+	// rebuilt from an epoch range that runs backwards (and fail after the
+	// checkpoint block and state were committed), or the backfill marker would
+	// be reset below history the node already holds.
+	finalized, err := s.FinalizedCheckpoint(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not read the finalized checkpoint")
+	}
+	if finalized.Epoch > 0 || (bytesutil.ToBytes32(finalized.Root) != params.BeaconConfig().ZeroHash && bytesutil.ToBytes32(finalized.Root) != genesisRoot) {
+		return errOriginOnSyncedDatabase
 	}
 	cf, err := detect.FromState(serState)
 	if err != nil {
@@ -53,9 +105,8 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 	if err != nil {
 		return errors.Wrap(err, "could not compute HashTreeRoot of checkpoint block")
 	}
-	// Do not persist even checkpoint metadata until the imported data passes validation.
-	if err := s.SaveBackfillBlockRoot(ctx, genesisRoot); err != nil {
-		return errors.Wrap(err, "unable to save genesis root as initial backfill starting point for checkpoint sync")
+	if err := verifyOriginBlockMatchesState(blk, state); err != nil {
+		return err
 	}
 
 	// save block
@@ -76,17 +127,6 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 		return errors.Wrap(err, "could not save state summary")
 	}
 
-	// mark block as head of chain, so that processing will pick up from this point
-	if err = s.SaveHeadBlockRoot(ctx, blockRoot); err != nil {
-		return errors.Wrap(err, "could not save head block root")
-	}
-
-	// save origin block root in a special key, to be used when the canonical
-	// origin (start of chain, ie alternative to genesis) block or state is needed
-	if err = s.SaveOriginCheckpointBlockRoot(ctx, blockRoot); err != nil {
-		return errors.Wrap(err, "could not save origin block root")
-	}
-
 	// rebuild the checkpoint from the block
 	// use it to mark the block as justified and finalized
 	slotEpoch, err := wblk.Block().Slot().SafeDivSlot(params.BeaconConfig().SlotsPerEpoch)
@@ -97,17 +137,45 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 		Epoch: primitives.Epoch(slotEpoch),
 		Root:  blockRoot[:],
 	}
-	if err = s.SaveJustifiedCheckpoint(ctx, chkpt); err != nil {
-		return errors.Wrap(err, "could not mark checkpoint sync block as justified")
+	encChkpt, err := encode(ctx, chkpt)
+	if err != nil {
+		return errors.Wrap(err, "could not encode checkpoint sync checkpoint")
 	}
-	if err = s.SaveFinalizedCheckpoint(ctx, chkpt); err != nil {
-		return errors.Wrap(err, "could not mark checkpoint sync block as finalized")
-	}
-	// Checkpoint sync starts from an explicitly trusted anchor. Persist that
-	// trust instead of inferring execution validity from finality on startup.
-	if err = s.SaveLastValidatedCheckpoint(ctx, chkpt); err != nil {
-		return errors.Wrap(err, "could not mark checkpoint sync block as validated")
-	}
+	hasStateSummary := s.HasStateSummary(ctx, blockRoot)
 
-	return nil
+	// The origin metadata is written in one transaction. A crash after a
+	// partial write (origin root and head set, finalized checkpoint still
+	// missing) would leave a database that starts from genesis while the
+	// backfill status reports the whole pre-origin range as missing, so no block
+	// could ever be processed again. With the metadata all-or-nothing, a crash
+	// here leaves a database that starts from genesis and the checkpoint import
+	// can simply be redone.
+	return s.db.Update(func(tx *bolt.Tx) error {
+		blocksBkt := tx.Bucket(blocksBucket)
+		// genesis root is the initial backfill starting point for checkpoint sync
+		if err := blocksBkt.Put(backfillBlockRootKey, genesisRoot[:]); err != nil {
+			return errors.Wrap(err, "unable to save genesis root as initial backfill starting point for checkpoint sync")
+		}
+		// mark block as head of chain, so that processing will pick up from this point
+		if err := saveHeadBlockRootTx(tx, blockRoot, hasStateSummary); err != nil {
+			return errors.Wrap(err, "could not save head block root")
+		}
+		// save origin block root in a special key, to be used when the canonical
+		// origin (start of chain, ie alternative to genesis) block or state is needed
+		if err := blocksBkt.Put(originCheckpointBlockRootKey, blockRoot[:]); err != nil {
+			return errors.Wrap(err, "could not save origin block root")
+		}
+		if err := saveCheckpointTx(ctx, tx, justifiedCheckpointKey, chkpt, encChkpt, hasStateSummary); err != nil {
+			return errors.Wrap(err, "could not mark checkpoint sync block as justified")
+		}
+		if err := s.saveFinalizedCheckpointTx(ctx, tx, chkpt, encChkpt, hasStateSummary); err != nil {
+			return errors.Wrap(err, "could not mark checkpoint sync block as finalized")
+		}
+		// Checkpoint sync starts from an explicitly trusted anchor. Persist that
+		// trust instead of inferring execution validity from finality on startup.
+		if err := saveCheckpointTx(ctx, tx, lastValidatedCheckpointKey, chkpt, encChkpt, hasStateSummary); err != nil {
+			return errors.Wrap(err, "could not mark checkpoint sync block as validated")
+		}
+		return nil
+	})
 }

@@ -123,6 +123,11 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 				continue
 			}
 
+			// The spans on disk are consistent with the latest epoch written per
+			// validator only if that map survives a crash; persist it as the
+			// epoch advances rather than only on a clean shutdown.
+			s.persistLatestEpochWritten(ctx, currentEpoch)
+
 			processedAttestationsTotal.Add(float64(len(validAtts)))
 		case <-ctx.Done():
 			return
