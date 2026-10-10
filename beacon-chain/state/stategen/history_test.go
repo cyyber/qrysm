@@ -286,7 +286,7 @@ func TestAncestorChainCache(t *testing.T) {
 	require.Equal(t, 1, len(hist.states))
 
 	endRoot := hist.slotMap[end]
-	st, bs, err := ch.ancestorChain(ctx, endRoot)
+	st, bs, err := ch.ancestorChain(ctx, endRoot, end)
 	require.NoError(t, err)
 	require.Equal(t, 3, len(bs))
 	expectedHTR, err := hist.states[hist.slotMap[0]].HashTreeRoot(ctx)
@@ -301,7 +301,7 @@ func TestAncestorChainCache(t *testing.T) {
 			hist.slotMap[end]: hist.hiddenStates[hist.slotMap[end]],
 		},
 	}
-	st, bs, err = ch.ancestorChain(ctx, endRoot)
+	st, bs, err = ch.ancestorChain(ctx, endRoot, end)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(bs))
 	expectedHTR, err = hist.hiddenStates[hist.slotMap[end]].HashTreeRoot(ctx)
@@ -316,7 +316,7 @@ func TestAncestorChainCache(t *testing.T) {
 			hist.slotMap[begin]: hist.hiddenStates[hist.slotMap[begin]],
 		},
 	}
-	st, bs, err = ch.ancestorChain(ctx, endRoot)
+	st, bs, err = ch.ancestorChain(ctx, endRoot, end)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(bs))
 	expectedHTR, err = hist.hiddenStates[hist.slotMap[begin]].HashTreeRoot(ctx)
@@ -335,7 +335,7 @@ func TestAncestorChainCache(t *testing.T) {
 			hist.slotMap[begin]: hist.hiddenStates[hist.slotMap[begin]],
 		},
 	}
-	st, bs, err = ch.ancestorChain(ctx, endRoot)
+	st, bs, err = ch.ancestorChain(ctx, endRoot, end)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(bs))
 	expectedHTR, err = hist.states[hist.slotMap[end]].HashTreeRoot(ctx)
@@ -357,7 +357,7 @@ func TestAncestorChainOK(t *testing.T) {
 	ch := &CanonicalHistory{h: hist, cc: hist, cs: hist}
 
 	endRoot := hist.slotMap[end]
-	st, bs, err := ch.ancestorChain(ctx, endRoot)
+	st, bs, err := ch.ancestorChain(ctx, endRoot, end)
 	require.NoError(t, err)
 
 	// middle is the most recent slot where savedState == true
@@ -369,7 +369,7 @@ func TestAncestorChainOK(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, expectedHTR, actualHTR)
 
-	st, bs, err = ch.ancestorChain(ctx, hist.slotMap[middle])
+	st, bs, err = ch.ancestorChain(ctx, hist.slotMap[middle], middle)
 	require.NoError(t, err)
 	actualHTR, err = st.HashTreeRoot(ctx)
 	require.NoError(t, err)
@@ -459,7 +459,7 @@ func TestAncestorChainOrdering(t *testing.T) {
 	hist := newMockHistory(t, specs, five+1)
 	endRoot := hist.slotMap[specs[len(specs)-1].slot]
 	ch := &CanonicalHistory{h: hist, cc: hist, cs: hist}
-	st, bs, err := ch.ancestorChain(ctx, endRoot)
+	st, bs, err := ch.ancestorChain(ctx, endRoot, five)
 	require.NoError(t, err)
 	expectedRoot, err := hist.states[hist.slotMap[one]].HashTreeRoot(ctx)
 	require.NoError(t, err)
@@ -481,7 +481,7 @@ func TestAncestorChainOrdering(t *testing.T) {
 	endRoot = hist.slotMap[specs[len(specs)-1].slot]
 
 	ch = &CanonicalHistory{h: hist, cc: hist, cs: hist}
-	st, bs, err = ch.ancestorChain(ctx, endRoot)
+	st, bs, err = ch.ancestorChain(ctx, endRoot, five)
 	require.NoError(t, err)
 	expectedRoot, err = hist.states[endRoot].HashTreeRoot(ctx)
 	require.NoError(t, err)
@@ -497,7 +497,7 @@ func TestAncestorChainOrdering(t *testing.T) {
 
 	ch = &CanonicalHistory{h: hist, cc: hist, cs: hist}
 	endRoot = hist.slotMap[specs[len(specs)-1].slot]
-	st, bs, err = ch.ancestorChain(ctx, endRoot)
+	st, bs, err = ch.ancestorChain(ctx, endRoot, five)
 	require.NoError(t, err)
 	expectedRoot, err = hist.states[hist.slotMap[one]].HashTreeRoot(ctx)
 	require.NoError(t, err)
@@ -632,6 +632,9 @@ func TestReplayer_CheckpointSyncedDBRefusesPreOriginSlots(t *testing.T) {
 		StateRoot:     make([]byte, 32),
 		BodyRoot:      bodyRoot[:],
 	}))
+	stateRoot, err := originState.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	blk.Block.StateRoot = stateRoot[:]
 	sb, err := originState.MarshalSSZ()
 	require.NoError(t, err)
 	wb, err := consensusblocks.NewSignedBeaconBlock(blk)
@@ -650,4 +653,39 @@ func TestReplayer_CheckpointSyncedDBRefusesPreOriginSlots(t *testing.T) {
 	st, err = ch.ReplayerForSlot(0).ReplayBlocks(ctx)
 	require.NoError(t, err)
 	require.Equal(t, primitives.Slot(0), st.Slot())
+}
+
+// A checkpoint state may be the origin block's post-state advanced through
+// empty slots. It must serve replays for targets at or after its slot instead
+// of being rejected (which would send the replay to the unavailable pre-origin
+// parent), and must not serve targets before its slot.
+func TestAncestorChain_AdvancedCheckpointState(t *testing.T) {
+	ctx := context.Background()
+	var origin primitives.Slot = 100
+	specs := []mockHistorySpec{
+		{slot: origin, canonicalBlock: true, savedState: true},
+	}
+	hist := newMockHistory(t, specs, origin+20)
+	originRoot := hist.slotMap[origin]
+	advanced := hist.states[originRoot].Copy()
+	require.NoError(t, advanced.SetSlot(origin+5))
+	hist.states[originRoot] = advanced
+	ch := &CanonicalHistory{h: hist, cc: hist, cs: hist}
+
+	st, bs, err := ch.ancestorChain(ctx, originRoot, origin+10)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(bs))
+	require.Equal(t, origin+5, st.Slot())
+
+	st, bs, err = ch.ancestorChain(ctx, originRoot, origin+5)
+	require.NoError(t, err)
+	require.Equal(t, origin+5, st.Slot())
+	require.Equal(t, 0, len(bs))
+
+	// Before the saved state's slot the chain has to come from further back.
+	st, bs, err = ch.ancestorChain(ctx, originRoot, origin+2)
+	require.NoError(t, err)
+	require.Equal(t, primitives.Slot(0), st.Slot())
+	require.Equal(t, 1, len(bs))
+	require.Equal(t, originRoot, bs[0])
 }

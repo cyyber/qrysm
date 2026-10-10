@@ -30,7 +30,7 @@ var errOriginOnSyncedDatabase = errors.New("checkpoint sync requires a database 
 // checkpoint state was produced by. A mismatched pair would otherwise be persisted
 // as origin, head, justified and finalized checkpoint, after which the node could
 // never process a block.
-func verifyOriginBlockMatchesState(blk interfaces.ReadOnlyBeaconBlock, st state.ReadOnlyBeaconState) error {
+func verifyOriginBlockMatchesState(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock, st state.BeaconState) error {
 	hdr := st.LatestBlockHeader()
 	if hdr == nil {
 		return errors.Wrap(errOriginBlockMismatch, "state has no latest block header")
@@ -49,6 +49,31 @@ func verifyOriginBlockMatchesState(blk interfaces.ReadOnlyBeaconBlock, st state.
 		return errors.Wrapf(errOriginBlockMismatch, "block parent root %#x, state latest block header parent root %#x", parentRoot, hdr.ParentRoot)
 	case !bytes.Equal(bodyRoot[:], hdr.BodyRoot):
 		return errors.Wrapf(errOriginBlockMismatch, "block body root %#x, state latest block header body root %#x", bodyRoot, hdr.BodyRoot)
+	}
+	// The header checks above do not cover the block's state root. A block
+	// with a wrong state root has a different root, and persisting it as the
+	// origin would leave the real descendants without a parent.
+	blockStateRoot := blk.StateRoot()
+	switch {
+	case st.Slot() == blk.Slot():
+		// The checkpoint state is the block's post-state.
+		stateRoot, err := st.HashTreeRoot(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not hash the checkpoint state")
+		}
+		if stateRoot != blockStateRoot {
+			return errors.Wrapf(errOriginBlockMismatch, "block state root %#x, checkpoint state root %#x", blockStateRoot, stateRoot)
+		}
+	case st.Slot() > blk.Slot():
+		// The checkpoint state was advanced through empty slots after the
+		// block. The first slot processed after the block fills the state
+		// root of the latest block header with the block's post-state root,
+		// however far the state was advanced since.
+		if !bytes.Equal(hdr.StateRoot, blockStateRoot[:]) {
+			return errors.Wrapf(errOriginBlockMismatch, "block state root %#x, state latest block header state root %#x", blockStateRoot, hdr.StateRoot)
+		}
+	default:
+		return errors.Wrapf(errOriginBlockMismatch, "checkpoint state slot %d is before block slot %d", st.Slot(), blk.Slot())
 	}
 	return nil
 }
@@ -105,7 +130,7 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 	if err != nil {
 		return errors.Wrap(err, "could not compute HashTreeRoot of checkpoint block")
 	}
-	if err := verifyOriginBlockMatchesState(blk, state); err != nil {
+	if err := verifyOriginBlockMatchesState(ctx, blk, state); err != nil {
 		return err
 	}
 

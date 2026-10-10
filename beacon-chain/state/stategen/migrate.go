@@ -108,15 +108,16 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 			if s.beaconDB.HasState(ctx, aRoot) {
 				// If you are migrating a state and its already part of the hot state cache saved to the db,
 				// you can just remove it from the hot state cache as it becomes redundant.
+				// Remove every entry for the root: a leftover one would have the
+				// hot-state cleanup delete the archived state later.
 				roots := s.saveHotStateDB.blockRootsOfSavedStates
-				for i := range roots {
-					if aRoot == roots[i] {
-						s.saveHotStateDB.blockRootsOfSavedStates = append(roots[:i], roots[i+1:]...)
-						// There shouldn't be duplicated roots in `blockRootsOfSavedStates`.
-						// Break here is ok.
-						break
+				kept := roots[:0]
+				for _, r := range roots {
+					if r != aRoot {
+						kept = append(kept, r)
 					}
 				}
+				s.saveHotStateDB.blockRootsOfSavedStates = kept
 				s.saveHotStateDB.lock.Unlock()
 				continue
 			}
@@ -145,6 +146,13 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 		}
 	}
 
+	// Every archived point below the finalized slot is on disk now. Record the
+	// cursor so a restart resumes here rather than at whatever archived state
+	// happens to be the highest one, which can hide an unfinished range below it.
+	if err := s.beaconDB.SaveStateMigrationCursor(ctx, fSlot); err != nil {
+		return errors.Wrap(err, "could not save the state migration cursor")
+	}
+
 	// Update finalized info in memory.
 	fInfo, ok, err := s.epochBoundaryStateCache.getByBlockRoot(fRoot)
 	if err != nil {
@@ -160,16 +168,16 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 // canonicalRootAtOrBelow returns the root of the highest canonical block at or below the given slot,
 // skipping slots that hold only blocks which lost fork choice. Those are never deleted from the slot index.
 // Canonicality comes from the finalized index, which is decisive below the finalized checkpoint slot.
-// floor is a slot already known to be canonical; resolving past it is an error rather than a walk to genesis.
+// floor is the migration cursor, a slot whose archive is known to exist. A canonical block below the
+// floor is a valid answer only when its state is on disk (the archive of a skipped boundary slot is the
+// state of the highest canonical block below that slot); otherwise resolving past the floor means the
+// finalized index is missing entries, and that is an error rather than a walk to genesis.
 func (s *State) canonicalRootAtOrBelow(ctx context.Context, slot, floor primitives.Slot) ([32]byte, error) {
 	// HighestRootsBelowSlot reports a strictly lower slot, so next decreases every round.
 	for next := slot + 1; ; {
 		high, roots, err := s.beaconDB.HighestRootsBelowSlot(ctx, next)
 		if err != nil {
 			return [32]byte{}, err
-		}
-		if high < floor {
-			return [32]byte{}, errUnknownBlock
 		}
 		canonical := make([][32]byte, 0, 1)
 		for _, r := range roots {
@@ -179,6 +187,9 @@ func (s *State) canonicalRootAtOrBelow(ctx context.Context, slot, floor primitiv
 		}
 		switch len(canonical) {
 		case 1:
+			if high < floor && !s.beaconDB.HasState(ctx, canonical[0]) {
+				return [32]byte{}, errUnknownBlock
+			}
 			return canonical[0], nil
 		case 0:
 			if high == 0 {

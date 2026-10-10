@@ -11,6 +11,7 @@ import (
 	"github.com/theQRL/qrysm/config/params"
 	"github.com/theQRL/qrysm/consensus-types/blocks"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
+	"github.com/theQRL/qrysm/encoding/bytesutil"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/testing/require"
 	"github.com/theQRL/qrysm/testing/util"
@@ -29,6 +30,9 @@ func alignLatestBlockHeader(t *testing.T, st state.BeaconState, blk *qrysmpb.Sig
 		StateRoot:     make([]byte, 32),
 		BodyRoot:      bodyRoot[:],
 	}))
+	stateRoot, err := st.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+	blk.Block.StateRoot = stateRoot[:]
 }
 
 func TestSaveOrigin(t *testing.T) {
@@ -223,8 +227,86 @@ func TestSaveOrigin_RejectsMismatchedBlock(t *testing.T) {
 	require.Equal(t, false, db.HasBlock(ctx, blockRoot))
 	require.Equal(t, false, db.HasState(ctx, blockRoot))
 
-	// The matching pair is accepted.
+	// A block whose only difference is its state root is refused as well:
+	// it has a different root, and the real descendants would never attach.
 	alignLatestBlockHeader(t, cst, cb)
+	csb, err = cst.MarshalSSZ()
+	require.NoError(t, err)
+	wrongStateRoot := util.NewBeaconBlockZond()
+	wrongStateRoot.Block = cb.Block
+	wrongStateRoot.Block.StateRoot = bytesutil.PadTo([]byte("wrong"), 32)
+	wsrb, err := blocks.NewSignedBeaconBlock(wrongStateRoot)
+	require.NoError(t, err)
+	wsrbb, err := wsrb.MarshalSSZ()
+	require.NoError(t, err)
+	require.ErrorIs(t, db.SaveOrigin(ctx, csb, wsrbb), errOriginBlockMismatch)
+	_, err = db.OriginCheckpointBlockRoot(ctx)
+	require.ErrorIs(t, err, ErrNotFoundOriginBlockRoot)
+
+	// The matching pair is accepted.
+	cb.Block.StateRoot = make([]byte, 32)
+	alignLatestBlockHeader(t, cst, cb)
+	csb, err = cst.MarshalSSZ()
+	require.NoError(t, err)
+	scb, err = blocks.NewSignedBeaconBlock(cb)
+	require.NoError(t, err)
+	cbb, err = scb.MarshalSSZ()
+	require.NoError(t, err)
+	blockRoot, err = scb.Block().HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveOrigin(ctx, csb, cbb))
+	originRoot, err := db.OriginCheckpointBlockRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, blockRoot, originRoot)
+}
+
+// A checkpoint state may be the block's post-state advanced through empty
+// slots, even beyond the history ring; its latest block header then carries
+// the block's state root.
+func TestSaveOrigin_AcceptsStateAdvancedPastBlock(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	if fieldparams.Preset == "minimal" {
+		cfg := params.MinimalSpecConfig().Copy()
+		cfg.ConfigName = params.MainnetTestName
+		params.FillTestVersions(cfg, 128)
+		require.NoError(t, params.SetActive(cfg))
+	}
+	ctx := context.Background()
+	db := setupDB(t)
+	require.NoError(t, db.SaveGenesisData(ctx, genesisStateWithValidatorCounts(t, 1, 0)))
+	genesisRoot, err := db.GenesisBlockRoot(ctx)
+	require.NoError(t, err)
+
+	cst := genesisStateWithValidatorCounts(t, 1, 0)
+	require.NoError(t, cst.SetSlot(5))
+	cb := util.NewBeaconBlockZond()
+	cb.Block.Slot = 5
+	cb.Block.ParentRoot = genesisRoot[:]
+	alignLatestBlockHeader(t, cst, cb) // sets the block's state root to the state's root at slot 5
+	// Advance the state past the block, further than the history ring reaches,
+	// the way process_slot records the block's state root in the header.
+	hdr := cst.LatestBlockHeader()
+	require.NoError(t, cst.SetSlot(5+params.BeaconConfig().SlotsPerHistoricalRoot+5))
+	scb, err := blocks.NewSignedBeaconBlock(cb)
+	require.NoError(t, err)
+	cbb, err := scb.MarshalSSZ()
+	require.NoError(t, err)
+	blockRoot, err := scb.Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	// A header whose recorded state root differs from the block's is refused,
+	// and nothing is persisted.
+	hdr.StateRoot = bytesutil.PadTo([]byte("other"), 32)
+	require.NoError(t, cst.SetLatestBlockHeader(hdr))
+	csb, err := cst.MarshalSSZ()
+	require.NoError(t, err)
+	require.ErrorIs(t, db.SaveOrigin(ctx, csb, cbb), errOriginBlockMismatch)
+	_, err = db.OriginCheckpointBlockRoot(ctx)
+	require.ErrorIs(t, err, ErrNotFoundOriginBlockRoot)
+
+	// The header carrying the block's state root is accepted.
+	hdr.StateRoot = cb.Block.StateRoot
+	require.NoError(t, cst.SetLatestBlockHeader(hdr))
 	csb, err = cst.MarshalSSZ()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveOrigin(ctx, csb, cbb))

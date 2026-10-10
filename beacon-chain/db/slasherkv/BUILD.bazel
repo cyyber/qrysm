@@ -7,6 +7,7 @@ go_library(
         "kv.go",
         "log.go",
         "metrics.go",
+        "migration_attestation_records.go",
         "pruning.go",
         "schema.go",
         "slasher.go",
@@ -38,6 +39,7 @@ go_test(
     name = "slasherkv_test",
     srcs = [
         "kv_test.go",
+        "migration_attestation_records_test.go",
         "pruning_test.go",
         "slasher_test.go",
         "slasherkv_test.go",

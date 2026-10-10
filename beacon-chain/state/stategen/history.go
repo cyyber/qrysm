@@ -172,7 +172,7 @@ func (c *CanonicalHistory) chainForSlot(ctx context.Context, target primitives.S
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "no canonical block root found below slot=%d", target)
 	}
-	s, descendants, err := c.ancestorChain(ctx, r)
+	s, descendants, err := c.ancestorChain(ctx, r, target)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to query for ancestor and descendant block roots")
 	}
@@ -197,8 +197,10 @@ func (c *CanonicalHistory) getState(ctx context.Context, blockRoot [32]byte) (st
 // If it finds a saved state that the tail block was descended from, it returns this state and
 // all roots in the lineage, including the tail block. Roots are returned in ascending order.
 // Note that this function assumes that the tail is a canonical block, and therefore assumes that
-// all ancestors are also canonical.
-func (c *CanonicalHistory) ancestorChain(ctx context.Context, tailRoot [32]byte) (state.BeaconState, [][32]byte, error) {
+// all ancestors are also canonical. A saved state at a later slot than its block (the block's
+// post-state advanced through empty slots, which is how a checkpoint state may have been
+// provided) is used as long as it does not lie beyond the replay target.
+func (c *CanonicalHistory) ancestorChain(ctx context.Context, tailRoot [32]byte, target primitives.Slot) (state.BeaconState, [][32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "canonicalChainer.ancestorChain")
 	defer span.End()
 	chain := make([][32]byte, 0)
@@ -217,9 +219,9 @@ func (c *CanonicalHistory) ancestorChain(ctx context.Context, tailRoot [32]byte)
 		st, err := c.getState(ctx, tailRoot)
 		// err == nil, we've got a real state - the job is done!
 		// Note: in cases where there are skipped slots we could find a state that is a descendant
-		// of the block we are searching for. We don't want to return a future block, so in this case
-		// we keep working backwards.
-		if err == nil && st.Slot() == b.Slot() {
+		// of the block we are searching for. Such a state is only usable when it does not lie
+		// beyond the replay target; otherwise we keep working backwards.
+		if err == nil && st.Slot() >= b.Slot() && st.Slot() <= target {
 			// we found the state by the root of the head, meaning it has already been applied.
 			// we only want to return the roots descended from it.
 			reverseBlockRoots(chain)

@@ -263,3 +263,25 @@ func TestDisableSaveHotStateToDB_KeepsProtectedRootForLater(t *testing.T) {
 	require.Equal(t, false, beaconDB.HasState(ctx, r2))
 	require.Equal(t, 0, len(service.saveHotStateDB.blockRootsOfSavedStates))
 }
+
+// Saving the same hot state twice (a batch saves its boundary states and its
+// last state, which may coincide) must record its root once: the migration
+// removes the root it archived, and a leftover entry would have the hot-state
+// cleanup delete the archived state.
+func TestSaveState_HotStateRootRecordedOnce(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB, doublylinkedtree.New())
+	service.EnableSaveHotStateToDB(ctx)
+	service.saveHotStateDB.duration = 2
+
+	beaconState, _ := util.DeterministicGenesisStateZond(t, 8)
+	require.NoError(t, beaconState.SetSlot(4))
+	r := [32]byte{'r'}
+	require.NoError(t, service.SaveState(ctx, r, beaconState))
+	// The second save of the same root (hot cache cleared in between, as a
+	// cache eviction would do) must not add a second entry.
+	service.hotStateCache.delete(r)
+	require.NoError(t, service.SaveState(ctx, r, beaconState))
+	require.DeepEqual(t, [][32]byte{r}, service.saveHotStateDB.blockRootsOfSavedStates)
+}

@@ -272,3 +272,39 @@ func TestPruneProposalsAtEpoch_CancelledContextCommitsNothing(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, record)
 }
+
+// A validator that votes twice at the same target keeps only the latest data
+// root in its index entry. The record of the first vote must still be pruned
+// with its epoch rather than stay on disk forever.
+func TestPruneAttestationsAtEpoch_RemovesSupersededRecords(t *testing.T) {
+	ctx := context.Background()
+	db := setupDB(t)
+
+	first := createAttestationWrapper(2, 3, []uint64{1}, bytesutil.PadTo([]byte("data-D"), 32))
+	second := createAttestationWrapper(2, 3, []uint64{1}, bytesutil.PadTo([]byte("data-E"), 32))
+	require.NoError(t, db.SaveAttestationRecordsForValidators(ctx, []*slashertypes.IndexedAttestationWrapper{first}))
+	require.NoError(t, db.SaveAttestationRecordsForValidators(ctx, []*slashertypes.IndexedAttestationWrapper{second}))
+	// A record of a later epoch that must survive.
+	later := createAttestationWrapper(8, 9, []uint64{1}, bytesutil.PadTo([]byte("data-F"), 32))
+	require.NoError(t, db.SaveAttestationRecordsForValidators(ctx, []*slashertypes.IndexedAttestationWrapper{later}))
+
+	countRecords := func() int {
+		n := 0
+		require.NoError(t, db.db.View(func(tx *bolt.Tx) error {
+			return tx.Bucket(attestationRecordsBucket).ForEach(func(_, _ []byte) error {
+				n++
+				return nil
+			})
+		}))
+		return n
+	}
+	require.Equal(t, 3, countRecords())
+
+	numPruned, err := db.PruneAttestationsAtEpoch(ctx, 3)
+	require.NoError(t, err)
+	require.Equal(t, uint(1), numPruned)
+	require.Equal(t, 1, countRecords(), "the superseded record of the first vote was not pruned")
+	record, err := db.AttestationRecordForValidator(ctx, 1, 9)
+	require.NoError(t, err)
+	require.NotNil(t, record)
+}

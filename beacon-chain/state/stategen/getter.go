@@ -165,7 +165,9 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 	if startState == nil || startState.IsNil() {
 		return nil, errUnknownState
 	}
-	if startState.Slot() == summary.Slot {
+	// A state at the target slot with no blocks left to apply is the result; a
+	// state at the target slot with a block left to apply is that block's pre-state.
+	if startState.Slot() == summary.Slot && len(blockRoots) == 0 {
 		return startState, nil
 	}
 
@@ -268,7 +270,9 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 		return nil, errUnknownBoundaryState
 	}
 
-	if startState.Slot() == targetSlot {
+	// A state at the target slot with no blocks left to apply is the result; a
+	// state at the target slot with a block left to apply is that block's pre-state.
+	if startState.Slot() == targetSlot && len(blockRoots) == 0 {
 		return startState, nil
 	}
 

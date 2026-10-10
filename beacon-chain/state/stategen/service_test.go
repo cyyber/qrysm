@@ -4,11 +4,13 @@ import (
 	"context"
 	"testing"
 
+	"github.com/theQRL/qrysm/beacon-chain/core/blocks"
 	"github.com/theQRL/qrysm/beacon-chain/db"
 	testDB "github.com/theQRL/qrysm/beacon-chain/db/testing"
 	doublylinkedtree "github.com/theQRL/qrysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/theQRL/qrysm/beacon-chain/state"
 	"github.com/theQRL/qrysm/config/params"
+	consensusblocks "github.com/theQRL/qrysm/consensus-types/blocks"
 	"github.com/theQRL/qrysm/consensus-types/primitives"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
 	"github.com/theQRL/qrysm/testing/assert"
@@ -85,8 +87,9 @@ func TestResume_MigrationCursorFromLastArchivedPoint(t *testing.T) {
 	genesisRoot := [32]byte{'g'}
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
 	require.NoError(t, beaconDB.SaveState(ctx, base, genesisRoot))
-	// Archived points 4 and 8 were written for canonical blocks; the one at 12
-	// was lost to a crash.
+	// Archived points 4 and 8 were written for canonical blocks. The chain has
+	// no block at 12, so the archive of point 12 is the state of block 8, which
+	// is on disk: every point is present and the cursor is the highest one.
 	parent := genesisRoot
 	for _, slot := range []primitives.Slot{4, 8} {
 		parent = saveCanonicalArchivedPoint(t, ctx, beaconDB, base, slot, parent)
@@ -95,7 +98,7 @@ func TestResume_MigrationCursorFromLastArchivedPoint(t *testing.T) {
 
 	_, err := service.Resume(ctx, fState)
 	require.NoError(t, err)
-	assert.Equal(t, primitives.Slot(8), service.finalizedInfo.slot, "cursor must resume at the last archived point")
+	assert.Equal(t, primitives.Slot(12), service.finalizedInfo.slot, "cursor must resume at the highest present archived point")
 	assert.Equal(t, fRoot, service.finalizedInfo.root)
 	assert.Equal(t, primitives.Slot(14), service.finalizedInfo.state.Slot())
 }
@@ -139,8 +142,10 @@ func TestResume_MigrationCursorSkipsNonCanonicalArchivedPoint(t *testing.T) {
 
 	_, err = service.Resume(ctx, fState)
 	require.NoError(t, err)
-	assert.Equal(t, primitives.Slot(8), service.finalizedInfo.slot, "cursor must skip the non-canonical archived point")
-	// The migration from that cursor completes.
+	// Every point up to the finalized epoch is served by the state of block 8;
+	// the orphan at 12 plays no part. The migration from that cursor completes
+	// even though no canonical block sits at the cursor slot itself.
+	assert.Equal(t, primitives.Slot(128), service.finalizedInfo.slot, "cursor must ignore the non-canonical archived point")
 	require.NoError(t, service.MigrateToCold(ctx, fRoot))
 }
 
@@ -174,4 +179,158 @@ func saveFinalizedBlock(t *testing.T, ctx context.Context, beaconDB db.Database,
 	require.NoError(t, beaconDB.SaveState(ctx, fState, fRoot))
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &qrysmpb.Checkpoint{Epoch: slots.ToEpoch(slot), Root: fRoot[:]}))
 	return fRoot, fState
+}
+
+// The migration cursor recorded by the last completed migration takes
+// precedence over the highest archived state: a finalized state forced to disk
+// at an archived slot (shutdown) or a hot state saved there can sit above an
+// unfinished range, which the scan alone would never fill.
+func TestResume_MigrationCursorPrefersRecordedProgress(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB, doublylinkedtree.New())
+	service.slotsPerArchivedPoint = 4
+
+	base, _ := util.DeterministicGenesisStateZond(t, 8)
+	genesisRoot := [32]byte{'g'}
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
+	require.NoError(t, beaconDB.SaveState(ctx, base, genesisRoot))
+	// Points 4 and 12 are on disk; the migration that would have handled the
+	// archived slot 8 (served by the canonical block at 7) never completed.
+	// The state at 12 is the finalized state itself.
+	parent := saveCanonicalArchivedPoint(t, ctx, beaconDB, base, 4, genesisRoot)
+	parent = saveCanonicalArchivedPoint(t, ctx, beaconDB, base, 7, parent)
+	fRoot, fState := saveFinalizedBlock(t, ctx, beaconDB, base, 12, parent)
+	require.NoError(t, beaconDB.SaveStateMigrationCursor(ctx, 4))
+
+	_, err := service.Resume(ctx, fState)
+	require.NoError(t, err)
+	assert.Equal(t, primitives.Slot(4), service.finalizedInfo.slot, "cursor must resume from the recorded progress")
+
+	// The migration walks the gap and moves the recorded cursor forward.
+	require.NoError(t, service.MigrateToCold(ctx, fRoot))
+	cursor, found, err := beaconDB.StateMigrationCursor(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, found)
+	assert.Equal(t, primitives.Slot(12), cursor)
+
+	// Without a recorded cursor the highest canonical archived point is used.
+	service2 := New(beaconDB, doublylinkedtree.New())
+	service2.slotsPerArchivedPoint = 4
+	require.NoError(t, beaconDB.SaveStateMigrationCursor(ctx, 1<<40))
+	_, err = service2.Resume(ctx, fState)
+	require.NoError(t, err)
+	assert.Equal(t, primitives.Slot(12), service2.finalizedInfo.slot)
+}
+
+// A database written before the migration cursor existed can hold an archived
+// state above an unfinished range. Without a recorded cursor the migration
+// resumes at the last archived point whose archive is on disk before the gap,
+// so the gap is filled and the first migration step can be reconstructed from
+// that archive.
+func TestResume_NoRecordedCursorResumesBeforeFirstMissingPoint(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB, doublylinkedtree.New())
+	service.slotsPerArchivedPoint = 4
+
+	beaconState, pks := util.DeterministicGenesisStateZond(t, 32)
+	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
+	util.SaveBlock(t, ctx, beaconDB, genesis)
+	gRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveState(ctx, beaconState, gRoot))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
+
+	// Real blocks at 4 (archived), 7 (state missing: the archive of point 8 was
+	// never written) and 12 (the finalized state, forced to disk at shutdown).
+	roots := map[primitives.Slot][32]byte{}
+	states := map[primitives.Slot]state.BeaconState{}
+	for _, slot := range []primitives.Slot{4, 7, 12} {
+		b, err := util.GenerateFullBlockZond(beaconState, pks, util.DefaultBlockGenConfig(), slot)
+		require.NoError(t, err)
+		wb, err := consensusblocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+		beaconState, err = executeStateTransitionStateGen(ctx, beaconState, wb)
+		require.NoError(t, err)
+		r, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, beaconDB, b)
+		require.NoError(t, beaconDB.SaveStateSummary(ctx, &qrysmpb.StateSummary{Slot: slot, Root: r[:]}))
+		roots[slot], states[slot] = r, beaconState.Copy()
+	}
+	require.NoError(t, beaconDB.SaveState(ctx, states[4], roots[4]))
+	require.NoError(t, beaconDB.SaveState(ctx, states[12], roots[12]))
+	fRoot := roots[12]
+	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &qrysmpb.Checkpoint{Root: fRoot[:]}))
+
+	_, err = service.Resume(ctx, states[12])
+	require.NoError(t, err)
+	assert.Equal(t, primitives.Slot(4), service.finalizedInfo.slot, "cursor must resume before the missing archived point")
+
+	// The migration from there rebuilds the missing archive and records its progress.
+	require.NoError(t, service.MigrateToCold(ctx, fRoot))
+	require.Equal(t, true, beaconDB.HasState(ctx, roots[7]), "the archive of point 8 (the state of block 7) was not rebuilt")
+	cursor, found, err := beaconDB.StateMigrationCursor(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, found)
+	assert.Equal(t, primitives.Slot(12), cursor)
+}
+
+// On a checkpoint-synced node the migration cannot go below the origin: without
+// a recorded cursor it resumes at the origin's slot and the first migration
+// after that completes even though no block sits at the archived slot itself.
+func TestResume_NoRecordedCursorOnCheckpointSyncedNode(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB, doublylinkedtree.New())
+	service.slotsPerArchivedPoint = 4
+
+	base, _ := util.DeterministicGenesisStateZond(t, 8)
+	require.NoError(t, beaconDB.SaveGenesisData(ctx, base))
+	genesisRoot, err := beaconDB.GenesisBlockRoot(ctx)
+	require.NoError(t, err)
+
+	// The origin block at slot 5, between the archived slots 4 and 8.
+	originSlot := primitives.Slot(5)
+	originState := base.Copy()
+	require.NoError(t, originState.SetSlot(originSlot))
+	blk := util.NewBeaconBlockZond()
+	blk.Block.Slot = originSlot
+	blk.Block.ParentRoot = genesisRoot[:]
+	bodyRoot, err := blk.Block.Body.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, originState.SetLatestBlockHeader(&qrysmpb.BeaconBlockHeader{
+		Slot:          originSlot,
+		ProposerIndex: blk.Block.ProposerIndex,
+		ParentRoot:    genesisRoot[:],
+		StateRoot:     make([]byte, 32),
+		BodyRoot:      bodyRoot[:],
+	}))
+	stateRoot, err := originState.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	blk.Block.StateRoot = stateRoot[:]
+	originRoot, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	sb, err := originState.MarshalSSZ()
+	require.NoError(t, err)
+	wb, err := consensusblocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	bb, err := wb.MarshalSSZ()
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveOrigin(ctx, sb, bb))
+
+	_, err = service.Resume(ctx, originState)
+	require.NoError(t, err)
+	assert.Equal(t, originSlot, service.finalizedInfo.slot, "cursor must not go below the origin")
+
+	// Finality moves to slot 9: the archived slot 8 is served by the origin's state.
+	fRoot, _ := saveFinalizedBlock(t, ctx, beaconDB, base, 9, originRoot)
+	require.NoError(t, service.MigrateToCold(ctx, fRoot))
+	cursor, found, err := beaconDB.StateMigrationCursor(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, found)
+	assert.Equal(t, primitives.Slot(9), cursor)
 }

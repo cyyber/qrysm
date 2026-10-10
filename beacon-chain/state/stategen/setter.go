@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"slices"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -64,7 +65,13 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 			s.saveHotStateDB.lock.Unlock()
 			return err
 		}
-		s.saveHotStateDB.blockRootsOfSavedStates = append(s.saveHotStateDB.blockRootsOfSavedStates, blockRoot)
+		// The same root can be saved more than once (a batch saves its boundary
+		// states and its last state, which may coincide). The list must hold it
+		// once: the migration removes a root it archived, and a leftover entry
+		// would have the hot-state cleanup delete the archived state.
+		if !slices.Contains(s.saveHotStateDB.blockRootsOfSavedStates, blockRoot) {
+			s.saveHotStateDB.blockRootsOfSavedStates = append(s.saveHotStateDB.blockRootsOfSavedStates, blockRoot)
+		}
 
 		log.WithFields(logrus.Fields{
 			"slot":                   st.Slot(),

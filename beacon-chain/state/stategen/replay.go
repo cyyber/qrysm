@@ -117,8 +117,15 @@ func replayBlockRoot(
 	if signed.Block().Slot() > targetSlot {
 		return st, nil
 	}
-	// A cached ancestor state can be at a later slot than its block root.
-	if st.Slot() >= signed.Block().Slot() {
+	// A cached ancestor state can be at a later slot than its block root, and a
+	// checkpoint state can be a block's post-state advanced through empty
+	// slots. A block is skipped only when the state has already applied a block
+	// at that slot (its latest block header says so): a state at the block's
+	// slot whose header is older is the block's pre-state.
+	if st.Slot() > signed.Block().Slot() {
+		return st, nil
+	}
+	if st.Slot() == signed.Block().Slot() && st.LatestBlockHeader() != nil && st.LatestBlockHeader().Slot == signed.Block().Slot() {
 		return st, nil
 	}
 	return executeStateTransitionStateGen(ctx, st, signed)

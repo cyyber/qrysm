@@ -176,13 +176,21 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 		return nil, err
 	}
 	boltDB.AllocSize = boltAllocSize
+	// An initialization failure must release the file lock, or the database
+	// cannot be reopened until the process exits.
+	closeOnError := func(initErr error) error {
+		if closeErr := boltDB.Close(); closeErr != nil {
+			log.WithError(closeErr).Error("Could not close the database after a failed initialization")
+		}
+		return initErr
+	}
 	blockCache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1000,           // number of keys to track frequency of (1000).
 		MaxCost:     BlockCacheSize, // maximum cost of cache (1000 Blocks).
 		BufferItems: 64,             // number of keys per Get buffer.
 	})
 	if err != nil {
-		return nil, err
+		return nil, closeOnError(err)
 	}
 
 	validatorCache, err := ristretto.NewCache(&ristretto.Config{
@@ -191,7 +199,7 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 		BufferItems: 64,                    // number of keys per Get buffer.
 	})
 	if err != nil {
-		return nil, err
+		return nil, closeOnError(err)
 	}
 
 	kv := &Store{
@@ -205,14 +213,15 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(tx, Buckets...)
 	}); err != nil {
-		return nil, err
+		return nil, closeOnError(err)
 	}
 	if err = prometheus.Register(createBoltCollector(kv.db)); err != nil {
-		return nil, err
+		return nil, closeOnError(err)
 	}
 	// Setup the type of block storage used depending on whether or not this is a fresh database.
 	if err := kv.setupBlockStorageType(ctx); err != nil {
-		return nil, err
+		prometheus.Unregister(createBoltCollector(kv.db))
+		return nil, closeOnError(err)
 	}
 
 	return kv, nil

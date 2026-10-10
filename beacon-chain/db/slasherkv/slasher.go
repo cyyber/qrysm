@@ -146,7 +146,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 					if len(attRecordsKey) < attestationRecordKeySize {
 						continue
 					}
-					encExistingAttRecord := attRecordsBkt.Get(attRecordsKey)
+					encExistingAttRecord := attRecordsBkt.Get(attestationRecordKey(encEpoch, attRecordsKey))
 					if encExistingAttRecord == nil {
 						continue
 					}
@@ -203,7 +203,7 @@ func (s *Store) AttestationRecordForValidator(
 			return nil
 		}
 		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
-		indexedAttBytes := attRecordsBkt.Get(attRecordKey)
+		indexedAttBytes := attRecordsBkt.Get(attestationRecordKey(encEpoch, attRecordKey))
 		if indexedAttBytes == nil {
 			return nil
 		}
@@ -271,7 +271,8 @@ func (s *Store) SaveAttestationRecordsForValidators(
 				// of overwriting it: the per-validator index points at this root,
 				// and a slashing built from a record that lacks the validator
 				// has no slashable index.
-				if existing := attRecordsBkt.Get(att.SigningRoot[:]); existing != nil {
+				recordKey := attestationRecordKey(encodedTargetEpochBatch[i], att.SigningRoot[:])
+				if existing := attRecordsBkt.Get(recordKey); existing != nil {
 					merged, changed, err := mergeAttestationRecord(existing, att)
 					if err != nil {
 						return err
@@ -283,7 +284,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 					}
 				}
 				if record != nil {
-					if err := attRecordsBkt.Put(att.SigningRoot[:], record); err != nil {
+					if err := attRecordsBkt.Put(recordKey, record); err != nil {
 						return err
 					}
 				}
@@ -527,7 +528,7 @@ func (s *Store) HighestAttestations(
 			c := signingRootsBkt.Cursor()
 			for k, v := c.Last(); k != nil; k, v = c.Prev() {
 				if suffixForAttestationRecordsKey(k, encodedIndices[i]) {
-					encodedAttRecord := attRecordsBkt.Get(v)
+					encodedAttRecord := attRecordsBkt.Get(attestationRecordKey(k[:8], v))
 					if encodedAttRecord == nil {
 						continue
 					}
@@ -553,6 +554,16 @@ func (s *Store) HighestAttestations(
 func suffixForAttestationRecordsKey(key, encodedValidatorIndex []byte) bool {
 	encIdx := key[8:]
 	return bytes.Equal(encIdx, encodedValidatorIndex)
+}
+
+// attestationRecordKey is the disk key of an attestation record: the target
+// epoch (8 bytes, big-endian) followed by the attestation data root. The epoch
+// prefix lets pruning remove every record of an epoch, including records that
+// no validator index points at any more because the validator voted again.
+func attestationRecordKey(encodedTargetEpoch, dataRoot []byte) []byte {
+	key := make([]byte, 0, len(encodedTargetEpoch)+len(dataRoot))
+	key = append(key, encodedTargetEpoch...)
+	return append(key, dataRoot...)
 }
 
 // Disk key for a validator proposal, including a slot+validatorIndex as a byte slice.

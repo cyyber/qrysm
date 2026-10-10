@@ -616,3 +616,39 @@ func TestLoadFinalizedBlocks(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 10, len(filteredBlocks))
 }
+
+// A checkpoint state can be a block's post-state advanced through empty slots
+// up to the slot of the next block. Replaying that next block must apply it:
+// the state is at the block's slot but has not applied it. A state that did
+// apply the block (its latest header is the block's) is left alone.
+func TestReplayBlockRoots_AppliesBlockAtPreStateSlot(t *testing.T) {
+	ctx := context.Background()
+	preState, keys := util.DeterministicGenesisStateZond(t, 32)
+	block, err := util.GenerateFullBlockZond(preState, keys, util.DefaultBlockGenConfig(), 3)
+	require.NoError(t, err)
+	signed, err := consensusblocks.NewSignedBeaconBlock(block)
+	require.NoError(t, err)
+	root, err := signed.Block().HashTreeRoot()
+	require.NoError(t, err)
+	getter := &recordingBlockRootGetter{blocks: map[[32]byte]interfaces.ReadOnlySignedBeaconBlock{root: signed}}
+
+	advanced, err := transition.ProcessSlots(ctx, preState.Copy(), 3)
+	require.NoError(t, err)
+	st, err := replayBlockRootsWithGetter(ctx, advanced, [][32]byte{root}, 3, getter)
+	require.NoError(t, err)
+	require.Equal(t, primitives.Slot(3), st.LatestBlockHeader().Slot, "the block at the pre-state's slot was not applied")
+
+	post, err := executeStateTransitionStateGen(ctx, preState.Copy(), signed)
+	require.NoError(t, err)
+	postRoot, err := post.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	replayedRoot, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, postRoot, replayedRoot)
+
+	again, err := replayBlockRootsWithGetter(ctx, post.Copy(), [][32]byte{root}, 3, getter)
+	require.NoError(t, err)
+	againRoot, err := again.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, postRoot, againRoot, "a block the state already applied must not be applied again")
+}

@@ -6,7 +6,6 @@ package stategen
 import (
 	"context"
 	stderrors "errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -150,9 +149,9 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 	// the last completed migration and the finalized slot restarted from. Resume
 	// the cursor from the last archived point that is actually in the DB; the
 	// migration skips points whose state already exists, so this is cheap.
-	cursor, err := s.lastArchivedPointAtOrBelow(ctx, fState.Slot())
+	cursor, err := s.migrationCursor(ctx, fState.Slot())
 	if err != nil {
-		return nil, errors.Wrap(err, "could not find the last archived point")
+		return nil, errors.Wrap(err, "could not find the migration cursor")
 	}
 	if cursor < fState.Slot() {
 		log.WithField("finalizedSlot", fState.Slot()).WithField("resumeFrom", cursor).
@@ -187,34 +186,85 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 	return fState, nil
 }
 
-// lastArchivedPointAtOrBelow returns the highest archived point at or below slot
-// whose state in the DB belongs to a finalized (canonical) block, or 0 when
-// there is none above genesis. A slot can also hold the state of a block that
-// lost fork choice (hot states are saved at every 128th slot, which includes
-// every archived slot, and such states are kept by the dirty-state cleanup);
-// resuming the migration from such a slot would stall it for good, because the
-// canonical chain may have no block at that slot and the migration never looks
-// below its cursor.
-func (s *State) lastArchivedPointAtOrBelow(ctx context.Context, slot primitives.Slot) (primitives.Slot, error) {
+// migrationCursor returns the slot the cold state migration resumes from: the
+// cursor recorded by the last completed migration when there is one at or
+// below the finalized slot, otherwise the last canonical archived point. The
+// recorded cursor is authoritative because an archived state can exist above
+// an unfinished range (a forced checkpoint at shutdown or a hot state saved
+// at an archived slot) and would otherwise hide that range for good.
+func (s *State) migrationCursor(ctx context.Context, finalizedSlot primitives.Slot) (primitives.Slot, error) {
+	cursor, found, err := s.beaconDB.StateMigrationCursor(ctx)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not read the state migration cursor")
+	}
+	if found && cursor <= finalizedSlot {
+		return cursor, nil
+	}
+	// No recorded progress (a database written before the cursor existed): the
+	// archived states on disk are the only evidence. Resume at the last archived
+	// point whose archive is on disk before the first missing one, so a gap below
+	// a later archived state is filled rather than hidden, and so that the first
+	// migration step can be reconstructed from that archive.
+	return s.lastReconstructableArchivedPoint(ctx, finalizedSlot)
+}
+
+// lastReconstructableArchivedPoint returns the highest archived point at or
+// below slot such that every archived point from the lower bound up to it has
+// its archive on disk (the archive of a point is the state of the highest
+// canonical block at or below it). The lower bound is the checkpoint origin
+// slot on a checkpoint-synced node, since no point below the origin can be
+// migrated, and genesis otherwise; it is returned when no point qualifies.
+func (s *State) lastReconstructableArchivedPoint(ctx context.Context, slot primitives.Slot) (primitives.Slot, error) {
 	interval := s.slotsPerArchivedPoint
 	if interval == 0 {
 		return slot, nil
 	}
-	for point := slot - slot%interval; point > 0; point -= interval {
+	lower, err := s.migrationLowerBound(ctx)
+	if err != nil {
+		return 0, err
+	}
+	cursor := lower
+	// Point 0 is genesis, which the migration never archives.
+	first := lower
+	if rem := lower % interval; rem != 0 {
+		first = lower - rem + interval
+	}
+	if first == 0 {
+		first = interval
+	}
+	for point := first; point <= slot; point += interval {
 		if err := ctx.Err(); err != nil {
 			return 0, err
 		}
-		if !s.beaconDB.HasArchivedPoint(ctx, point) {
-			continue
+		root, err := s.canonicalRootAtOrBelow(ctx, point, lower)
+		if err != nil || !s.beaconDB.HasState(ctx, root) {
+			log.WithField("slot", point).WithField("resumeFrom", cursor).
+				Info("Archived point missing; resuming cold state migration from the last archived point on disk")
+			return cursor, nil
 		}
-		root := s.beaconDB.ArchivedPointRoot(ctx, point)
-		if s.beaconDB.IsFinalizedBlock(ctx, root) {
-			return point, nil
-		}
-		log.WithField("slot", point).WithField("root", fmt.Sprintf("%#x", root)).
-			Debug("Skipping an archived point whose state belongs to a non-canonical block")
+		cursor = point
 	}
-	return 0, nil
+	return cursor, nil
+}
+
+// migrationLowerBound returns the slot below which no state can be archived:
+// the checkpoint origin's slot on a checkpoint-synced node, otherwise genesis.
+func (s *State) migrationLowerBound(ctx context.Context) (primitives.Slot, error) {
+	originRoot, err := s.beaconDB.OriginCheckpointBlockRoot(ctx)
+	if err != nil {
+		if errors.Is(err, db.ErrNotFoundOriginBlockRoot) {
+			return 0, nil
+		}
+		return 0, errors.Wrap(err, "could not read the origin checkpoint root")
+	}
+	blk, err := s.beaconDB.Block(ctx, originRoot)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not read the origin checkpoint block")
+	}
+	if blk == nil || blk.IsNil() {
+		return 0, errors.New("origin checkpoint block not found")
+	}
+	return blk.Block().Slot(), nil
 }
 
 // SaveFinalizedState saves the finalized slot, root and state into memory to be used by state gen service.

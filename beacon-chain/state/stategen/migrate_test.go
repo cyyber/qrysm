@@ -491,3 +491,46 @@ func TestMigrateToCold_RestartWithFinalizedBlockAtArchivedPoint(t *testing.T) {
 	assert.Equal(t, r8, service.finalizedInfo.root)
 	assert.Equal(t, true, beaconDB.HasState(ctx, r4))
 }
+
+// An archived root present more than once in the hot-state list (as older
+// releases could record it) is removed entirely by the migration, so the
+// hot-state cleanup can never delete the archived state through a leftover entry.
+func TestMigrateToCold_RemovesEveryHotStateEntryOfArchivedRoot(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB, doublylinkedtree.New())
+	service.slotsPerArchivedPoint = 1
+
+	beaconState, _ := util.DeterministicGenesisStateZond(t, 32)
+	require.NoError(t, beaconState.SetSlot(1))
+	b := util.NewBeaconBlockZond()
+	b.Block.Slot = 1
+	util.SaveBlock(t, ctx, beaconDB, b)
+	bRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveState(ctx, beaconState, bRoot))
+	// The finalized index walk stops at the genesis root (the blocks' zero parent).
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, [32]byte{}))
+	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &qrysmpb.Checkpoint{Root: bRoot[:]}))
+	fb := util.NewBeaconBlockZond()
+	fb.Block.Slot = 2
+	fb.Block.ParentRoot = bRoot[:]
+	util.SaveBlock(t, ctx, beaconDB, fb)
+	fRoot, err := fb.Block.HashTreeRoot()
+	require.NoError(t, err)
+	fState := beaconState.Copy()
+	require.NoError(t, fState.SetSlot(2))
+	require.NoError(t, beaconDB.SaveState(ctx, fState, fRoot))
+	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &qrysmpb.Checkpoint{Root: fRoot[:]}))
+
+	service.finalizedInfo.slot = 1
+	service.saveHotStateDB.blockRootsOfSavedStates = [][32]byte{bRoot, {9}, bRoot}
+	require.NoError(t, service.MigrateToCold(ctx, fRoot))
+	require.DeepEqual(t, [][32]byte{{9}}, service.saveHotStateDB.blockRootsOfSavedStates)
+	require.Equal(t, true, beaconDB.HasState(ctx, bRoot))
+	// The migration recorded where it stopped.
+	cursor, found, err := beaconDB.StateMigrationCursor(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, found)
+	require.Equal(t, primitives.Slot(2), cursor)
+}
