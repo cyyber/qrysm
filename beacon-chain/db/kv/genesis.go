@@ -13,8 +13,10 @@ import (
 	"github.com/theQRL/qrysm/config/params"
 	consensusblocks "github.com/theQRL/qrysm/consensus-types/blocks"
 	"github.com/theQRL/qrysm/consensus-types/interfaces"
+	"github.com/theQRL/qrysm/encoding/bytesutil"
 	"github.com/theQRL/qrysm/encoding/ssz/detect"
 	qrysmpb "github.com/theQRL/qrysm/proto/qrysm/v1alpha1"
+	bolt "go.etcd.io/bbolt"
 )
 
 // SaveGenesisData bootstraps the beaconDB with a given genesis state.
@@ -53,6 +55,71 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconSt
 	if err := s.SaveGenesisBlockRoot(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "could not save genesis block root")
 	}
+	return nil
+}
+
+// repairBlindedGenesisBlock rewrites a genesis block that an older release
+// stored blinded with its (empty) execution payload. The blinded form cannot be
+// served: its payload header carries the zero block hash, which the execution
+// client cannot resolve. The regular save path never overwrites an existing
+// root, so the entry is replaced directly. It runs when the database is opened.
+func (s *Store) repairBlindedGenesisBlock(ctx context.Context) error {
+	var root, enc []byte
+	if err := s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		root = bytesutil.SafeCopyBytes(bkt.Get(genesisBlockRootKey))
+		if len(root) == 0 {
+			return nil
+		}
+		enc = bytesutil.SafeCopyBytes(bkt.Get(root))
+		return nil
+	}); err != nil {
+		return err
+	}
+	if len(root) == 0 || len(enc) == 0 {
+		return nil
+	}
+	blk, err := unmarshalBlock(ctx, enc)
+	if err != nil {
+		return errors.Wrap(err, "could not decode the stored genesis block")
+	}
+	if err := consensusblocks.BeaconBlockIsNil(blk); err != nil {
+		return errors.Wrap(err, "stored genesis block")
+	}
+	if !blk.IsBlinded() {
+		return nil
+	}
+	emptyPayload := blocks.NewGenesisBlock(nil).Block.Body.ExecutionPayload
+	full, err := consensusblocks.BuildSignedBeaconBlockFromExecutionPayload(blk, emptyPayload)
+	if err != nil {
+		// Not the genesis block of this chain's construction; it cannot be
+		// served either way, which is no reason to keep the node from starting.
+		log.WithError(err).WithField("root", fmt.Sprintf("%#x", root)).
+			Error("Stored genesis block is blinded and its execution payload could not be restored")
+		return nil
+	}
+	fullRoot, err := full.Block().HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	if fullRoot != bytesutil.ToBytes32(root) {
+		log.WithField("root", fmt.Sprintf("%#x", root)).WithField("restoredRoot", fmt.Sprintf("%#x", fullRoot)).
+			Error("Stored genesis block is blinded and does not carry the empty execution payload")
+		return nil
+	}
+	encFull, err := marshalBlockFull(ctx, full)
+	if err != nil {
+		return errors.Wrap(err, "could not encode the restored genesis block")
+	}
+	s.blockWriteLock.Lock()
+	defer s.blockWriteLock.Unlock()
+	if err := s.db.Update(func(tx *bolt.Tx) error {
+		return tx.Bucket(blocksBucket).Put(root, encFull)
+	}); err != nil {
+		return errors.Wrap(err, "could not store the restored genesis block")
+	}
+	s.blockCache.Del(string(root))
+	log.WithField("root", fmt.Sprintf("%#x", root)).Info("Restored the execution payload of the stored genesis block")
 	return nil
 }
 

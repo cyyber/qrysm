@@ -194,6 +194,12 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot primi
 
 	var err error
 	for state.Slot() < slot {
+		// Slot and epoch transitions never look at the context; a replay for a
+		// request that went away would otherwise run to the target slot.
+		if err := ctx.Err(); err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, err
+		}
 		state, err = transition.ProcessSlot(ctx, state)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not process slot")

@@ -610,6 +610,59 @@ func TestStore_CleanUpDirtyStates_NoOriginRoot(t *testing.T) {
 	}
 }
 
+// The archive of an archived point with no block at that slot is the state of
+// the highest canonical block below it, wherever in the interval that block
+// sits. The cleanup must keep it: once the migration has passed the point the
+// archive is never written again.
+func TestStore_CleanUpDirtyStates_KeepsArchiveOfSkippedPoint(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	genesisState, err := util.NewBeaconStateZond()
+	require.NoError(t, err)
+	genesisRoot := [32]byte{'a'}
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisRoot))
+	require.NoError(t, db.SaveState(ctx, genesisState, genesisRoot))
+
+	saveBlockAndState := func(slot primitives.Slot, parent [32]byte) [32]byte {
+		b := util.NewBeaconBlockZond()
+		b.Block.Slot = slot
+		b.Block.ParentRoot = parent[:]
+		r, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		wsb, err := blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
+		st, err := util.NewBeaconStateZond()
+		require.NoError(t, err)
+		require.NoError(t, st.SetSlot(slot))
+		require.NoError(t, db.SaveState(ctx, st, r))
+		return r
+	}
+	// Blocks at 1..64 and 130: the archived slot 128 is served by block 64, in
+	// the first half of the interval, which the interval rules alone discard.
+	slotsPerArchivedPoint := primitives.Slot(128)
+	roots := map[primitives.Slot][32]byte{}
+	parent := genesisRoot
+	for i := primitives.Slot(1); i <= 64; i++ {
+		parent = saveBlockAndState(i, parent)
+		roots[i] = parent
+	}
+	fRoot := saveBlockAndState(130, parent)
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, &qrysmpb.Checkpoint{
+		Root:  fRoot[:],
+		Epoch: primitives.Epoch(primitives.Slot(130) / params.BeaconConfig().SlotsPerEpoch),
+	}))
+
+	require.NoError(t, db.CleanUpDirtyStates(ctx, slotsPerArchivedPoint))
+
+	for i := primitives.Slot(1); i < 64; i++ {
+		require.Equal(t, false, db.HasState(ctx, roots[i]), "the state at slot %d is not an archive", i)
+	}
+	require.Equal(t, true, db.HasState(ctx, roots[64]), "the archive of slot 128 (the state of block 64) must be kept")
+	require.Equal(t, true, db.HasState(ctx, fRoot))
+	require.Equal(t, true, db.HasState(ctx, genesisRoot))
+}
+
 func TestStore_CleanUpDirtyStates_Finalized(t *testing.T) {
 	db := setupDB(t)
 

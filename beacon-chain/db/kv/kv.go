@@ -25,6 +25,12 @@ import (
 
 var _ iface.Database = (*Store)(nil)
 
+// OpenTimeout is how long NewKVStore retries the database file lock before
+// giving up (bolt retries it every 50 ms). A tool that replaces the database
+// file relies on it: holding the lock for longer than this after the file is
+// replaced sees off every node that was waiting for the lock.
+const OpenTimeout = 1 * time.Second
+
 const (
 	// NumOfValidatorEntries is the size of the validator cache entries.
 	// we expect to hold a max of 200K validators, so setting it to 2 million (10x the capacity).
@@ -165,7 +171,7 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 		datafile,
 		params.BeaconIoConfig().ReadWritePermissions,
 		&bolt.Options{
-			Timeout:         1 * time.Second,
+			Timeout:         OpenTimeout,
 			InitialMmapSize: mmapSize,
 		},
 	)
@@ -222,6 +228,11 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 	if err := kv.setupBlockStorageType(ctx); err != nil {
 		prometheus.Unregister(createBoltCollector(kv.db))
 		return nil, closeOnError(err)
+	}
+	// A genesis block stored blinded by an older release cannot be served.
+	if err := kv.repairBlindedGenesisBlock(ctx); err != nil {
+		prometheus.Unregister(createBoltCollector(kv.db))
+		return nil, closeOnError(errors.Wrap(err, "could not repair the stored genesis block"))
 	}
 
 	return kv, nil

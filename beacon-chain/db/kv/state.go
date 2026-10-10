@@ -787,6 +787,13 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint pr
 				if oRoot == root {
 					continue
 				}
+				archive, err := isArchivedPointState(tx, slot, root, slotsPerArchivedPoint, finalizedSlot)
+				if err != nil {
+					return err
+				}
+				if archive {
+					continue
+				}
 				deletedRoots = append(deletedRoots, root)
 			}
 			return nil
@@ -807,6 +814,50 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint pr
 	}
 
 	return err
+}
+
+// isArchivedPointState reports whether the state of the block with the given
+// root at slot is the archive of the next archived point. The archive of a
+// point is the state of the highest canonical block at or below it, so when no
+// block was produced at the point itself the archive sits below it, at a slot
+// the interval rules above would otherwise clean up; it is never written again
+// once the migration has passed the point. The decision needs the finalized
+// index up to the point, so a state below a point that finality has not reached
+// yet is kept until it has.
+func isArchivedPointState(tx *bolt.Tx, slot primitives.Slot, root [32]byte, interval, finalizedSlot primitives.Slot) (bool, error) {
+	point := slot + (interval - slot%interval)
+	if point > finalizedSlot {
+		return true, nil
+	}
+	finalizedBkt := tx.Bucket(finalizedBlockRootsIndexBucket)
+	if finalizedBkt.Get(root[:]) == nil {
+		return false, nil
+	}
+	// A canonical block in (slot, point] would be the archive instead.
+	c := tx.Bucket(blockSlotIndicesBucket).Cursor()
+	k, v := c.Seek(bytesutil.SlotToBytesBigEndian(point))
+	if k == nil {
+		k, v = c.Last()
+	}
+	for ; k != nil; k, v = c.Prev() {
+		indexed := bytesutil.BytesToSlotBigEndian(k)
+		if indexed > point {
+			continue
+		}
+		if indexed <= slot {
+			break
+		}
+		roots, err := splitRoots(v)
+		if err != nil {
+			return false, errors.Wrapf(err, "corrupt value in block slot index for slot=%d", indexed)
+		}
+		for _, r := range roots {
+			if finalizedBkt.Get(r[:]) != nil {
+				return false, nil
+			}
+		}
+	}
+	return true, nil
 }
 
 func (s *Store) isStateValidatorMigrationOver() (bool, error) {

@@ -652,3 +652,13 @@ func TestReplayBlockRoots_AppliesBlockAtPreStateSlot(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, postRoot, againRoot, "a block the state already applied must not be applied again")
 }
+
+// A replay stops at the next slot once its context is cancelled instead of
+// running every remaining slot and epoch transition to the target.
+func TestReplayProcessSlots_StopsOnCancelledContext(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateZond(t, 8)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := ReplayProcessSlots(ctx, st, params.BeaconConfig().SlotsPerEpoch*2)
+	require.ErrorIs(t, err, context.Canceled)
+}

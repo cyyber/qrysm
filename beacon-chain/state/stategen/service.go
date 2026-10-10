@@ -187,25 +187,31 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 }
 
 // migrationCursor returns the slot the cold state migration resumes from: the
-// cursor recorded by the last completed migration when there is one at or
-// below the finalized slot, otherwise the last canonical archived point. The
-// recorded cursor is authoritative because an archived state can exist above
-// an unfinished range (a forced checkpoint at shutdown or a hot state saved
-// at an archived slot) and would otherwise hide that range for good.
+// last archived point whose archive is on disk before the first missing one
+// (so a gap is filled rather than hidden and the first migration step can be
+// reconstructed from the archive at the cursor), capped by the cursor recorded
+// by the last completed migration when there is one at or below the finalized
+// slot. The archived states on disk are the ground truth: an archive can be
+// lost below the recorded cursor (an older release's cleanup removed the
+// archive of a skipped archived slot), and the scan is cheap, one lookup per
+// archived point.
 func (s *State) migrationCursor(ctx context.Context, finalizedSlot primitives.Slot) (primitives.Slot, error) {
+	scanned, err := s.lastReconstructableArchivedPoint(ctx, finalizedSlot)
+	if err != nil {
+		return 0, err
+	}
 	cursor, found, err := s.beaconDB.StateMigrationCursor(ctx)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not read the state migration cursor")
 	}
-	if found && cursor <= finalizedSlot {
+	if found && cursor <= finalizedSlot && cursor < scanned {
 		return cursor, nil
 	}
-	// No recorded progress (a database written before the cursor existed): the
-	// archived states on disk are the only evidence. Resume at the last archived
-	// point whose archive is on disk before the first missing one, so a gap below
-	// a later archived state is filled rather than hidden, and so that the first
-	// migration step can be reconstructed from that archive.
-	return s.lastReconstructableArchivedPoint(ctx, finalizedSlot)
+	if found && cursor <= finalizedSlot && scanned < cursor {
+		log.WithField("recorded", cursor).WithField("resumeFrom", scanned).
+			Warn("An archived state below the recorded migration cursor is missing; resuming below it to rebuild it")
+	}
+	return scanned, nil
 }
 
 // lastReconstructableArchivedPoint returns the highest archived point at or

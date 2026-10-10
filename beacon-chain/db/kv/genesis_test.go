@@ -363,3 +363,50 @@ func TestSaveGenesisData_StoresGenesisBlockUnblinded(t *testing.T) {
 }
 
 // A checkpoint can only be the origin of a chain without finalized history.
+
+// A genesis block that an older release stored blinded is rewritten with its
+// empty execution payload when the database is opened, so it can be served.
+func TestNewKVStore_RepairsBlindedGenesisBlock(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := NewKVStore(ctx, dir)
+	require.NoError(t, err)
+	gs, err := util.NewBeaconStateZond()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveGenesisData(ctx, gs))
+	gb, err := db.GenesisBlock(ctx)
+	require.NoError(t, err)
+	root, err := gb.Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	// Store it the way an older release did.
+	blindedEnc, err := marshalBlockBlinded(ctx, gb)
+	require.NoError(t, err)
+	require.NoError(t, db.db.Update(func(tx *bolt.Tx) error {
+		return tx.Bucket(blocksBucket).Put(root[:], blindedEnc)
+	}))
+	db.blockCache.Del(string(root[:]))
+	stored, err := db.GenesisBlock(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, stored.IsBlinded())
+	require.NoError(t, db.Close())
+
+	reopened, err := NewKVStore(ctx, dir)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, reopened.Close()) }()
+	repaired, err := reopened.GenesisBlock(ctx)
+	require.NoError(t, err)
+	require.Equal(t, false, repaired.IsBlinded(), "the genesis block must be stored with its payload again")
+	repairedRoot, err := repaired.Block().HashTreeRoot()
+	require.NoError(t, err)
+	require.Equal(t, root, repairedRoot)
+	byRoot, err := reopened.Block(ctx, root)
+	require.NoError(t, err)
+	require.Equal(t, false, byRoot.IsBlinded())
+
+	// A database whose genesis block is already full is left alone.
+	require.NoError(t, reopened.repairBlindedGenesisBlock(ctx))
+	again, err := reopened.GenesisBlock(ctx)
+	require.NoError(t, err)
+	require.Equal(t, false, again.IsBlinded())
+}

@@ -214,7 +214,7 @@ func TestResume_MigrationCursorPrefersRecordedProgress(t *testing.T) {
 	require.Equal(t, true, found)
 	assert.Equal(t, primitives.Slot(12), cursor)
 
-	// Without a recorded cursor the highest canonical archived point is used.
+	// Without a usable recorded cursor the scan alone decides.
 	service2 := New(beaconDB, doublylinkedtree.New())
 	service2.slotsPerArchivedPoint = 4
 	require.NoError(t, beaconDB.SaveStateMigrationCursor(ctx, 1<<40))
@@ -277,6 +277,17 @@ func TestResume_NoRecordedCursorResumesBeforeFirstMissingPoint(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, found)
 	assert.Equal(t, primitives.Slot(12), cursor)
+
+	// An archive lost below the recorded cursor (an older release's cleanup
+	// removed skipped-slot archives) is found by the scan and rebuilt.
+	require.NoError(t, beaconDB.DeleteState(ctx, roots[7]))
+	service2 := New(beaconDB, doublylinkedtree.New())
+	service2.slotsPerArchivedPoint = 4
+	_, err = service2.Resume(ctx, states[12])
+	require.NoError(t, err)
+	assert.Equal(t, primitives.Slot(4), service2.finalizedInfo.slot, "the recorded cursor must not hide a missing archive")
+	require.NoError(t, service2.MigrateToCold(ctx, fRoot))
+	require.Equal(t, true, beaconDB.HasState(ctx, roots[7]), "the archive of point 8 was not rebuilt after its loss")
 }
 
 // On a checkpoint-synced node the migration cannot go below the origin: without
