@@ -604,7 +604,7 @@ func TestAttestationRewardsMatchEpochProcessing(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			pre := test.newState(t)
-			reported := attestationRewardTotals(t, pre)
+			reported := attestationRewardTotals(t, pre.Copy())
 			post, err := altair.ProcessEpoch(context.Background(), pre.Copy())
 			require.NoError(t, err)
 			for i, total := range reported {

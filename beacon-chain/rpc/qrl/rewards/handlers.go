@@ -310,8 +310,8 @@ func attRewardsBalancesAndVals(
 		return nil, nil, nil, nil, false
 	}
 	// Epoch processing pays rewards after justification and the inactivity
-	// score update, so apply both, on a copy, before computing them.
-	st = st.Copy()
+	// score update, so apply both before computing them. The stater replays a
+	// state for each request, so no shared state changes.
 	st, err = precompute.ProcessJustificationAndFinalizationPreCompute(st, bal)
 	if err != nil {
 		http2.HandleError(w, "Could not process justification: "+err.Error(), http.StatusInternalServerError)
