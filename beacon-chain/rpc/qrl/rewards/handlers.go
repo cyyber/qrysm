@@ -124,7 +124,7 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	bal, vals, valIndices, ok := attRewardsBalancesAndVals(w, r, st)
+	st, bal, vals, valIndices, ok := attRewardsBalancesAndVals(w, r, st)
 	if !ok {
 		return
 	}
@@ -298,29 +298,42 @@ func attRewardsBalancesAndVals(
 	w http.ResponseWriter,
 	r *http.Request,
 	st state.BeaconState,
-) (*precompute.Balance, []*precompute.Validator, []primitives.ValidatorIndex, bool) {
+) (state.BeaconState, *precompute.Balance, []*precompute.Validator, []primitives.ValidatorIndex, bool) {
 	allVals, bal, err := altair.InitializePrecomputeValidators(r.Context(), st)
 	if err != nil {
 		http2.HandleError(w, "Could not initialize precompute validators: "+err.Error(), http.StatusBadRequest)
-		return nil, nil, nil, false
+		return nil, nil, nil, nil, false
 	}
 	allVals, bal, err = altair.ProcessEpochParticipation(r.Context(), st, bal, allVals)
 	if err != nil {
 		http2.HandleError(w, "Could not process epoch participation: "+err.Error(), http.StatusBadRequest)
-		return nil, nil, nil, false
+		return nil, nil, nil, nil, false
+	}
+	// Epoch processing pays rewards after justification and the inactivity
+	// score update, so apply both, on a copy, before computing them.
+	st = st.Copy()
+	st, err = precompute.ProcessJustificationAndFinalizationPreCompute(st, bal)
+	if err != nil {
+		http2.HandleError(w, "Could not process justification: "+err.Error(), http.StatusInternalServerError)
+		return nil, nil, nil, nil, false
+	}
+	st, allVals, err = altair.ProcessInactivityScores(r.Context(), st, allVals)
+	if err != nil {
+		http2.HandleError(w, "Could not process inactivity updates: "+err.Error(), http.StatusInternalServerError)
+		return nil, nil, nil, nil, false
 	}
 	valIndices, ok := requestedValIndices(w, r, st, allVals)
 	if !ok {
-		return nil, nil, nil, false
+		return nil, nil, nil, nil, false
 	}
 	if len(valIndices) == len(allVals) {
-		return bal, allVals, valIndices, true
+		return st, bal, allVals, valIndices, true
 	} else {
 		filteredVals := make([]*precompute.Validator, len(valIndices))
 		for i, valIx := range valIndices {
 			filteredVals[i] = allVals[valIx]
 		}
-		return bal, filteredVals, valIndices, true
+		return st, bal, filteredVals, valIndices, true
 	}
 }
 

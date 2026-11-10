@@ -573,6 +573,131 @@ func TestAttestationRewards(t *testing.T) {
 	})
 }
 
+// TestAttestationRewardsMatchEpochProcessing checks that each validator's
+// reported attestation reward equals the balance change that epoch processing
+// applies to the same state.
+func TestAttestationRewardsMatchEpochProcessing(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	helpers.ClearCache()
+
+	for _, test := range []struct {
+		name     string
+		newState func(t *testing.T) state.BeaconState
+	}{
+		{
+			// Epoch 0 is finalized, so epoch 6 is processed in a leak. The
+			// offline validators' score rises from 8 to 12 in the processing,
+			// and they pay the inactivity penalty at 12.
+			name: "inactivity leak",
+			newState: func(t *testing.T) state.BeaconState {
+				return epochRewardsState(t, 32, 8, 0, 0, 0, 0b0000)
+			},
+		},
+		{
+			// The processing justifies epoch 7 and finalizes epoch 6, which
+			// ends the leak, so timely votes are rewarded again.
+			name: "processing that ends the leak",
+			newState: func(t *testing.T) state.BeaconState {
+				return epochRewardsState(t, 0, 0, 1, 1, 6, 0b0001)
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			pre := test.newState(t)
+			reported := attestationRewardTotals(t, pre)
+			post, err := altair.ProcessEpoch(context.Background(), pre.Copy())
+			require.NoError(t, err)
+			for i, total := range reported {
+				applied := int64(post.Balances()[i]) - int64(pre.Balances()[i])
+				require.Equal(t, applied, total, "validator %d", i)
+			}
+		})
+	}
+}
+
+// epochRewardsState returns a state at the last slot of epoch 7, whose epoch
+// processing pays the attestation rewards of epoch 6. The last offline
+// validators cast no vote and have the given inactivity score; the others
+// cast timely votes.
+func epochRewardsState(
+	t *testing.T, offline int, score uint64,
+	finalized, previousJustified, currentJustified primitives.Epoch, justificationBits byte,
+) state.BeaconState {
+	const valCount = 64
+	st, err := util.NewBeaconStateZond()
+	require.NoError(t, err)
+	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*8-1))
+	validators := make([]*qrysmpb.Validator, valCount)
+	balances := make([]uint64, valCount)
+	scores := make([]uint64, valCount)
+	participation := make([]byte, valCount)
+	for i := range valCount {
+		key, err := ml_dsa_87.RandKey()
+		require.NoError(t, err)
+		validators[i] = &qrysmpb.Validator{
+			PublicKey:         key.PublicKey().Marshal(),
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
+		}
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+		if i >= valCount-offline {
+			scores[i] = score
+		} else {
+			participation[i] = 0b111
+		}
+	}
+	require.NoError(t, st.SetValidators(validators))
+	require.NoError(t, st.SetBalances(balances))
+	require.NoError(t, st.SetInactivityScores(scores))
+	require.NoError(t, st.SetPreviousParticipationBits(participation))
+	require.NoError(t, st.SetCurrentParticipationBits(participation))
+	require.NoError(t, st.SetFinalizedCheckpoint(&qrysmpb.Checkpoint{Epoch: finalized, Root: make([]byte, 32)}))
+	require.NoError(t, st.SetPreviousJustifiedCheckpoint(&qrysmpb.Checkpoint{Epoch: previousJustified, Root: make([]byte, 32)}))
+	require.NoError(t, st.SetCurrentJustifiedCheckpoint(&qrysmpb.Checkpoint{Epoch: currentJustified, Root: make([]byte, 32)}))
+	require.NoError(t, st.SetJustificationBits(bitfield.Bitvector4{justificationBits}))
+	return st
+}
+
+// attestationRewardTotals asks the handler for the attestation rewards of
+// epoch 6 in st, and returns each validator's head, source and target sum.
+func attestationRewardTotals(t *testing.T, st state.BeaconState) []int64 {
+	attBlkRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	require.NoError(t, err)
+	currentSlot := params.BeaconConfig().SlotsPerEpoch * 8
+	headRoot := [32]byte{'h'}
+	chainService := &mock.ChainService{
+		Slot:      &currentSlot,
+		Root:      headRoot[:],
+		Ancestors: map[[32]byte][32]byte{headRoot: attBlkRoot},
+	}
+	s := &Server{
+		Stater:                &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{st.Slot(): st}},
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
+		HeadFetcher:           chainService,
+		ForkchoiceFetcher:     chainService,
+	}
+	request := httptest.NewRequest("POST", "http://only.the.epoch.number.at.the.end.is.important/6", nil)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+	s.AttestationRewards(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code, writer.Body.String())
+	resp := &AttestationRewardsResponse{}
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+
+	totals := make([]int64, len(resp.Data.TotalRewards))
+	for i, reward := range resp.Data.TotalRewards {
+		for _, value := range []string{reward.Head, reward.Source, reward.Target} {
+			parsed, err := strconv.ParseInt(value, 10, 64)
+			require.NoError(t, err)
+			totals[i] += parsed
+		}
+	}
+	return totals
+}
+
 func TestSyncCommiteeRewards(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	helpers.ClearCache()
