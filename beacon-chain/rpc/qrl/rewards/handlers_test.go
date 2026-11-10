@@ -400,6 +400,17 @@ func TestAttestationRewards(t *testing.T) {
 		assert.Equal(t, "-496943261", resp.Data.TotalRewards[0].Source)
 		assert.Equal(t, "-922894628", resp.Data.TotalRewards[0].Target)
 	})
+	t.Run("ok - matches epoch processing in a leak", func(t *testing.T) {
+		// Epoch 0 is finalized, so epoch 6 is processed in a leak. The offline
+		// validators' score rises from 8 to 12 in the processing, and they pay
+		// the inactivity penalty at 12.
+		expectRewardsMatchEpochProcessing(t, epochRewardsState(t, 32, 8, 0, 0, 0, 0b0000))
+	})
+	t.Run("ok - matches epoch processing that ends the leak", func(t *testing.T) {
+		// The processing justifies epoch 7 and finalizes epoch 6, which ends
+		// the leak, so timely votes are rewarded again.
+		expectRewardsMatchEpochProcessing(t, epochRewardsState(t, 0, 0, 1, 1, 6, 0b0001))
+	})
 	t.Run("zero state root (state at skipped slot) uses ancestor root", func(t *testing.T) {
 		// A state replayed past the last block of the epoch carries a header
 		// whose state root is zero; its hash tree root is not a stored block
@@ -576,45 +587,6 @@ func TestAttestationRewards(t *testing.T) {
 // TestAttestationRewardsMatchEpochProcessing checks that each validator's
 // reported attestation reward equals the balance change that epoch processing
 // applies to the same state.
-func TestAttestationRewardsMatchEpochProcessing(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	helpers.ClearCache()
-
-	for _, test := range []struct {
-		name     string
-		newState func(t *testing.T) state.BeaconState
-	}{
-		{
-			// Epoch 0 is finalized, so epoch 6 is processed in a leak. The
-			// offline validators' score rises from 8 to 12 in the processing,
-			// and they pay the inactivity penalty at 12.
-			name: "inactivity leak",
-			newState: func(t *testing.T) state.BeaconState {
-				return epochRewardsState(t, 32, 8, 0, 0, 0, 0b0000)
-			},
-		},
-		{
-			// The processing justifies epoch 7 and finalizes epoch 6, which
-			// ends the leak, so timely votes are rewarded again.
-			name: "processing that ends the leak",
-			newState: func(t *testing.T) state.BeaconState {
-				return epochRewardsState(t, 0, 0, 1, 1, 6, 0b0001)
-			},
-		},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			pre := test.newState(t)
-			reported := attestationRewardTotals(t, pre.Copy())
-			post, err := altair.ProcessEpoch(context.Background(), pre.Copy())
-			require.NoError(t, err)
-			for i, total := range reported {
-				applied := int64(post.Balances()[i]) - int64(pre.Balances()[i])
-				require.Equal(t, applied, total, "validator %d", i)
-			}
-		})
-	}
-}
-
 // epochRewardsState returns a state at the last slot of epoch 7, whose epoch
 // processing pays the attestation rewards of epoch 6. The last offline
 // validators cast no vote and have the given inactivity score; the others
@@ -659,10 +631,11 @@ func epochRewardsState(
 	return st
 }
 
-// attestationRewardTotals asks the handler for the attestation rewards of
-// epoch 6 in st, and returns each validator's head, source and target sum.
-func attestationRewardTotals(t *testing.T, st state.BeaconState) []int64 {
-	attBlkRoot, err := st.LatestBlockHeader().HashTreeRoot()
+// expectRewardsMatchEpochProcessing asks the handler for the attestation
+// rewards of epoch 6 in pre, and checks every validator's total against the
+// balance change epoch processing applies.
+func expectRewardsMatchEpochProcessing(t *testing.T, pre state.BeaconState) {
+	attBlkRoot, err := pre.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
 	currentSlot := params.BeaconConfig().SlotsPerEpoch * 8
 	headRoot := [32]byte{'h'}
@@ -672,7 +645,7 @@ func attestationRewardTotals(t *testing.T, st state.BeaconState) []int64 {
 		Ancestors: map[[32]byte][32]byte{headRoot: attBlkRoot},
 	}
 	s := &Server{
-		Stater:                &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{st.Slot(): st}},
+		Stater:                &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{pre.Slot(): pre.Copy()}},
 		TimeFetcher:           chainService,
 		OptimisticModeFetcher: chainService,
 		FinalizationFetcher:   chainService,
@@ -686,16 +659,20 @@ func attestationRewardTotals(t *testing.T, st state.BeaconState) []int64 {
 	require.Equal(t, http.StatusOK, writer.Code, writer.Body.String())
 	resp := &AttestationRewardsResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+	require.Equal(t, pre.NumValidators(), len(resp.Data.TotalRewards))
 
-	totals := make([]int64, len(resp.Data.TotalRewards))
+	post, err := altair.ProcessEpoch(context.Background(), pre.Copy())
+	require.NoError(t, err)
 	for i, reward := range resp.Data.TotalRewards {
+		var total int64
 		for _, value := range []string{reward.Head, reward.Source, reward.Target} {
 			parsed, err := strconv.ParseInt(value, 10, 64)
 			require.NoError(t, err)
-			totals[i] += parsed
+			total += parsed
 		}
+		applied := int64(post.Balances()[i]) - int64(pre.Balances()[i])
+		require.Equal(t, applied, total, "validator %d", i)
 	}
-	return totals
 }
 
 func TestSyncCommiteeRewards(t *testing.T) {
