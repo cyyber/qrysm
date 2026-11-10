@@ -309,6 +309,16 @@ func attRewardsBalancesAndVals(
 		http2.HandleError(w, "Could not process epoch participation: "+err.Error(), http.StatusBadRequest)
 		return nil, nil, nil, false
 	}
+	st, err = precompute.ProcessJustificationAndFinalizationPreCompute(st, bal)
+	if err != nil {
+		http2.HandleError(w, "Could not process justification and finalization: "+err.Error(), http.StatusInternalServerError)
+		return nil, nil, nil, false
+	}
+	st, allVals, err = altair.ProcessInactivityScores(r.Context(), st, allVals)
+	if err != nil {
+		http2.HandleError(w, "Could not process inactivity updates: "+err.Error(), http.StatusInternalServerError)
+		return nil, nil, nil, false
+	}
 	valIndices, ok := requestedValIndices(w, r, st, allVals)
 	if !ok {
 		return nil, nil, nil, false
