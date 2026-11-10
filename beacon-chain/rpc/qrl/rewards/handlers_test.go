@@ -404,12 +404,18 @@ func TestAttestationRewards(t *testing.T) {
 		// Epoch 0 is finalized, so epoch 6 is processed in a leak. The offline
 		// validators' score rises from 8 to 12 in the processing, and they pay
 		// the inactivity penalty at 12.
-		expectRewardsMatchEpochProcessing(t, epochRewardsState(t, 32, 8, 0, 0, 0, 0b0000))
+		expectRewardsMatchEpochProcessing(t, epochRewardsState(t, 32, 8))
 	})
 	t.Run("ok - matches epoch processing that ends the leak", func(t *testing.T) {
-		// The processing justifies epoch 7 and finalizes epoch 6, which ends
-		// the leak, so timely votes are rewarded again.
-		expectRewardsMatchEpochProcessing(t, epochRewardsState(t, 0, 0, 1, 1, 6, 0b0001))
+		// Epoch 1 is finalized and epoch 6 justified. The processing justifies
+		// epoch 7 and finalizes epoch 6, which ends the leak, so timely votes
+		// are rewarded again.
+		st := epochRewardsState(t, 0, 0)
+		require.NoError(t, st.SetFinalizedCheckpoint(&qrysmpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)}))
+		require.NoError(t, st.SetPreviousJustifiedCheckpoint(&qrysmpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)}))
+		require.NoError(t, st.SetCurrentJustifiedCheckpoint(&qrysmpb.Checkpoint{Epoch: 6, Root: make([]byte, 32)}))
+		require.NoError(t, st.SetJustificationBits(bitfield.Bitvector4{0b0001}))
+		expectRewardsMatchEpochProcessing(t, st)
 	})
 	t.Run("zero state root (state at skipped slot) uses ancestor root", func(t *testing.T) {
 		// A state replayed past the last block of the epoch carries a header
@@ -584,17 +590,12 @@ func TestAttestationRewards(t *testing.T) {
 	})
 }
 
-// TestAttestationRewardsMatchEpochProcessing checks that each validator's
-// reported attestation reward equals the balance change that epoch processing
-// applies to the same state.
-// epochRewardsState returns a state at the last slot of epoch 7, whose epoch
-// processing pays the attestation rewards of epoch 6. The last offline
-// validators cast no vote and have the given inactivity score; the others
-// cast timely votes.
-func epochRewardsState(
-	t *testing.T, offline int, score uint64,
-	finalized, previousJustified, currentJustified primitives.Epoch, justificationBits byte,
-) state.BeaconState {
+// epochRewardsState returns a state at the last slot of epoch 7, with epoch 0
+// finalized, whose epoch processing pays the attestation rewards of epoch 6.
+// The last offline validators cast no vote and have the given inactivity
+// score; the others cast timely votes.
+func epochRewardsState(t *testing.T, offline int, score uint64) state.BeaconState {
+	t.Helper()
 	const valCount = 64
 	st, err := util.NewBeaconStateZond()
 	require.NoError(t, err)
@@ -624,10 +625,6 @@ func epochRewardsState(
 	require.NoError(t, st.SetInactivityScores(scores))
 	require.NoError(t, st.SetPreviousParticipationBits(participation))
 	require.NoError(t, st.SetCurrentParticipationBits(participation))
-	require.NoError(t, st.SetFinalizedCheckpoint(&qrysmpb.Checkpoint{Epoch: finalized, Root: make([]byte, 32)}))
-	require.NoError(t, st.SetPreviousJustifiedCheckpoint(&qrysmpb.Checkpoint{Epoch: previousJustified, Root: make([]byte, 32)}))
-	require.NoError(t, st.SetCurrentJustifiedCheckpoint(&qrysmpb.Checkpoint{Epoch: currentJustified, Root: make([]byte, 32)}))
-	require.NoError(t, st.SetJustificationBits(bitfield.Bitvector4{justificationBits}))
 	return st
 }
 
@@ -635,6 +632,7 @@ func epochRewardsState(
 // rewards of epoch 6 in pre, and checks every validator's total against the
 // balance change epoch processing applies.
 func expectRewardsMatchEpochProcessing(t *testing.T, pre state.BeaconState) {
+	t.Helper()
 	attBlkRoot, err := pre.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
 	currentSlot := params.BeaconConfig().SlotsPerEpoch * 8
