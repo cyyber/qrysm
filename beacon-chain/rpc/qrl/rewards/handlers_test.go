@@ -411,9 +411,9 @@ func TestAttestationRewards(t *testing.T) {
 		// epoch 7 and finalizes epoch 6, which ends the leak, so timely votes
 		// are rewarded again.
 		st := epochRewardsState(t, 0, 0)
-		require.NoError(t, st.SetFinalizedCheckpoint(&qrysmpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)}))
-		require.NoError(t, st.SetPreviousJustifiedCheckpoint(&qrysmpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)}))
-		require.NoError(t, st.SetCurrentJustifiedCheckpoint(&qrysmpb.Checkpoint{Epoch: 6, Root: make([]byte, 32)}))
+		require.NoError(t, st.SetFinalizedCheckpoint(&qrysmpb.Checkpoint{Epoch: 1, Root: make([]byte, fieldparams.RootLength)}))
+		require.NoError(t, st.SetPreviousJustifiedCheckpoint(&qrysmpb.Checkpoint{Epoch: 1, Root: make([]byte, fieldparams.RootLength)}))
+		require.NoError(t, st.SetCurrentJustifiedCheckpoint(&qrysmpb.Checkpoint{Epoch: 6, Root: make([]byte, fieldparams.RootLength)}))
 		require.NoError(t, st.SetJustificationBits(bitfield.Bitvector4{0b0001}))
 		expectRewardsMatchEpochProcessing(t, st)
 	})

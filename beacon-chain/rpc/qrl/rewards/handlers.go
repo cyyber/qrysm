@@ -311,7 +311,7 @@ func attRewardsBalancesAndVals(
 	}
 	st, err = precompute.ProcessJustificationAndFinalizationPreCompute(st, bal)
 	if err != nil {
-		http2.HandleError(w, "Could not process justification: "+err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "Could not process justification and finalization: "+err.Error(), http.StatusInternalServerError)
 		return nil, nil, nil, false
 	}
 	st, allVals, err = altair.ProcessInactivityScores(r.Context(), st, allVals)
