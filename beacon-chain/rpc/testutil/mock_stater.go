@@ -38,9 +38,13 @@ func (m *MockStater) StateRoot(context.Context, []byte) ([]byte, error) {
 	return m.BeaconStateRoot, nil
 }
 
-// StateBySlot --
+// StateBySlot returns a copy of the state for the slot, as the caller may
+// change the state it gets from a lookup.Stater.
 func (m *MockStater) StateBySlot(_ context.Context, s primitives.Slot) (state.BeaconState, error) {
-	return m.StatesBySlot[s], nil
+	if st := m.StatesBySlot[s]; st != nil {
+		return st.Copy(), nil
+	}
+	return nil, nil
 }
 
 // StateByEpoch --

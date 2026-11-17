@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -629,8 +630,10 @@ func epochRewardsState(t *testing.T, offline int, score uint64) state.BeaconStat
 }
 
 // expectRewardsMatchEpochProcessing asks the handler for the attestation
-// rewards of epoch 6 in pre, and checks every validator's total against the
-// balance change epoch processing applies.
+// rewards of epoch 6 in pre. It checks every validator's total against the
+// balance change epoch processing applies, the ideal rewards against a
+// validator that cast timely votes, and a request for two validators against
+// the request for all of them.
 func expectRewardsMatchEpochProcessing(t *testing.T, pre state.BeaconState) {
 	t.Helper()
 	attBlkRoot, err := pre.LatestBlockHeader().HashTreeRoot()
@@ -643,25 +646,35 @@ func expectRewardsMatchEpochProcessing(t *testing.T, pre state.BeaconState) {
 		Ancestors: map[[32]byte][32]byte{headRoot: attBlkRoot},
 	}
 	s := &Server{
-		Stater:                &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{pre.Slot(): pre.Copy()}},
+		Stater:                &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{pre.Slot(): pre}},
 		TimeFetcher:           chainService,
 		OptimisticModeFetcher: chainService,
 		FinalizationFetcher:   chainService,
 		HeadFetcher:           chainService,
 		ForkchoiceFetcher:     chainService,
 	}
-	request := httptest.NewRequest("POST", "http://only.the.epoch.number.at.the.end.is.important/6", nil)
-	writer := httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
-	s.AttestationRewards(writer, request)
-	require.Equal(t, http.StatusOK, writer.Code, writer.Body.String())
-	resp := &AttestationRewardsResponse{}
-	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-	require.Equal(t, pre.NumValidators(), len(resp.Data.TotalRewards))
+	rewardsOf := func(valIds ...string) AttestationRewards {
+		var body io.Reader
+		if len(valIds) > 0 {
+			encoded, err := json.Marshal(valIds)
+			require.NoError(t, err)
+			body = bytes.NewReader(encoded)
+		}
+		request := httptest.NewRequest("POST", "http://only.the.epoch.number.at.the.end.is.important/6", body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		s.AttestationRewards(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code, writer.Body.String())
+		resp := &AttestationRewardsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		return resp.Data
+	}
 
+	all := rewardsOf()
+	require.Equal(t, pre.NumValidators(), len(all.TotalRewards))
 	post, err := altair.ProcessEpoch(context.Background(), pre.Copy())
 	require.NoError(t, err)
-	for i, reward := range resp.Data.TotalRewards {
+	for i, reward := range all.TotalRewards {
 		var total int64
 		for _, value := range []string{reward.Head, reward.Source, reward.Target} {
 			parsed, err := strconv.ParseInt(value, 10, 64)
@@ -671,6 +684,20 @@ func expectRewardsMatchEpochProcessing(t *testing.T, pre state.BeaconState) {
 		applied := int64(post.Balances()[i]) - int64(pre.Balances()[i])
 		require.Equal(t, applied, total, "validator %d", i)
 	}
+
+	// Validator 0 cast timely votes and all validators have the same effective
+	// balance, so its rewards are the ideal ones.
+	timely := all.TotalRewards[0]
+	require.Equal(t, 1, len(all.IdealRewards))
+	ideal := all.IdealRewards[0]
+	require.Equal(t, timely.Head, ideal.Head)
+	require.Equal(t, timely.Source, ideal.Source)
+	require.Equal(t, timely.Target, ideal.Target)
+
+	last := pre.NumValidators() - 1
+	two := rewardsOf("0", strconv.Itoa(last))
+	require.DeepEqual(t, []TotalAttestationReward{all.TotalRewards[0], all.TotalRewards[last]}, two.TotalRewards)
+	require.DeepEqual(t, all.IdealRewards, two.IdealRewards)
 }
 
 func TestSyncCommiteeRewards(t *testing.T) {
