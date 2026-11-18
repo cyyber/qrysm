@@ -313,6 +313,14 @@ func attRewardsBalancesAndVals(
 	if !ok {
 		return nil, nil, nil, false
 	}
+	if _, err = precompute.ProcessJustificationAndFinalizationPreCompute(st, bal); err != nil {
+		http2.HandleError(w, "Could not process justification and finalization: "+err.Error(), http.StatusInternalServerError)
+		return nil, nil, nil, false
+	}
+	if _, allVals, err = altair.ProcessInactivityScores(r.Context(), st, allVals); err != nil {
+		http2.HandleError(w, "Could not process inactivity updates: "+err.Error(), http.StatusInternalServerError)
+		return nil, nil, nil, false
+	}
 	if len(valIndices) == len(allVals) {
 		return bal, allVals, valIndices, true
 	} else {

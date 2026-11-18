@@ -105,6 +105,7 @@ func (e *StateRootNotFoundError) Error() string {
 type Stater interface {
 	State(ctx context.Context, id []byte) (state.BeaconState, error)
 	StateRoot(ctx context.Context, id []byte) ([]byte, error)
+	// StateBySlot returns a state that belongs to the caller, who may change it.
 	StateBySlot(ctx context.Context, slot primitives.Slot) (state.BeaconState, error)
 	StateByEpoch(ctx context.Context, epoch primitives.Epoch) (state.BeaconState, error)
 }
