@@ -242,7 +242,7 @@ func TestService_BroadcastAttestation(t *testing.T) {
 
 func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 	// Setup bootnode.
-	cfg := &Config{}
+	cfg := &Config{PingInterval: testPingInterval, DisableLivenessCheck: true}
 	port := 2000
 	cfg.UDPPort = uint(port)
 	_, pkey := createAddrAndPrivKey(t)
@@ -272,9 +272,11 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 	var hosts []host.Host
 	// setup other nodes.
 	cfg = &Config{
-		BootstrapNodeAddr:   []string{bootNode.String()},
-		Discv5BootStrapAddr: []string{bootNode.String()},
-		MaxPeers:            30,
+		BootstrapNodeAddr:    []string{bootNode.String()},
+		Discv5BootStrapAddr:  []string{bootNode.String()},
+		MaxPeers:             30,
+		PingInterval:         testPingInterval,
+		DisableLivenessCheck: true,
 	}
 	// Setup 2 different hosts
 	for i := 1; i <= 2; i++ {
