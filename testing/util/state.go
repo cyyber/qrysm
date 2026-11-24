@@ -65,8 +65,8 @@ func NewBeaconStateZond(options ...func(state *qrysmpb.BeaconStateZond) error) (
 		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderZond{
 			ParentHash:       make([]byte, 32),
 			FeeRecipient:     make([]byte, 64),
-			StateRoot:        make([]byte, 32),
-			ReceiptsRoot:     make([]byte, 32),
+			StateRoot:        make([]byte, fieldparams.ExecutionRootLength),
+			ReceiptsRoot:     make([]byte, fieldparams.ExecutionRootLength),
 			LogsBloom:        make([]byte, 256),
 			PrevRandao:       make([]byte, 32),
 			ExtraData:        make([]byte, 0),

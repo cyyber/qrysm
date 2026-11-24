@@ -139,7 +139,7 @@ func TestGetDuties_HistoricalProposersAfterSlashing(t *testing.T) {
 	}
 	st, err := transition.GenesisBeaconStateZond(ctx, deposits, 0, executionData, &enginev1.ExecutionPayloadZond{
 		ParentHash: make([]byte, 32), FeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot: make([]byte, 32), ReceiptsRoot: make([]byte, 32), LogsBloom: make([]byte, 256),
+		StateRoot: make([]byte, 64), ReceiptsRoot: make([]byte, 64), LogsBloom: make([]byte, 256),
 		PrevRandao: make([]byte, 32), BaseFeePerGas: make([]byte, 32), BlockHash: make([]byte, 32),
 	})
 	require.NoError(t, err)

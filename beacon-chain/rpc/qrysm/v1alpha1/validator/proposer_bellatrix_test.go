@@ -96,8 +96,8 @@ func TestServer_setExecutionData(t *testing.T) {
 		bid := &qrysmpb.BuilderBidZond{
 			Header: &v1.ExecutionPayloadHeaderZond{
 				FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
-				StateRoot:        make([]byte, fieldparams.RootLength),
-				ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+				StateRoot:        make([]byte, fieldparams.ExecutionRootLength),
+				ReceiptsRoot:     make([]byte, fieldparams.ExecutionRootLength),
 				LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
 				PrevRandao:       make([]byte, fieldparams.RootLength),
 				BaseFeePerGas:    make([]byte, fieldparams.RootLength),
@@ -161,8 +161,8 @@ func TestServer_setExecutionData(t *testing.T) {
 		bid := &qrysmpb.BuilderBidZond{
 			Header: &v1.ExecutionPayloadHeaderZond{
 				FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
-				StateRoot:        make([]byte, fieldparams.RootLength),
-				ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+				StateRoot:        make([]byte, fieldparams.ExecutionRootLength),
+				ReceiptsRoot:     make([]byte, fieldparams.ExecutionRootLength),
 				LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
 				PrevRandao:       make([]byte, fieldparams.RootLength),
 				BaseFeePerGas:    make([]byte, fieldparams.RootLength),
@@ -295,8 +295,8 @@ func TestServer_getPayloadHeader(t *testing.T) {
 	bidZond := &qrysmpb.BuilderBidZond{
 		Header: &v1.ExecutionPayloadHeaderZond{
 			FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
-			StateRoot:        make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+			StateRoot:        make([]byte, fieldparams.ExecutionRootLength),
+			ReceiptsRoot:     make([]byte, fieldparams.ExecutionRootLength),
 			LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
 			PrevRandao:       make([]byte, fieldparams.RootLength),
 			BaseFeePerGas:    make([]byte, fieldparams.RootLength),
@@ -511,8 +511,8 @@ func TestServer_validateBuilderSignature(t *testing.T) {
 		Header: &v1.ExecutionPayloadHeaderZond{
 			ParentHash:       make([]byte, fieldparams.RootLength),
 			FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
-			StateRoot:        make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+			StateRoot:        make([]byte, fieldparams.ExecutionRootLength),
+			ReceiptsRoot:     make([]byte, fieldparams.ExecutionRootLength),
 			LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
 			PrevRandao:       make([]byte, fieldparams.RootLength),
 			BaseFeePerGas:    make([]byte, fieldparams.RootLength),

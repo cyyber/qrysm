@@ -16,7 +16,7 @@ func fillPrecompileTest(gst *GstMaker, fork string) {
 	gst.AddAccount(dest, GenesisAccount{
 		Code:    randCallPrecompile(),
 		Balance: new(big.Int),
-		Storage: make(map[common.Hash]common.StorageValue64),
+		Storage: make(map[common.StorageKey]common.StorageValue64),
 	})
 	// The transaction
 	gst.SetTx(&StTransaction{

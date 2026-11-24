@@ -313,8 +313,8 @@ func generateSignedBlindedZondBlock() *qrysmpb.GenericSignedBeaconBlock_BlindedZ
 					ExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderZond{
 						ParentHash:       test_helpers.FillByteSlice(32, 112),
 						FeeRecipient:     test_helpers.FillByteSlice(fieldparams.FeeRecipientLength, 113),
-						StateRoot:        test_helpers.FillByteSlice(32, 114),
-						ReceiptsRoot:     test_helpers.FillByteSlice(32, 115),
+						StateRoot:        test_helpers.FillByteSlice(64, 114),
+						ReceiptsRoot:     test_helpers.FillByteSlice(64, 115),
 						LogsBloom:        test_helpers.FillByteSlice(256, 116),
 						PrevRandao:       test_helpers.FillByteSlice(32, 117),
 						BlockNumber:      118,

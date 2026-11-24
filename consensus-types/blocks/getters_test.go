@@ -106,8 +106,8 @@ func Test_SignedBeaconBlock_Header(t *testing.T) {
 			p: &pb.ExecutionPayloadZond{
 				ParentHash:    make([]byte, 32),
 				FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-				StateRoot:     make([]byte, 32),
-				ReceiptsRoot:  make([]byte, 32),
+				StateRoot:     make([]byte, 64),
+				ReceiptsRoot:  make([]byte, 64),
 				LogsBloom:     make([]byte, 256),
 				PrevRandao:    make([]byte, 32),
 				ExtraData:     make([]byte, 32),
@@ -429,8 +429,8 @@ func hydrateBeaconBlockBody() *qrysmpb.BeaconBlockBodyZond {
 		ExecutionPayload: &pb.ExecutionPayloadZond{
 			ParentHash:    make([]byte, fieldparams.RootLength),
 			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-			StateRoot:     make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			StateRoot:     make([]byte, fieldparams.ExecutionRootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.ExecutionRootLength),
 			LogsBloom:     make([]byte, 256),
 			PrevRandao:    make([]byte, fieldparams.RootLength),
 			ExtraData:     make([]byte, fieldparams.RootLength),

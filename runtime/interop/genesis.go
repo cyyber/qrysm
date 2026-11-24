@@ -30,7 +30,8 @@ var defaultCoinbase, _ = common.NewAddressFromString("Q0000000000000000000000000
 // zero_hashes[2n] and zero_hashes[2n+1] share slot 0x11+n, with zero_hashes[2n+1] in the
 // high-order half (branch takes slots 0x00 to 0x0f and deposit_count slot 0x10).
 // zero_hashes[0] is zero. This is not the layout of the Ethereum contract, which has one
-// bytes32 per slot. TestGqrlTestnetGenesis_DepositContractMatchesConstructor checks these
+// bytes32 per slot. Storage keys are 64 bytes as well; the slot numbers below are left-padded
+// to that width. TestGqrlTestnetGenesis_DepositContractMatchesConstructor checks these
 // values against a contract created by its constructor.
 var DefaultDepositContractStorage = map[string]string{
 	"0x0000000000000000000000000000000000000000000000000000000000000011": "0xf5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b0000000000000000000000000000000000000000000000000000000000000000",
@@ -96,9 +97,9 @@ func minerAllocation() depositAllocation {
 }
 
 func defaultDepositContractAllocation(contractAddress string) depositAllocation {
-	s := make(map[common.Hash]common.StorageValue64)
+	s := make(map[common.StorageKey]common.StorageValue64)
 	for k, v := range DefaultDepositContractStorage {
-		s[common.HexToHash(k)] = common.HexToStorageValue64(v)
+		s[common.HexToHash512(k)] = common.HexToStorageValue64(v)
 	}
 	codeBytes, err := hexutil.Decode(contracts.DepositContractRuntimeCodeHex())
 	if err != nil {

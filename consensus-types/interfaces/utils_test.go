@@ -41,8 +41,8 @@ func TestBeaconBlockHeaderFromBlock(t *testing.T) {
 			ExecutionPayload: &enginev1.ExecutionPayloadZond{
 				ParentHash:    bytesutil.PadTo([]byte("parent root"), hashLen),
 				FeeRecipient:  bytesutil.PadTo([]byte("fee recipient"), field_params.FeeRecipientLength),
-				StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
-				ReceiptsRoot:  bytesutil.PadTo([]byte("receipts root"), hashLen),
+				StateRoot:     bytesutil.PadTo([]byte("state root"), 2*hashLen),
+				ReceiptsRoot:  bytesutil.PadTo([]byte("receipts root"), 2*hashLen),
 				LogsBloom:     bytesutil.PadTo([]byte("state root"), 256),
 				PrevRandao:    bytesutil.PadTo([]byte("prev randao"), hashLen),
 				ExtraData:     bytesutil.PadTo([]byte("extra data"), hashLen),
@@ -95,8 +95,8 @@ func TestBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 			ExecutionPayload: &enginev1.ExecutionPayloadZond{
 				ParentHash:    bytesutil.PadTo([]byte("parent root"), hashLen),
 				FeeRecipient:  bytesutil.PadTo([]byte("fee recipient"), field_params.FeeRecipientLength),
-				StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
-				ReceiptsRoot:  bytesutil.PadTo([]byte("receipts root"), hashLen),
+				StateRoot:     bytesutil.PadTo([]byte("state root"), 2*hashLen),
+				ReceiptsRoot:  bytesutil.PadTo([]byte("receipts root"), 2*hashLen),
 				LogsBloom:     bytesutil.PadTo([]byte("state root"), 256),
 				PrevRandao:    bytesutil.PadTo([]byte("prev randao"), hashLen),
 				ExtraData:     bytesutil.PadTo([]byte("extra data"), hashLen),
@@ -162,8 +162,8 @@ func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
 			ExecutionPayload: &enginev1.ExecutionPayloadZond{
 				ParentHash:    bytesutil.PadTo([]byte("parent root"), hashLen),
 				FeeRecipient:  bytesutil.PadTo([]byte("fee recipient"), field_params.FeeRecipientLength),
-				StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
-				ReceiptsRoot:  bytesutil.PadTo([]byte("receipts root"), hashLen),
+				StateRoot:     bytesutil.PadTo([]byte("state root"), 2*hashLen),
+				ReceiptsRoot:  bytesutil.PadTo([]byte("receipts root"), 2*hashLen),
 				LogsBloom:     bytesutil.PadTo([]byte("state root"), 256),
 				PrevRandao:    bytesutil.PadTo([]byte("prev randao"), hashLen),
 				ExtraData:     bytesutil.PadTo([]byte("extra data"), hashLen),
@@ -220,8 +220,8 @@ func TestSignedBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 			ExecutionPayload: &enginev1.ExecutionPayloadZond{
 				ParentHash:    bytesutil.PadTo([]byte("parent root"), hashLen),
 				FeeRecipient:  bytesutil.PadTo([]byte("fee recipient"), field_params.FeeRecipientLength),
-				StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
-				ReceiptsRoot:  bytesutil.PadTo([]byte("receipts root"), hashLen),
+				StateRoot:     bytesutil.PadTo([]byte("state root"), 2*hashLen),
+				ReceiptsRoot:  bytesutil.PadTo([]byte("receipts root"), 2*hashLen),
 				LogsBloom:     bytesutil.PadTo([]byte("state root"), 256),
 				PrevRandao:    bytesutil.PadTo([]byte("prev randao"), hashLen),
 				ExtraData:     bytesutil.PadTo([]byte("extra data"), hashLen),

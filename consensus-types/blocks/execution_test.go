@@ -152,8 +152,8 @@ func createWrappedPayloadZond(t testing.TB) interfaces.ExecutionData {
 	payload, err := blocks.WrappedExecutionPayloadZond(&enginev1.ExecutionPayloadZond{
 		ParentHash:    make([]byte, fieldparams.RootLength),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		StateRoot:     make([]byte, fieldparams.ExecutionRootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.ExecutionRootLength),
 		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 		PrevRandao:    make([]byte, fieldparams.RootLength),
 		BlockNumber:   0,
@@ -174,8 +174,8 @@ func createWrappedPayloadHeaderZond(t testing.TB) interfaces.ExecutionData {
 	payload, err := blocks.WrappedExecutionPayloadHeaderZond(&enginev1.ExecutionPayloadHeaderZond{
 		ParentHash:       make([]byte, fieldparams.RootLength),
 		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:        make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+		StateRoot:        make([]byte, fieldparams.ExecutionRootLength),
+		ReceiptsRoot:     make([]byte, fieldparams.ExecutionRootLength),
 		LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
 		PrevRandao:       make([]byte, fieldparams.RootLength),
 		BlockNumber:      0,
@@ -202,8 +202,8 @@ func TestIsEmptyExecutionData_WithWithdrawals(t *testing.T) {
 		return &enginev1.ExecutionPayloadZond{
 			ParentHash:    make([]byte, fieldparams.RootLength),
 			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-			StateRoot:     make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			StateRoot:     make([]byte, fieldparams.ExecutionRootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.ExecutionRootLength),
 			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 			PrevRandao:    make([]byte, fieldparams.RootLength),
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
@@ -239,8 +239,8 @@ func TestIsEmptyExecutionData_HeaderWithdrawalsRoot(t *testing.T) {
 		return &enginev1.ExecutionPayloadHeaderZond{
 			ParentHash:       make([]byte, fieldparams.RootLength),
 			FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
-			StateRoot:        make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+			StateRoot:        make([]byte, fieldparams.ExecutionRootLength),
+			ReceiptsRoot:     make([]byte, fieldparams.ExecutionRootLength),
 			LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
 			PrevRandao:       make([]byte, fieldparams.RootLength),
 			BaseFeePerGas:    make([]byte, fieldparams.RootLength),

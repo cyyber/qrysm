@@ -49,15 +49,14 @@ func (ga *GenesisAlloc) UnmarshalJSON(data []byte) error {
 
 // GenesisAccount is an account in the state of the genesis block.
 // Copied from go-ethereum, with the mod of making Storage mandatory.
-// Post-48B-address migration the storage value width is 64 bytes while
-// the key stays 32 bytes (Keccak-256 slot path).
+// Storage keys and values are both 64 bytes wide (full 512-bit QRVM words).
 type GenesisAccount struct {
 	Code []byte `json:"code"`
 	// N.B: parity demands storage even if it's empty
-	Storage map[common.Hash]common.StorageValue64 `json:"storage"`
-	Balance *big.Int                              `json:"balance" gencodec:"required"`
-	Nonce   uint64                                `json:"nonce"`
-	Seed    []byte                                `json:"seed,omitempty"` // for tests
+	Storage map[common.StorageKey]common.StorageValue64 `json:"storage"`
+	Balance *big.Int                                    `json:"balance" gencodec:"required"`
+	Nonce   uint64                                      `json:"nonce"`
+	Seed    []byte                                      `json:"seed,omitempty"` // for tests
 }
 
 type genesisAccountMarshaling struct {
@@ -68,13 +67,13 @@ type genesisAccountMarshaling struct {
 	PrivateKey hexutil.Bytes
 }
 
-// storageKeyJSON represents a 256 bit byte array (storage slot key),
-// but allows less than 256 bits when unmarshaling from hex.
-type storageKeyJSON common.Hash
+// storageKeyJSON represents a 512 bit byte array (storage slot key),
+// but allows less than 512 bits when unmarshaling from hex.
+type storageKeyJSON common.StorageKey
 
 func (h *storageKeyJSON) UnmarshalText(text []byte) error {
 	text = bytes.TrimPrefix(text, []byte("0x"))
-	if len(text) > 64 {
+	if len(text) > 128 {
 		return fmt.Errorf("too many hex characters in storage key %q", text)
 	}
 	offset := len(h) - len(text)/2 // pad on the left
@@ -137,9 +136,9 @@ type stJSON struct {
 }
 
 type stPostState struct {
-	Root    common.Hash `json:"hash"`
-	Logs    common.Hash `json:"logs"`
-	Indexes stIndex     `json:"indexes"`
+	Root    common.Hash512 `json:"hash"`
+	Logs    common.Hash    `json:"logs"`
+	Indexes stIndex        `json:"indexes"`
 }
 
 type stIndex struct {

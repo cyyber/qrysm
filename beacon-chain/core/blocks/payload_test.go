@@ -564,8 +564,8 @@ func Test_PayloadToHeader(t *testing.T) {
 
 	require.DeepSSZEqual(t, h.ParentHash, make([]byte, fieldparams.RootLength))
 	require.DeepSSZEqual(t, h.FeeRecipient, make([]byte, fieldparams.FeeRecipientLength))
-	require.DeepSSZEqual(t, h.StateRoot, make([]byte, fieldparams.RootLength))
-	require.DeepSSZEqual(t, h.ReceiptsRoot, make([]byte, fieldparams.RootLength))
+	require.DeepSSZEqual(t, h.StateRoot, make([]byte, fieldparams.ExecutionRootLength))
+	require.DeepSSZEqual(t, h.ReceiptsRoot, make([]byte, fieldparams.ExecutionRootLength))
 	require.DeepSSZEqual(t, h.LogsBloom, make([]byte, fieldparams.LogsBloomLength))
 	require.DeepSSZEqual(t, h.PrevRandao, make([]byte, fieldparams.RootLength))
 	require.DeepSSZEqual(t, h.ExtraData, make([]byte, 0))
@@ -581,8 +581,8 @@ func emptyPayloadHeaderZond() (interfaces.ExecutionData, error) {
 	return consensusblocks.WrappedExecutionPayloadHeaderZond(&enginev1.ExecutionPayloadHeaderZond{
 		ParentHash:       make([]byte, fieldparams.RootLength),
 		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:        make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+		StateRoot:        make([]byte, fieldparams.ExecutionRootLength),
+		ReceiptsRoot:     make([]byte, fieldparams.ExecutionRootLength),
 		LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
 		PrevRandao:       make([]byte, fieldparams.RootLength),
 		BaseFeePerGas:    make([]byte, fieldparams.RootLength),
@@ -597,8 +597,8 @@ func emptyPayloadZond() *enginev1.ExecutionPayloadZond {
 	return &enginev1.ExecutionPayloadZond{
 		ParentHash:    make([]byte, fieldparams.RootLength),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     make([]byte, fieldparams.RootLength),
-		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		StateRoot:     make([]byte, fieldparams.ExecutionRootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.ExecutionRootLength),
 		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 		PrevRandao:    make([]byte, fieldparams.RootLength),
 		BaseFeePerGas: make([]byte, fieldparams.RootLength),

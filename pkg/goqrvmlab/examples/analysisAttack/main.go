@@ -181,7 +181,7 @@ Fork: %v
 		Balance: big.NewInt(0xffffffff),
 	}
 	var (
-		statedb, _ = state.New(common.Hash{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
+		statedb, _ = state.New(common.Hash512{}, state.NewDatabase(rawdb.NewMemoryDatabase()), nil)
 		sender     = common.BytesToAddress([]byte("sender"))
 	)
 	for addr, acc := range alloc {
@@ -246,7 +246,7 @@ func convertToStateTest(name, fork string, alloc core.GenesisAlloc, gasLimit uin
 			fuzzAcc.Balance = new(big.Int)
 		}
 		if fuzzAcc.Storage == nil {
-			fuzzAcc.Storage = make(map[common.Hash]common.StorageValue64)
+			fuzzAcc.Storage = make(map[common.StorageKey]common.StorageValue64)
 		}
 		fuzzGenesisAlloc[k] = fuzzAcc
 	}
@@ -256,7 +256,7 @@ func convertToStateTest(name, fork string, alloc core.GenesisAlloc, gasLimit uin
 		fuzzGenesisAlloc[sender] = fuzzing.GenesisAccount{
 			Balance: big.NewInt(1000000000000000000), // 1 eth
 			Nonce:   0,
-			Storage: make(map[common.Hash]common.StorageValue64),
+			Storage: make(map[common.StorageKey]common.StorageValue64),
 		}
 	}
 

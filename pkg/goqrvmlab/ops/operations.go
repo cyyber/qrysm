@@ -90,8 +90,10 @@ const (
 	SHL    = OpCode(0x1B)
 	SHR    = OpCode(0x1C)
 	SAR    = OpCode(0x1D)
+	CLZ    = OpCode(0x1E)
 
 	KECCAK256 = OpCode(0x20)
+	KECCAK512 = OpCode(0x21)
 )
 
 // 0x30 range - closure state.
@@ -141,6 +143,9 @@ const (
 	MSIZE    = OpCode(0x59)
 	GAS      = OpCode(0x5A)
 	JUMPDEST = OpCode(0x5B)
+	TLOAD    = OpCode(0x5C)
+	TSTORE   = OpCode(0x5D)
+	MCOPY    = OpCode(0x5E)
 
 	PUSH0 = OpCode(0x5f)
 )
@@ -356,11 +361,13 @@ var opCodeInfo = map[OpCode]opInfo{
 	SHL:    {"SHL", []string{"shift", "x"}, []string{"x << shift"}},
 	SHR:    {"SHR", []string{"shift", "x"}, []string{"x >> shift"}},
 	SAR:    {"SAR", []string{"shift", "x"}, []string{"x >>> shift"}},
+	CLZ:    {"CLZ", []string{"x"}, []string{"count of leading zero bits in x"}},
 	ADDMOD: {"ADDMOD", []string{"a", "b", "x"}, []string{"(a + b) mod x"}},
 	MULMOD: {"MULMOD", []string{"a", "b", "x"}, []string{"(a * b) mod x"}},
 
 	// 0x20 range - crypto.
 	KECCAK256: {"KECCAK256", []string{"offset", "size"}, []string{"keccak256(mem[offset:offset+size])"}},
+	KECCAK512: {"KECCAK512", []string{"offset", "size"}, []string{"keccak512(mem[offset:offset+size])"}},
 	// 0x30 range - closure state.
 	ADDRESS:      {"ADDRESS", nil, []string{"address of current context"}},
 	BALANCE:      {"BALANCE", []string{"address"}, []string{"balance of address"}},
@@ -404,6 +411,9 @@ var opCodeInfo = map[OpCode]opInfo{
 	MSIZE:    {"MSIZE", nil, []string{"size of memory"}},
 	GAS:      {"GAS", nil, []string{"current gas remaining"}},
 	JUMPDEST: {"JUMPDEST", nil, nil},
+	TLOAD:    {"TLOAD", []string{"slot"}, []string{"value"}},
+	TSTORE:   {"TSTORE", []string{"slot", "value"}, nil},
+	MCOPY:    {"MCOPY", []string{"dest", "src", "size"}, nil},
 	PUSH0:    {"PUSH0", nil, []string{"zero"}},
 
 	// 0x60 through 0x7F range - push.
@@ -555,9 +565,9 @@ func (op OpCode) ExpandsMem() bool {
 		return false
 	}
 	switch op {
-	case KECCAK256, CALLDATALOAD, CALLDATASIZE, CALLDATACOPY, CODECOPY,
+	case KECCAK256, KECCAK512, CALLDATALOAD, CALLDATASIZE, CALLDATACOPY, CODECOPY,
 		EXTCODECOPY, RETURNDATACOPY,
-		MLOAD, MSTORE, MSTORE8, LOG0, LOG1, LOG2, LOG3, LOG4,
+		MLOAD, MSTORE, MSTORE8, MCOPY, LOG0, LOG1, LOG2, LOG3, LOG4,
 		CREATE, CALL, DELEGATECALL, STATICCALL, RETURN, REVERT, CREATE2:
 		return true
 	default:

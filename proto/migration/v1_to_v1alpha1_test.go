@@ -118,7 +118,7 @@ func Test_ZondToV1Alpha1SignedBlock(t *testing.T) {
 	v1Block.Message.Body.ExecutionPayload = &enginev1.ExecutionPayloadZond{
 		ParentHash:    parentHash,
 		FeeRecipient:  feeRecipient,
-		StateRoot:     stateRoot,
+		StateRoot:     executionRoot,
 		ReceiptsRoot:  receiptsRoot,
 		LogsBloom:     logsBloom,
 		PrevRandao:    prevRandao,
@@ -169,7 +169,7 @@ func Test_BlindedZondToV1Alpha1SignedBlock(t *testing.T) {
 	v1Block.Message.Body.ExecutionPayloadHeader = &enginev1.ExecutionPayloadHeaderZond{
 		ParentHash:       parentHash,
 		FeeRecipient:     feeRecipient,
-		StateRoot:        stateRoot,
+		StateRoot:        executionRoot,
 		ReceiptsRoot:     receiptsRoot,
 		LogsBloom:        logsBloom,
 		PrevRandao:       prevRandao,

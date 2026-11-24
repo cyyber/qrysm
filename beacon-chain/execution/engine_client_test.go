@@ -704,9 +704,9 @@ func TestReconstructFullBlock(t *testing.T) {
 		jsonPayload["hash"] = hexutil.Encode(payload.BlockHash)
 		jsonPayload["parentHash"] = common.BytesToHash([]byte("parent"))
 		jsonPayload["miner"] = common.BytesToAddress([]byte("miner"))
-		jsonPayload["stateRoot"] = common.BytesToHash([]byte("state"))
-		jsonPayload["transactionsRoot"] = common.BytesToHash([]byte("txs"))
-		jsonPayload["receiptsRoot"] = common.BytesToHash([]byte("receipts"))
+		jsonPayload["stateRoot"] = common.BytesToHash512([]byte("state"))
+		jsonPayload["transactionsRoot"] = common.BytesToHash512([]byte("txs"))
+		jsonPayload["receiptsRoot"] = common.BytesToHash512([]byte("receipts"))
 		jsonPayload["logsBloom"] = gqrltypes.BytesToBloom([]byte("bloom"))
 		jsonPayload["gasLimit"] = hexutil.EncodeUint64(1)
 		jsonPayload["gasUsed"] = hexutil.EncodeUint64(2)
@@ -801,9 +801,9 @@ func TestReconstructFullBlockBatch(t *testing.T) {
 		jsonPayload["hash"] = hexutil.Encode(payload.BlockHash)
 		jsonPayload["parentHash"] = common.BytesToHash([]byte("parent"))
 		jsonPayload["miner"] = common.BytesToAddress([]byte("miner"))
-		jsonPayload["stateRoot"] = common.BytesToHash([]byte("state"))
-		jsonPayload["transactionsRoot"] = common.BytesToHash([]byte("txs"))
-		jsonPayload["receiptsRoot"] = common.BytesToHash([]byte("receipts"))
+		jsonPayload["stateRoot"] = common.BytesToHash512([]byte("state"))
+		jsonPayload["transactionsRoot"] = common.BytesToHash512([]byte("txs"))
+		jsonPayload["receiptsRoot"] = common.BytesToHash512([]byte("receipts"))
 		jsonPayload["logsBloom"] = gqrltypes.BytesToBloom([]byte("bloom"))
 		jsonPayload["gasLimit"] = hexutil.EncodeUint64(1)
 		jsonPayload["gasUsed"] = hexutil.EncodeUint64(2)
@@ -1004,14 +1004,15 @@ func newTestIPCServer(t *testing.T) *rpc.Server {
 
 func fixtures() map[string]any {
 	foo := bytesutil.ToBytes32([]byte("foo"))
+	fooRoot := bytesutil.PadTo([]byte("foo"), fieldparams.ExecutionRootLength)
 	bar := bytesutil.PadTo([]byte("bar"), fieldparams.FeeRecipientLength)
 	baz := bytesutil.PadTo([]byte("baz"), 256)
 	baseFeePerGas := big.NewInt(12345)
 	executionPayloadFixtureZond := &pb.ExecutionPayloadZond{
 		ParentHash:    foo[:],
 		FeeRecipient:  bar,
-		StateRoot:     foo[:],
-		ReceiptsRoot:  foo[:],
+		StateRoot:     fooRoot,
+		ReceiptsRoot:  fooRoot,
 		LogsBloom:     baz,
 		PrevRandao:    foo[:],
 		BlockNumber:   1,
@@ -1029,8 +1030,8 @@ func fixtures() map[string]any {
 		ExecutionPayload: &pb.ExecutionPayloadZondJSON{
 			ParentHash:    &common.Hash{'a'},
 			FeeRecipient:  &common.Address{'b'},
-			StateRoot:     &common.Hash{'c'},
-			ReceiptsRoot:  &common.Hash{'d'},
+			StateRoot:     &common.Hash512{'c'},
+			ReceiptsRoot:  &common.Hash512{'d'},
 			LogsBloom:     &hexutil.Bytes{'e'},
 			PrevRandao:    &common.Hash{'f'},
 			BaseFeePerGas: "0x123",
@@ -1046,18 +1047,18 @@ func fixtures() map[string]any {
 	}
 	parent := bytesutil.PadTo([]byte("parentHash"), fieldparams.RootLength)
 	miner := bytesutil.PadTo([]byte("miner"), fieldparams.FeeRecipientLength)
-	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
-	transactionsRoot := bytesutil.PadTo([]byte("transactionsRoot"), fieldparams.RootLength)
-	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
+	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.ExecutionRootLength)
+	transactionsRoot := bytesutil.PadTo([]byte("transactionsRoot"), fieldparams.ExecutionRootLength)
+	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.ExecutionRootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
 	executionBlock := &pb.ExecutionBlock{
 		Version: version.Zond,
 		Header: gqrltypes.Header{
 			ParentHash:  common.BytesToHash(parent),
 			Coinbase:    common.BytesToAddress(miner),
-			Root:        common.BytesToHash(stateRoot),
-			TxHash:      common.BytesToHash(transactionsRoot),
-			ReceiptHash: common.BytesToHash(receiptsRoot),
+			Root:        common.BytesToHash512(stateRoot),
+			TxHash:      common.BytesToHash512(transactionsRoot),
+			ReceiptHash: common.BytesToHash512(receiptsRoot),
 			Bloom:       gqrltypes.BytesToBloom(logsBloom),
 			Number:      big.NewInt(2),
 			GasLimit:    3,

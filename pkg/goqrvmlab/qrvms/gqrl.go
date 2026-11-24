@@ -18,7 +18,6 @@ package qrvms
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -76,12 +75,7 @@ func (qrvm *GqrlQRVM) GetStateRoot(path string) (root, command string, err error
 
 // ParseStateRoot reads geth's stateroot from the combined output.
 func (qrvm *GqrlQRVM) ParseStateRoot(data []byte) (string, error) {
-	start := bytes.Index(data, []byte(`"stateRoot": "`))
-	end := start + 14 + 66
-	if start == -1 || end >= len(data) {
-		return "", fmt.Errorf("%v: no stateroot found", qrvm.Name())
-	}
-	return string(data[start+14 : end]), nil
+	return parseQuotedRoot(qrvm.Name(), data, []byte(`"stateRoot": "`))
 }
 
 // RunStateTest implements the Qrvm interface

@@ -140,11 +140,11 @@ func (b *BeaconBlockZond) ToConsensus() (*qrysmpb.BeaconBlockZond, error) {
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayload.FeeRecipient")
 	}
-	payloadStateRoot, err := DecodeHexWithLength(b.Body.ExecutionPayload.StateRoot, fieldparams.RootLength)
+	payloadStateRoot, err := DecodeHexWithLength(b.Body.ExecutionPayload.StateRoot, fieldparams.ExecutionRootLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayload.StateRoot")
 	}
-	payloadReceiptsRoot, err := DecodeHexWithLength(b.Body.ExecutionPayload.ReceiptsRoot, fieldparams.RootLength)
+	payloadReceiptsRoot, err := DecodeHexWithLength(b.Body.ExecutionPayload.ReceiptsRoot, fieldparams.ExecutionRootLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayload.ReceiptsRoot")
 	}
@@ -391,11 +391,11 @@ func (b *BlindedBeaconBlockZond) ToConsensus() (*qrysmpb.BlindedBeaconBlockZond,
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.FeeRecipient")
 	}
-	payloadStateRoot, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.StateRoot, fieldparams.RootLength)
+	payloadStateRoot, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.StateRoot, fieldparams.ExecutionRootLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.StateRoot")
 	}
-	payloadReceiptsRoot, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.ReceiptsRoot, fieldparams.RootLength)
+	payloadReceiptsRoot, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.ReceiptsRoot, fieldparams.ExecutionRootLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ReceiptsRoot")
 	}

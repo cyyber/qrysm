@@ -74,14 +74,7 @@ func (qrvm *QrvmoneVM) GetStateRoot(path string) (root, command string, err erro
 }
 
 func (qrvm *QrvmoneVM) ParseStateRoot(data []byte) (root string, err error) {
-	pattern := []byte(`"stateRoot":"`)
-	idx := bytes.Index(data, pattern)
-	start := idx + len(pattern)
-	end := start + 32*2 + 2
-	if idx == -1 || end >= len(data) {
-		return "", fmt.Errorf("%v: no stateroot found", qrvm.Name())
-	}
-	return string(data[start:end]), nil
+	return parseQuotedRoot(qrvm.Name(), data, []byte(`"stateRoot":"`))
 }
 
 func (qrvm *QrvmoneVM) RunStateTest(path string, out io.Writer, speedTest bool) (*tracingResult, error) {

@@ -129,8 +129,8 @@ func GenerateFullBlockZond(
 	newExecutionPayloadZond := &v1.ExecutionPayloadZond{
 		ParentHash:    parentExecution.BlockHash(),
 		FeeRecipient:  make([]byte, 64),
-		StateRoot:     params.BeaconConfig().ZeroHash[:],
-		ReceiptsRoot:  params.BeaconConfig().ZeroHash[:],
+		StateRoot:     make([]byte, fieldparams.ExecutionRootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.ExecutionRootLength),
 		LogsBloom:     make([]byte, 256),
 		PrevRandao:    random,
 		BlockNumber:   uint64(slot),

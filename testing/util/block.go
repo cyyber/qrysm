@@ -364,8 +364,8 @@ func HydrateBeaconBlockBodyZond(b *qrysmpb.BeaconBlockBodyZond) *qrysmpb.BeaconB
 		b.ExecutionPayload = &enginev1.ExecutionPayloadZond{
 			ParentHash:    make([]byte, fieldparams.RootLength),
 			FeeRecipient:  make([]byte, 64),
-			StateRoot:     make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			StateRoot:     make([]byte, fieldparams.ExecutionRootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.ExecutionRootLength),
 			LogsBloom:     make([]byte, 256),
 			PrevRandao:    make([]byte, fieldparams.RootLength),
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
@@ -453,8 +453,8 @@ func HydrateBlindedBeaconBlockBodyZond(b *qrysmpb.BlindedBeaconBlockBodyZond) *q
 		b.ExecutionPayloadHeader = &enginev1.ExecutionPayloadHeaderZond{
 			ParentHash:       make([]byte, 32),
 			FeeRecipient:     make([]byte, 64),
-			StateRoot:        make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+			StateRoot:        make([]byte, fieldparams.ExecutionRootLength),
+			ReceiptsRoot:     make([]byte, fieldparams.ExecutionRootLength),
 			LogsBloom:        make([]byte, 256),
 			PrevRandao:       make([]byte, 32),
 			BaseFeePerGas:    make([]byte, 32),
@@ -542,8 +542,8 @@ func HydrateV1BlindedBeaconBlockBodyZond(b *qrlpb.BlindedBeaconBlockBodyZond) *q
 		b.ExecutionPayloadHeader = &enginev1.ExecutionPayloadHeaderZond{
 			ParentHash:       make([]byte, 32),
 			FeeRecipient:     make([]byte, 64),
-			StateRoot:        make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+			StateRoot:        make([]byte, fieldparams.ExecutionRootLength),
+			ReceiptsRoot:     make([]byte, fieldparams.ExecutionRootLength),
 			LogsBloom:        make([]byte, 256),
 			PrevRandao:       make([]byte, 32),
 			BaseFeePerGas:    make([]byte, 32),
@@ -609,8 +609,8 @@ func HydrateV1ZondBeaconBlockBody(b *qrlpb.BeaconBlockBodyZond) *qrlpb.BeaconBlo
 		b.ExecutionPayload = &enginev1.ExecutionPayloadZond{
 			ParentHash:    make([]byte, fieldparams.RootLength),
 			FeeRecipient:  make([]byte, 64),
-			StateRoot:     make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			StateRoot:     make([]byte, fieldparams.ExecutionRootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.ExecutionRootLength),
 			LogsBloom:     make([]byte, 256),
 			PrevRandao:    make([]byte, fieldparams.RootLength),
 			ExtraData:     make([]byte, fieldparams.RootLength),

@@ -166,8 +166,8 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 		payload := &enginev1.ExecutionPayloadZond{
 			ParentHash:    make([]byte, fieldparams.RootLength),
 			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-			StateRoot:     make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			StateRoot:     make([]byte, fieldparams.ExecutionRootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.ExecutionRootLength),
 			LogsBloom:     make([]byte, 256),
 			PrevRandao:    make([]byte, fieldparams.RootLength),
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
@@ -195,8 +195,8 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 		payload := &enginev1.ExecutionPayloadZond{
 			ParentHash:    make([]byte, fieldparams.RootLength),
 			FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-			StateRoot:     make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			StateRoot:     make([]byte, fieldparams.ExecutionRootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.ExecutionRootLength),
 			LogsBloom:     make([]byte, 256),
 			PrevRandao:    make([]byte, fieldparams.RootLength),
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
@@ -229,8 +229,8 @@ func TestBuildSignedBeaconBlockFromEmptyExecutionPayload(t *testing.T) {
 			payload := &enginev1.ExecutionPayloadZond{
 				ParentHash:    make([]byte, fieldparams.RootLength),
 				FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-				StateRoot:     make([]byte, fieldparams.RootLength),
-				ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+				StateRoot:     make([]byte, fieldparams.ExecutionRootLength),
+				ReceiptsRoot:  make([]byte, fieldparams.ExecutionRootLength),
 				LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 				PrevRandao:    make([]byte, fieldparams.RootLength),
 				BaseFeePerGas: make([]byte, fieldparams.RootLength),
