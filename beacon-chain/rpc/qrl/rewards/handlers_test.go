@@ -34,7 +34,7 @@ import (
 	"github.com/theQRL/qrysm/testing/util"
 )
 
-func TestBlockRewards(t *testing.T) {
+func BlockRewardTestSetup(t *testing.T) (state.BeaconState, interfaces.SignedBeaconBlock) {
 	helpers.ClearCache()
 
 	valCount := 256
@@ -166,19 +166,26 @@ func TestBlockRewards(t *testing.T) {
 
 	sbb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
-	blkRoot, err := sbb.Block().HashTreeRoot()
-	require.NoError(t, err)
-	mockChainService := &mock.ChainService{OptimisticRoots: map[[32]byte]bool{blkRoot: true}}
-	s := &Server{
-		Blocker: &testutil.MockBlocker{SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
-			2: sbb,
-		}},
-		OptimisticModeFetcher: mockChainService,
-		FinalizationFetcher:   mockChainService,
-		ReplayerBuilder:       mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st)),
-	}
 
+	return st, sbb
+}
+
+func TestBlockRewards(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
+		st, sbb := BlockRewardTestSetup(t)
+
+		blkRoot, err := sbb.Block().HashTreeRoot()
+		require.NoError(t, err)
+		mockChainService := &mock.ChainService{OptimisticRoots: map[[32]byte]bool{blkRoot: true}}
+		s := &Server{
+			Blocker: &testutil.MockBlocker{SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
+				2: sbb,
+			}},
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+			ReplayerBuilder:       mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st)),
+		}
+
 		url := "http://only.the.slot.number.at.the.end.is.important/2"
 		request := httptest.NewRequest("GET", url, nil)
 		writer := httptest.NewRecorder()
