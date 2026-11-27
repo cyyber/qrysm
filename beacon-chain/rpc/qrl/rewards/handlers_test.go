@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -381,7 +382,9 @@ func TestAttestationRewards(t *testing.T) {
 		require.NoError(t, st.SetValidators(validators))
 		inactivityScores, err := st.InactivityScores()
 		require.NoError(t, err)
-		inactivityScores[63] = 10
+		// Outside a leak the score rises by 4 and recovers by 16 before the
+		// penalty is charged, so it is charged at 10.
+		inactivityScores[63] = 22
 		require.NoError(t, st.SetInactivityScores(inactivityScores))
 
 		s := &Server{
@@ -410,6 +413,19 @@ func TestAttestationRewards(t *testing.T) {
 		resp := &AttestationRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, "-1525878906", resp.Data.TotalRewards[0].Inactivity)
+	})
+	t.Run("matches epoch processing in a leak", func(t *testing.T) {
+		// Epoch 0 is finalized, so this is a leak: offline scores go 8 to 12.
+		expectRewardsMatchEpochProcessing(t, epochRewardsState(t, 32, 8))
+	})
+	t.Run("matches epoch processing that ends the leak", func(t *testing.T) {
+		// Epoch 6 is justified and 7/8 vote in both epochs, so processing
+		// justifies 7, finalizes 6 and ends the leak: timely votes earn again,
+		// and offline scores go 20 to 24, then recover to 8.
+		st := epochRewardsState(t, 8, 20)
+		justified := &qrysmpb.Checkpoint{Epoch: 6, Root: make([]byte, fieldparams.RootLength)}
+		require.NoError(t, st.SetCurrentJustifiedCheckpoint(justified))
+		expectRewardsMatchEpochProcessing(t, st)
 	})
 	t.Run("zero state root (state at skipped slot) uses ancestor root", func(t *testing.T) {
 		// A state replayed past the last block of the epoch carries a header
@@ -582,6 +598,94 @@ func TestAttestationRewards(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, e.Code)
 		assert.Equal(t, "Attestation rewards are available after two epoch transitions to ensure all attestations have a chance of inclusion", e.Message)
 	})
+}
+
+// epochRewardsState returns a state at the end of epoch 7, with epoch 0
+// finalized. The last offline validators cast no vote and have the given
+// inactivity score.
+func epochRewardsState(t *testing.T, offline int, score uint64) state.BeaconState {
+	t.Helper()
+	const valCount = 64
+	st, err := util.NewBeaconStateZond()
+	require.NoError(t, err)
+	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*8-1))
+	validators := make([]*qrysmpb.Validator, valCount)
+	balances := make([]uint64, valCount)
+	scores := make([]uint64, valCount)
+	participation := make([]byte, valCount)
+	for i := range valCount {
+		validators[i] = &qrysmpb.Validator{
+			PublicKey:         bytesutil.PadTo([]byte{byte(i)}, fieldparams.MLDSA87PubkeyLength),
+			ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
+		}
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+		if i >= valCount-offline {
+			scores[i] = score
+		} else {
+			participation[i] = 0b111
+		}
+	}
+	require.NoError(t, st.SetValidators(validators))
+	require.NoError(t, st.SetBalances(balances))
+	require.NoError(t, st.SetInactivityScores(scores))
+	require.NoError(t, st.SetPreviousParticipationBits(participation))
+	require.NoError(t, st.SetCurrentParticipationBits(participation))
+	return st
+}
+
+// expectRewardsMatchEpochProcessing checks the handler against epoch
+// processing: each validator's head, source, target and inactivity must sum
+// to its balance change. It also checks that a request naming only validators
+// 0 and 63 returns the figures those two have in the request for all.
+func expectRewardsMatchEpochProcessing(t *testing.T, pre state.BeaconState) {
+	t.Helper()
+	attBlkRoot, err := pre.LatestBlockHeader().HashTreeRoot()
+	require.NoError(t, err)
+	currentSlot := params.BeaconConfig().SlotsPerEpoch * 8
+	headRoot := [32]byte{'h'}
+	chainService := &mock.ChainService{
+		Slot:      &currentSlot,
+		Root:      headRoot[:],
+		Ancestors: map[[32]byte][32]byte{headRoot: attBlkRoot},
+	}
+	s := &Server{
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
+		HeadFetcher:           chainService,
+		ForkchoiceFetcher:     chainService,
+	}
+	rewardsOf := func(body io.Reader) AttestationRewards {
+		request := httptest.NewRequest("POST", "http://only.the.epoch.number.at.the.end.is.important/6", body)
+		writer := httptest.NewRecorder()
+		// The handler changes its state, so each request gets a copy.
+		s.Stater = &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{pre.Slot(): pre.Copy()}}
+		s.AttestationRewards(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code, writer.Body.String())
+		resp := &AttestationRewardsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		return resp.Data
+	}
+
+	all := rewardsOf(nil)
+	require.Equal(t, pre.NumValidators(), len(all.TotalRewards))
+	post, err := altair.ProcessEpoch(context.Background(), pre.Copy())
+	require.NoError(t, err)
+	for i, reward := range all.TotalRewards {
+		var total int64
+		for _, value := range []string{reward.Head, reward.Source, reward.Target, reward.Inactivity} {
+			parsed, err := strconv.ParseInt(value, 10, 64)
+			require.NoError(t, err)
+			total += parsed
+		}
+		applied := int64(post.Balances()[i]) - int64(pre.Balances()[i])
+		require.Equal(t, applied, total, "validator %d", i)
+	}
+
+	two := rewardsOf(strings.NewReader(`["0","63"]`))
+	require.DeepEqual(t, []TotalAttestationReward{all.TotalRewards[0], all.TotalRewards[63]}, two.TotalRewards)
 }
 
 func TestSyncCommiteeRewards(t *testing.T) {
