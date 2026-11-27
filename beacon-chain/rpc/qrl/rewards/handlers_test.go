@@ -34,7 +34,7 @@ import (
 	"github.com/theQRL/qrysm/testing/util"
 )
 
-func TestBlockRewards(t *testing.T) {
+func BlockRewardTestSetup(t *testing.T) (state.BeaconState, interfaces.SignedBeaconBlock) {
 	helpers.ClearCache()
 
 	valCount := 256
@@ -166,19 +166,26 @@ func TestBlockRewards(t *testing.T) {
 
 	sbb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
-	blkRoot, err := sbb.Block().HashTreeRoot()
-	require.NoError(t, err)
-	mockChainService := &mock.ChainService{OptimisticRoots: map[[32]byte]bool{blkRoot: true}}
-	s := &Server{
-		Blocker: &testutil.MockBlocker{SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
-			2: sbb,
-		}},
-		OptimisticModeFetcher: mockChainService,
-		FinalizationFetcher:   mockChainService,
-		ReplayerBuilder:       mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st)),
-	}
 
+	return st, sbb
+}
+
+func TestBlockRewards(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
+		st, sbb := BlockRewardTestSetup(t)
+
+		blkRoot, err := sbb.Block().HashTreeRoot()
+		require.NoError(t, err)
+		mockChainService := &mock.ChainService{OptimisticRoots: map[[32]byte]bool{blkRoot: true}}
+		s := &Server{
+			Blocker: &testutil.MockBlocker{SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
+				2: sbb,
+			}},
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+			ReplayerBuilder:       mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st)),
+		}
+
 		url := "http://only.the.slot.number.at.the.end.is.important/2"
 		request := httptest.NewRequest("GET", url, nil)
 		writer := httptest.NewRecorder()
@@ -255,7 +262,7 @@ func TestAttestationRewards(t *testing.T) {
 		ForkchoiceFetcher:     mockChainService,
 	}
 
-	t.Run("ok - ideal rewards", func(t *testing.T) {
+	t.Run("ideal rewards", func(t *testing.T) {
 		url := "http://only.the.epoch.number.at.the.end.is.important/1"
 		request := httptest.NewRequest("POST", url, nil)
 		writer := httptest.NewRecorder()
@@ -279,7 +286,7 @@ func TestAttestationRewards(t *testing.T) {
 		assert.Equal(t, uint64(46488068391), sum)
 	})
 
-	t.Run("ok - filtered vals", func(t *testing.T) {
+	t.Run("filtered vals", func(t *testing.T) {
 		url := "http://only.the.epoch.number.at.the.end.is.important/1"
 		var body bytes.Buffer
 		pubkey := fmt.Sprintf("%#x", secretKeys[10].PublicKey().Marshal())
@@ -308,7 +315,7 @@ func TestAttestationRewards(t *testing.T) {
 		}
 		assert.Equal(t, uint64(958516872), sum)
 	})
-	t.Run("ok - all vals", func(t *testing.T) {
+	t.Run("all vals", func(t *testing.T) {
 		url := "http://only.the.epoch.number.at.the.end.is.important/1"
 		request := httptest.NewRequest("POST", url, nil)
 		writer := httptest.NewRecorder()
@@ -331,46 +338,12 @@ func TestAttestationRewards(t *testing.T) {
 		}
 		assert.Equal(t, uint64(62303596782), sum)
 	})
-	t.Run("ok - penalty", func(t *testing.T) {
-		st, err := util.NewBeaconStateZond()
-		require.NoError(t, err)
-		require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*3-1))
-		validators := make([]*qrysmpb.Validator, 0, valCount)
-		balances := make([]uint64, 0, valCount)
-		secretKeys := make([]ml_dsa_87.MLDSA87Key, 0, valCount)
-		for i := range valCount {
-			mlDSA87Key, err := ml_dsa_87.RandKey()
-			require.NoError(t, err)
-			secretKeys = append(secretKeys, mlDSA87Key)
-			validators = append(validators, &qrysmpb.Validator{
-				PublicKey:         mlDSA87Key.PublicKey().Marshal(),
-				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-				EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance / 64 * uint64(i),
-			})
-			balances = append(balances, params.BeaconConfig().MaxEffectiveBalance/64*uint64(i))
-		}
+	t.Run("penalty", func(t *testing.T) {
+		st := st.Copy()
+		validators := st.Validators()
 		validators[63].Slashed = true
 		require.NoError(t, st.SetValidators(validators))
-		require.NoError(t, st.SetBalances(balances))
-		require.NoError(t, st.SetInactivityScores(make([]uint64, len(validators))))
-		participation := make([]byte, len(validators))
-		for i := range participation {
-			participation[i] = 0b111
-		}
-		require.NoError(t, st.SetCurrentParticipationBits(participation))
-		require.NoError(t, st.SetPreviousParticipationBits(participation))
 
-		subBlkRoot, err := st.LatestBlockHeader().HashTreeRoot()
-		require.NoError(t, err)
-		currentSlot := params.BeaconConfig().SlotsPerEpoch * 3
-		mockChainService := &mock.ChainService{
-			Optimistic:      true,
-			OptimisticRoots: map[[32]byte]bool{subBlkRoot: true},
-			Slot:            &currentSlot,
-			Root:            headRoot[:],
-			Ancestors:       map[[32]byte][32]byte{headRoot: subBlkRoot},
-		}
 		s := &Server{
 			Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
 				params.BeaconConfig().SlotsPerEpoch*3 - 1: st,
@@ -397,8 +370,46 @@ func TestAttestationRewards(t *testing.T) {
 		resp := &AttestationRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, "0", resp.Data.TotalRewards[0].Head)
-		assert.Equal(t, "-496943261", resp.Data.TotalRewards[0].Source)
-		assert.Equal(t, "-922894628", resp.Data.TotalRewards[0].Target)
+		assert.Equal(t, "-497008750", resp.Data.TotalRewards[0].Source)
+		assert.Equal(t, "-923016250", resp.Data.TotalRewards[0].Target)
+		assert.Equal(t, "0", resp.Data.TotalRewards[0].Inactivity)
+	})
+	t.Run("inactivity", func(t *testing.T) {
+		st := st.Copy()
+		validators := st.Validators()
+		validators[63].Slashed = true
+		require.NoError(t, st.SetValidators(validators))
+		inactivityScores, err := st.InactivityScores()
+		require.NoError(t, err)
+		inactivityScores[63] = 10
+		require.NoError(t, st.SetInactivityScores(inactivityScores))
+
+		s := &Server{
+			Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
+				params.BeaconConfig().SlotsPerEpoch*3 - 1: st,
+			}},
+			TimeFetcher:           mockChainService,
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+			HeadFetcher:           mockChainService,
+			ForkchoiceFetcher:     mockChainService,
+		}
+
+		url := "http://only.the.epoch.number.at.the.end.is.important/1"
+		var body bytes.Buffer
+		valIds, err := json.Marshal([]string{"63"})
+		require.NoError(t, err)
+		_, err = body.Write(valIds)
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", url, &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.AttestationRewards(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &AttestationRewardsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, "-1525878906", resp.Data.TotalRewards[0].Inactivity)
 	})
 	t.Run("zero state root (state at skipped slot) uses ancestor root", func(t *testing.T) {
 		// A state replayed past the last block of the epoch carries a header
