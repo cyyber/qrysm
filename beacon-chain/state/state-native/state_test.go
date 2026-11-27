@@ -240,8 +240,8 @@ func generateState(t *testing.T) state.BeaconState {
 		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeaderZond{
 			ParentHash:       make([]byte, 32),
 			FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
-			StateRoot:        make([]byte, fieldparams.RootLength),
-			ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+			StateRoot:        make([]byte, fieldparams.ExecutionRootLength),
+			ReceiptsRoot:     make([]byte, fieldparams.ExecutionRootLength),
 			LogsBloom:        make([]byte, 256),
 			PrevRandao:       make([]byte, 32),
 			BaseFeePerGas:    make([]byte, 32),

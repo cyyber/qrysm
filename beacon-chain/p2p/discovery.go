@@ -244,7 +244,9 @@ func (s *Service) createListener(
 		}
 	}
 	dv5Cfg := discover.Config{
-		PrivateKey: privKey,
+		PrivateKey:              privKey,
+		PingInterval:            s.cfg.PingInterval,
+		NoFindnodeLivenessCheck: s.cfg.DisableLivenessCheck,
 	}
 	dv5Cfg.Bootnodes = []*qnode.Node{}
 	for _, addr := range s.cfg.Discv5BootStrapAddr {

@@ -42,6 +42,12 @@ import (
 
 var discoveryWaitTime = 1 * time.Second
 
+// testPingInterval speeds up discv5 table revalidation in tests. Together with
+// DisableLivenessCheck it lets a bootnode hand out peers it has only just met;
+// by default go-qrl relays a node only after pinging it, which takes several
+// seconds per node.
+const testPingInterval = 100 * time.Millisecond
+
 func init() {
 	rand.Seed(time.Now().Unix())
 }
@@ -97,7 +103,7 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	genesisTime := time.Now()
 	genesisValidatorsRoot := make([]byte, 32)
 	s := &Service{
-		cfg:                   &Config{UDPPort: uint(port)},
+		cfg:                   &Config{UDPPort: uint(port), PingInterval: testPingInterval, DisableLivenessCheck: true},
 		genesisTime:           genesisTime,
 		genesisValidatorsRoot: genesisValidatorsRoot,
 	}
@@ -111,8 +117,10 @@ func TestStartDiscV5_DiscoverAllPeers(t *testing.T) {
 	for i := 1; i <= 5; i++ {
 		port = 3000 + i
 		cfg := &Config{
-			Discv5BootStrapAddr: []string{bootNode.String()},
-			UDPPort:             uint(port),
+			Discv5BootStrapAddr:  []string{bootNode.String()},
+			UDPPort:              uint(port),
+			PingInterval:         testPingInterval,
+			DisableLivenessCheck: true,
 		}
 		ipAddr, pkey := createAddrAndPrivKey(t)
 		s = &Service{

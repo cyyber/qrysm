@@ -32,7 +32,7 @@ func TestSSZMarshal_RejectsUnrepresentableSize(t *testing.T) {
 	newPayload := func() *engine.ExecutionPayloadZond {
 		return &engine.ExecutionPayloadZond{
 			ParentHash: make([]byte, 32), FeeRecipient: make([]byte, 64),
-			StateRoot: make([]byte, 32), ReceiptsRoot: make([]byte, 32),
+			StateRoot: make([]byte, 64), ReceiptsRoot: make([]byte, 64),
 			LogsBloom: make([]byte, 256), PrevRandao: make([]byte, 32),
 			BaseFeePerGas: make([]byte, 32), BlockHash: make([]byte, 32),
 			Transactions: [][]byte{{1, 2, 3}},
@@ -122,18 +122,20 @@ func TestSSZMarshal_RejectsUnrepresentableSize(t *testing.T) {
 
 func TestSSZUnmarshal_InvalidTransactionOffset(t *testing.T) {
 	// A payload with an empty extra-data field, one empty transaction, and no withdrawals.
-	encoded := make([]byte, 560)
-	binary.LittleEndian.PutUint32(encoded[480:484], 556)
-	binary.LittleEndian.PutUint32(encoded[548:552], 556)
-	binary.LittleEndian.PutUint32(encoded[552:556], 560)
-	binary.LittleEndian.PutUint32(encoded[556:], 4)
+	// The fixed part is 620 bytes: the extra-data offset is at 544, the transactions offset at
+	// 612 and the withdrawals offset at 616.
+	encoded := make([]byte, 624)
+	binary.LittleEndian.PutUint32(encoded[544:548], 620)
+	binary.LittleEndian.PutUint32(encoded[612:616], 620)
+	binary.LittleEndian.PutUint32(encoded[616:620], 624)
+	binary.LittleEndian.PutUint32(encoded[620:], 4)
 	var payload engine.ExecutionPayloadZond
 	if err := payload.UnmarshalSSZ(encoded); err != nil {
 		t.Fatal(err)
 	}
 	malformed := bytes.Clone(encoded)
 	// Claim thousands of offsets while providing only four transaction bytes.
-	binary.LittleEndian.PutUint32(malformed[556:], 4096*4)
+	binary.LittleEndian.PutUint32(malformed[620:], 4096*4)
 	var decodeErr error
 	allocations := testing.AllocsPerRun(2, func() {
 		decodeErr = payload.UnmarshalSSZ(malformed)
@@ -207,7 +209,7 @@ func TestSSZUnmarshal_ReusedReceiver(t *testing.T) {
 		"execution payload": func(seed byte) sszCodec {
 			return &engine.ExecutionPayloadZond{
 				ParentHash: bytes.Repeat([]byte{seed}, 32), FeeRecipient: make([]byte, 64),
-				StateRoot: make([]byte, 32), ReceiptsRoot: make([]byte, 32),
+				StateRoot: make([]byte, 64), ReceiptsRoot: make([]byte, 64),
 				LogsBloom: make([]byte, 256), PrevRandao: make([]byte, 32),
 				ExtraData: bytes.Repeat([]byte{seed}, int(seed)), BaseFeePerGas: make([]byte, 32),
 				BlockHash: make([]byte, 32), Transactions: [][]byte{{seed, seed}},

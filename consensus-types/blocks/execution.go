@@ -377,10 +377,10 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 	if !bytes.Equal(data.FeeRecipient(), make([]byte, fieldparams.FeeRecipientLength)) {
 		return false, nil
 	}
-	if !bytes.Equal(data.StateRoot(), make([]byte, fieldparams.RootLength)) {
+	if !bytes.Equal(data.StateRoot(), make([]byte, fieldparams.ExecutionRootLength)) {
 		return false, nil
 	}
-	if !bytes.Equal(data.ReceiptsRoot(), make([]byte, fieldparams.RootLength)) {
+	if !bytes.Equal(data.ReceiptsRoot(), make([]byte, fieldparams.ExecutionRootLength)) {
 		return false, nil
 	}
 	if !bytes.Equal(data.LogsBloom(), make([]byte, fieldparams.LogsBloomLength)) {

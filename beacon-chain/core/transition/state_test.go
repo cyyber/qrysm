@@ -108,8 +108,8 @@ func TestGenesisState_HashEquality(t *testing.T) {
 	ee1 := &enginev1.ExecutionPayloadZond{
 		ParentHash:    make([]byte, 32),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     make([]byte, 32),
-		ReceiptsRoot:  make([]byte, 32),
+		StateRoot:     make([]byte, 64),
+		ReceiptsRoot:  make([]byte, 64),
 		LogsBloom:     make([]byte, 256),
 		PrevRandao:    make([]byte, 32),
 		BaseFeePerGas: make([]byte, 32),
@@ -120,8 +120,8 @@ func TestGenesisState_HashEquality(t *testing.T) {
 	ee := &enginev1.ExecutionPayloadZond{
 		ParentHash:    make([]byte, 32),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     make([]byte, 32),
-		ReceiptsRoot:  make([]byte, 32),
+		StateRoot:     make([]byte, 64),
+		ReceiptsRoot:  make([]byte, 64),
 		LogsBloom:     make([]byte, 256),
 		PrevRandao:    make([]byte, 32),
 		BaseFeePerGas: make([]byte, 32),
@@ -312,8 +312,8 @@ func genesisExecutionPayload() *enginev1.ExecutionPayloadZond {
 	return &enginev1.ExecutionPayloadZond{
 		ParentHash:    make([]byte, 32),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     make([]byte, 32),
-		ReceiptsRoot:  make([]byte, 32),
+		StateRoot:     make([]byte, 64),
+		ReceiptsRoot:  make([]byte, 64),
 		LogsBloom:     make([]byte, 256),
 		PrevRandao:    make([]byte, 32),
 		BaseFeePerGas: make([]byte, 32),

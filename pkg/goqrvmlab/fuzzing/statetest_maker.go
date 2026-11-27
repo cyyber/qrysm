@@ -45,7 +45,7 @@ type GstMaker struct {
 	env   *stEnv
 	tx    StTransaction
 	forks []string
-	root  common.Hash
+	root  common.Hash512
 	logs  common.Hash
 }
 
@@ -107,7 +107,7 @@ func (g *GstMaker) SetCode(address common.Address, code []byte) {
 	if !exist {
 		account = GenesisAccount{
 			Code:    code,
-			Storage: make(map[common.Hash]common.StorageValue64),
+			Storage: make(map[common.StorageKey]common.StorageValue64),
 			Nonce:   0,
 			Balance: new(big.Int),
 		}
@@ -117,7 +117,7 @@ func (g *GstMaker) SetCode(address common.Address, code []byte) {
 	alloc[address] = account
 }
 
-func (g *GstMaker) SetResult(root, logs common.Hash) {
+func (g *GstMaker) SetResult(root common.Hash512, logs common.Hash) {
 	g.root = root
 	g.logs = logs
 }
@@ -207,7 +207,7 @@ func BasicStateTest(fork string) *GstMaker {
 	gst.AddAccount(sender, GenesisAccount{
 		Nonce:   0,
 		Balance: big.NewInt(0xffffffffff),
-		Storage: make(map[common.Hash]common.StorageValue64),
+		Storage: make(map[common.StorageKey]common.StorageValue64),
 		Code:    []byte{},
 	})
 	gst.EnableFork(fork)

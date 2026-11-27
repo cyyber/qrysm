@@ -138,8 +138,8 @@ type ExecutionPayloadZond struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ParentHash    []byte                 `protobuf:"bytes,1,opt,name=parent_hash,json=parentHash,proto3" json:"parent_hash,omitempty" ssz-size:"32"`
 	FeeRecipient  []byte                 `protobuf:"bytes,2,opt,name=fee_recipient,json=feeRecipient,proto3" json:"fee_recipient,omitempty" ssz-size:"64"`
-	StateRoot     []byte                 `protobuf:"bytes,3,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"32"`
-	ReceiptsRoot  []byte                 `protobuf:"bytes,4,opt,name=receipts_root,json=receiptsRoot,proto3" json:"receipts_root,omitempty" ssz-size:"32"`
+	StateRoot     []byte                 `protobuf:"bytes,3,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"64"`
+	ReceiptsRoot  []byte                 `protobuf:"bytes,4,opt,name=receipts_root,json=receiptsRoot,proto3" json:"receipts_root,omitempty" ssz-size:"64"`
 	LogsBloom     []byte                 `protobuf:"bytes,5,opt,name=logs_bloom,json=logsBloom,proto3" json:"logs_bloom,omitempty" ssz-size:"256"`
 	PrevRandao    []byte                 `protobuf:"bytes,6,opt,name=prev_randao,json=prevRandao,proto3" json:"prev_randao,omitempty" ssz-size:"32"`
 	BlockNumber   uint64                 `protobuf:"varint,7,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty"`
@@ -346,8 +346,8 @@ type ExecutionPayloadHeaderZond struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	ParentHash       []byte                 `protobuf:"bytes,1,opt,name=parent_hash,json=parentHash,proto3" json:"parent_hash,omitempty" ssz-size:"32"`
 	FeeRecipient     []byte                 `protobuf:"bytes,2,opt,name=fee_recipient,json=feeRecipient,proto3" json:"fee_recipient,omitempty" ssz-size:"64"`
-	StateRoot        []byte                 `protobuf:"bytes,3,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"32"`
-	ReceiptsRoot     []byte                 `protobuf:"bytes,4,opt,name=receipts_root,json=receiptsRoot,proto3" json:"receipts_root,omitempty" ssz-size:"32"`
+	StateRoot        []byte                 `protobuf:"bytes,3,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"64"`
+	ReceiptsRoot     []byte                 `protobuf:"bytes,4,opt,name=receipts_root,json=receiptsRoot,proto3" json:"receipts_root,omitempty" ssz-size:"64"`
 	LogsBloom        []byte                 `protobuf:"bytes,5,opt,name=logs_bloom,json=logsBloom,proto3" json:"logs_bloom,omitempty" ssz-size:"256"`
 	PrevRandao       []byte                 `protobuf:"bytes,6,opt,name=prev_randao,json=prevRandao,proto3" json:"prev_randao,omitempty" ssz-size:"32"`
 	BlockNumber      uint64                 `protobuf:"varint,7,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty"`
@@ -767,8 +767,8 @@ const file_proto_engine_v1_execution_engine_proto_rawDesc = "" +
 	"parentHash\x12+\n" +
 	"\rfee_recipient\x18\x02 \x01(\fB\x06\x8a\xb5\x18\x0264R\ffeeRecipient\x12%\n" +
 	"\n" +
-	"state_root\x18\x03 \x01(\fB\x06\x8a\xb5\x18\x0232R\tstateRoot\x12+\n" +
-	"\rreceipts_root\x18\x04 \x01(\fB\x06\x8a\xb5\x18\x0232R\freceiptsRoot\x12&\n" +
+	"state_root\x18\x03 \x01(\fB\x06\x8a\xb5\x18\x0264R\tstateRoot\x12+\n" +
+	"\rreceipts_root\x18\x04 \x01(\fB\x06\x8a\xb5\x18\x0264R\freceiptsRoot\x12&\n" +
 	"\n" +
 	"logs_bloom\x18\x05 \x01(\fB\a\x8a\xb5\x18\x03256R\tlogsBloom\x12'\n" +
 	"\vprev_randao\x18\x06 \x01(\fB\x06\x8a\xb5\x18\x0232R\n" +
@@ -793,8 +793,8 @@ const file_proto_engine_v1_execution_engine_proto_rawDesc = "" +
 	"parentHash\x12+\n" +
 	"\rfee_recipient\x18\x02 \x01(\fB\x06\x8a\xb5\x18\x0264R\ffeeRecipient\x12%\n" +
 	"\n" +
-	"state_root\x18\x03 \x01(\fB\x06\x8a\xb5\x18\x0232R\tstateRoot\x12+\n" +
-	"\rreceipts_root\x18\x04 \x01(\fB\x06\x8a\xb5\x18\x0232R\freceiptsRoot\x12&\n" +
+	"state_root\x18\x03 \x01(\fB\x06\x8a\xb5\x18\x0264R\tstateRoot\x12+\n" +
+	"\rreceipts_root\x18\x04 \x01(\fB\x06\x8a\xb5\x18\x0264R\freceiptsRoot\x12&\n" +
 	"\n" +
 	"logs_bloom\x18\x05 \x01(\fB\a\x8a\xb5\x18\x03256R\tlogsBloom\x12'\n" +
 	"\vprev_randao\x18\x06 \x01(\fB\x06\x8a\xb5\x18\x0232R\n" +

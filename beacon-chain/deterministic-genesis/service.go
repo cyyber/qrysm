@@ -115,8 +115,8 @@ func (s *Service) Start() {
 	ee := &enginev1.ExecutionPayloadZond{
 		ParentHash:    make([]byte, 32),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
-		StateRoot:     make([]byte, 32),
-		ReceiptsRoot:  make([]byte, 32),
+		StateRoot:     make([]byte, fieldparams.ExecutionRootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.ExecutionRootLength),
 		LogsBloom:     make([]byte, 256),
 		PrevRandao:    make([]byte, 32),
 		BaseFeePerGas: make([]byte, 32),

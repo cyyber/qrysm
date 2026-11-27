@@ -53,6 +53,21 @@ type stateRoot struct {
 	StateRoot string `json:"stateRoot"`
 }
 
+// parseQuotedRoot returns the quoted value that follows pattern in a VM's output. The state
+// root is a 64-byte Keccak-512 digest; its width is read from the output, not assumed.
+func parseQuotedRoot(name string, data, pattern []byte) (string, error) {
+	idx := bytes.Index(data, pattern)
+	if idx == -1 {
+		return "", fmt.Errorf("%v: no stateroot found", name)
+	}
+	start := idx + len(pattern)
+	n := bytes.IndexByte(data[start:], '"')
+	if n <= 0 {
+		return "", fmt.Errorf("%v: no stateroot found", name)
+	}
+	return string(data[start : start+n]), nil
+}
+
 // CompareFiles returns true if the files are equal, along with the number of line s
 // compared
 func CompareFiles(vms []Qrvm, readers []io.Reader) (bool, int) {

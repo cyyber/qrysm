@@ -57,9 +57,9 @@ func deleteAL(list *types.AccessList) *types.AccessList { return &types.AccessLi
 // add a random entry and random slots to the list
 func addRandom(list *types.AccessList) *types.AccessList {
 	addr := randomAddress()
-	keys := []common.Hash{}
+	keys := []common.StorageKey{}
 	for i := 0; i < rand.Intn(10); i++ {
-		h := randomHash()
+		h := randomStorageKey()
 		keys = append(keys, h)
 	}
 	tuple := types.AccessTuple{Address: addr, StorageKeys: keys}
@@ -71,12 +71,12 @@ func addRandom(list *types.AccessList) *types.AccessList {
 func replaceRandom(list *types.AccessList) *types.AccessList {
 	slot := (*list)[rand.Int31n(int32(len(*list)))]
 	addr := randomAddress()
-	keys := []common.Hash{}
+	keys := []common.StorageKey{}
 	if len(slot.StorageKeys) == 0 {
 		return list
 	}
 	for i := 0; i < rand.Intn(len(slot.StorageKeys)); i++ {
-		h := randomHash()
+		h := randomStorageKey()
 		keys = append(keys, h)
 	}
 	tuple := types.AccessTuple{Address: addr, StorageKeys: keys}
@@ -88,7 +88,7 @@ func replaceRandom(list *types.AccessList) *types.AccessList {
 func replaceRandomSlot(list *types.AccessList) *types.AccessList {
 	keyIdx := rand.Int31n(int32(len(*list)))
 	slotIdx := rand.Int31n(int32(len((*list)[keyIdx].StorageKeys)))
-	h := randomHash()
+	h := randomStorageKey()
 	(*list)[keyIdx].StorageKeys[slotIdx] = h
 	return list
 }
@@ -97,10 +97,10 @@ func fullyRandom(list *types.AccessList) *types.AccessList {
 	var accesslist []types.AccessTuple
 	for i := 0; i < rand.Int(); i++ {
 		addr := randomAddress()
-		keys := []common.Hash{}
+		keys := []common.StorageKey{}
 		// create a fully random access list
 		for q := 0; q < rand.Int(); q++ {
-			h := randomHash()
+			h := randomStorageKey()
 			keys = append(keys, h)
 		}
 		tuple := types.AccessTuple{Address: addr, StorageKeys: keys}

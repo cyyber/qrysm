@@ -202,8 +202,8 @@ type GetPayloadV2ResponseJson struct {
 type ExecutionPayloadZondJSON struct {
 	ParentHash    *common.Hash    `json:"parentHash"`
 	FeeRecipient  *common.Address `json:"feeRecipient"`
-	StateRoot     *common.Hash    `json:"stateRoot"`
-	ReceiptsRoot  *common.Hash    `json:"receiptsRoot"`
+	StateRoot     *common.Hash512 `json:"stateRoot"`
+	ReceiptsRoot  *common.Hash512 `json:"receiptsRoot"`
 	LogsBloom     *hexutil.Bytes  `json:"logsBloom"`
 	PrevRandao    *common.Hash    `json:"prevRandao"`
 	BlockNumber   *hexutil.Uint64 `json:"blockNumber"`
@@ -226,8 +226,8 @@ func (e *ExecutionPayloadZond) MarshalJSON() ([]byte, error) {
 	baseFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.BaseFeePerGas))
 	baseFeeHex := hexutil.EncodeBig(baseFee)
 	pHash := common.BytesToHash(e.ParentHash)
-	sRoot := common.BytesToHash(e.StateRoot)
-	recRoot := common.BytesToHash(e.ReceiptsRoot)
+	sRoot := common.BytesToHash512(e.StateRoot)
+	recRoot := common.BytesToHash512(e.ReceiptsRoot)
 	prevRan := common.BytesToHash(e.PrevRandao)
 	bHash := common.BytesToHash(e.BlockHash)
 	blockNum := hexutil.Uint64(e.BlockNumber)

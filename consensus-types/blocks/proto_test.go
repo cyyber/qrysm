@@ -394,6 +394,7 @@ func getFields() fields {
 	b2592 := make([]byte, 2592)
 	b256 := make([]byte, 256)
 	var root [32]byte
+	var execRoot [field_params.ExecutionRootLength]byte
 	var withdrawalRecipient [field_params.WithdrawalRecipientLength]byte
 	var sig [field_params.MLDSA87SignatureLength]byte
 	b64[0], b64[5], b64[10] = 'q', 'u', 'x'
@@ -512,8 +513,8 @@ func getFields() fields {
 	execPayloadZond := &enginev1.ExecutionPayloadZond{
 		ParentHash:    root[:],
 		FeeRecipient:  b64,
-		StateRoot:     root[:],
-		ReceiptsRoot:  root[:],
+		StateRoot:     execRoot[:],
+		ReceiptsRoot:  execRoot[:],
 		LogsBloom:     b256,
 		PrevRandao:    root[:],
 		BlockNumber:   128,
@@ -539,8 +540,8 @@ func getFields() fields {
 	execPayloadHeaderZond := &enginev1.ExecutionPayloadHeaderZond{
 		ParentHash:       root[:],
 		FeeRecipient:     b64,
-		StateRoot:        root[:],
-		ReceiptsRoot:     root[:],
+		StateRoot:        execRoot[:],
+		ReceiptsRoot:     execRoot[:],
 		LogsBloom:        b256,
 		PrevRandao:       root[:],
 		BlockNumber:      128,

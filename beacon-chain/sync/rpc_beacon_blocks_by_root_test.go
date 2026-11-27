@@ -44,8 +44,8 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
 	parent := bytesutil.PadTo([]byte("parentHash"), fieldparams.RootLength)
-	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
-	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
+	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.ExecutionRootLength)
+	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.ExecutionRootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
 	to, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
 	require.NoError(t, err)
@@ -140,8 +140,8 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks_ReconstructsPayload(t *testi
 
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
 	parent := bytesutil.PadTo([]byte("parentHash"), fieldparams.RootLength)
-	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
-	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
+	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.ExecutionRootLength)
+	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.ExecutionRootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
 	to, err := common.NewAddressFromString("Q0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000095e7baea6a6c7c4c2dfeb977efac326af552d87")
 	require.NoError(t, err)

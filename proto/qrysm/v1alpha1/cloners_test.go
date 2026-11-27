@@ -677,8 +677,8 @@ func genPayloadZond() *enginev1.ExecutionPayloadZond {
 	return &enginev1.ExecutionPayloadZond{
 		ParentHash:    bytes(32),
 		FeeRecipient:  bytes(64),
-		StateRoot:     bytes(32),
-		ReceiptsRoot:  bytes(32),
+		StateRoot:     bytes(64),
+		ReceiptsRoot:  bytes(64),
 		LogsBloom:     bytes(256),
 		PrevRandao:    bytes(32),
 		BlockNumber:   1,
@@ -710,8 +710,8 @@ func genPayloadHeaderZond() *enginev1.ExecutionPayloadHeaderZond {
 	return &enginev1.ExecutionPayloadHeaderZond{
 		ParentHash:       bytes(32),
 		FeeRecipient:     bytes(64),
-		StateRoot:        bytes(32),
-		ReceiptsRoot:     bytes(32),
+		StateRoot:        bytes(64),
+		ReceiptsRoot:     bytes(64),
 		LogsBloom:        bytes(256),
 		PrevRandao:       bytes(32),
 		BlockNumber:      1,

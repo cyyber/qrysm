@@ -40,7 +40,8 @@ var (
 	selectionProof   = bytesutil.PadTo([]byte("selectionproof"), 4627)
 	parentHash       = bytesutil.PadTo([]byte("parenthash"), 32)
 	feeRecipient     = bytesutil.PadTo([]byte("feerecipient"), fieldparams.FeeRecipientLength)
-	receiptsRoot     = bytesutil.PadTo([]byte("receiptsroot"), 32)
+	executionRoot    = bytesutil.PadTo([]byte("executionstateroot"), fieldparams.ExecutionRootLength)
+	receiptsRoot     = bytesutil.PadTo([]byte("receiptsroot"), fieldparams.ExecutionRootLength)
 	logsBloom        = bytesutil.PadTo([]byte("logsbloom"), 256)
 	prevRandao       = bytesutil.PadTo([]byte("prevrandao"), 32)
 	extraData        = bytesutil.PadTo([]byte("extradata"), 32)
@@ -513,8 +514,8 @@ func TestBeaconStateZondToProto(t *testing.T) {
 		state.LatestExecutionPayloadHeader = &enginev1.ExecutionPayloadHeaderZond{
 			ParentHash:       bytesutil.PadTo([]byte("parenthash"), 32),
 			FeeRecipient:     bytesutil.PadTo([]byte("feerecipient"), 64),
-			StateRoot:        bytesutil.PadTo([]byte("stateroot"), 32),
-			ReceiptsRoot:     bytesutil.PadTo([]byte("receiptroot"), 32),
+			StateRoot:        bytesutil.PadTo([]byte("stateroot"), 64),
+			ReceiptsRoot:     bytesutil.PadTo([]byte("receiptroot"), 64),
 			LogsBloom:        bytesutil.PadTo([]byte("logsbloom"), 256),
 			PrevRandao:       bytesutil.PadTo([]byte("prevrandao"), 32),
 			BlockNumber:      123,
@@ -618,8 +619,8 @@ func TestBeaconStateZondToProto(t *testing.T) {
 	require.NotNil(t, resultLatestExecutionPayloadHeader)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("parenthash"), 32), resultLatestExecutionPayloadHeader.ParentHash)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("feerecipient"), fieldparams.FeeRecipientLength), resultLatestExecutionPayloadHeader.FeeRecipient)
-	assert.DeepEqual(t, bytesutil.PadTo([]byte("stateroot"), 32), resultLatestExecutionPayloadHeader.StateRoot)
-	assert.DeepEqual(t, bytesutil.PadTo([]byte("receiptroot"), 32), resultLatestExecutionPayloadHeader.ReceiptsRoot)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("stateroot"), 64), resultLatestExecutionPayloadHeader.StateRoot)
+	assert.DeepEqual(t, bytesutil.PadTo([]byte("receiptroot"), 64), resultLatestExecutionPayloadHeader.ReceiptsRoot)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("logsbloom"), 256), resultLatestExecutionPayloadHeader.LogsBloom)
 	assert.DeepEqual(t, bytesutil.PadTo([]byte("prevrandao"), 32), resultLatestExecutionPayloadHeader.PrevRandao)
 	assert.Equal(t, uint64(123), resultLatestExecutionPayloadHeader.BlockNumber)

@@ -47,7 +47,7 @@ func TestGqrlTestnetGenesis_DepositContractMatchesConstructor(t *testing.T) {
 	// slot.
 	const lastSlot = 0x40
 	for slot := int64(0); slot <= lastSlot; slot++ {
-		key := common.BigToHash(big.NewInt(slot))
+		key := common.BigToHash512(big.NewInt(slot))
 		want, err := deployed.Backend.StorageAt(ctx, deployed.ContractAddr, key, nil)
 		require.NoError(t, err)
 		require.Equal(t, common.BytesToStorageValue64(want), account.Storage[key],

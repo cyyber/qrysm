@@ -223,8 +223,8 @@ func GenerateProtoZondBeaconBlock() *qrysmpb.BeaconBlockZond {
 			ExecutionPayload: &enginev1.ExecutionPayloadZond{
 				ParentHash:    FillByteSlice(32, 112),
 				FeeRecipient:  FillByteSlice(fieldparams.FeeRecipientLength, 113),
-				StateRoot:     FillByteSlice(32, 114),
-				ReceiptsRoot:  FillByteSlice(32, 115),
+				StateRoot:     FillByteSlice(64, 114),
+				ReceiptsRoot:  FillByteSlice(64, 115),
 				LogsBloom:     FillByteSlice(256, 116),
 				PrevRandao:    FillByteSlice(32, 117),
 				BlockNumber:   118,
@@ -472,8 +472,8 @@ func GenerateJsonZondBeaconBlock() *apimiddleware.BeaconBlockZondJson {
 			ExecutionPayload: &apimiddleware.ExecutionPayloadZondJson{
 				ParentHash:    FillEncodedByteSlice(32, 112),
 				FeeRecipient:  FillEncodedAddress(fieldparams.FeeRecipientLength, 113),
-				StateRoot:     FillEncodedByteSlice(32, 114),
-				ReceiptsRoot:  FillEncodedByteSlice(32, 115),
+				StateRoot:     FillEncodedByteSlice(64, 114),
+				ReceiptsRoot:  FillEncodedByteSlice(64, 115),
 				LogsBloom:     FillEncodedByteSlice(256, 116),
 				PrevRandao:    FillEncodedByteSlice(32, 117),
 				BlockNumber:   "118",

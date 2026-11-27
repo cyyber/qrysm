@@ -83,8 +83,8 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 	t.Run("execution payload Zond", func(t *testing.T) {
 		parentHash := common.BytesToHash([]byte("parent"))
 		feeRecipient := common.BytesToAddress([]byte("feeRecipient"))
-		stateRoot := common.BytesToHash([]byte("stateRoot"))
-		receiptsRoot := common.BytesToHash([]byte("receiptsRoot"))
+		stateRoot := common.BytesToHash512([]byte("stateRoot"))
+		receiptsRoot := common.BytesToHash512([]byte("receiptsRoot"))
 		logsBloom := hexutil.Bytes(bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength))
 		random := common.BytesToHash([]byte("random"))
 		extra := common.BytesToHash([]byte("extra"))
@@ -152,9 +152,9 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			Number:      big.NewInt(1),
 			ParentHash:  common.BytesToHash([]byte("parent")),
 			Coinbase:    common.BytesToAddress([]byte("coinbase")),
-			Root:        common.BytesToHash([]byte("root")),
-			TxHash:      common.BytesToHash([]byte("txHash")),
-			ReceiptHash: common.BytesToHash([]byte("receiptHash")),
+			Root:        common.BytesToHash512([]byte("root")),
+			TxHash:      common.BytesToHash512([]byte("txHash")),
+			ReceiptHash: common.BytesToHash512([]byte("receiptHash")),
 			Bloom:       gqrltypes.BytesToBloom([]byte("bloom")),
 			GasLimit:    3,
 			GasUsed:     4,
@@ -213,9 +213,9 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			Number:      big.NewInt(1),
 			ParentHash:  common.BytesToHash([]byte("parent")),
 			Coinbase:    common.BytesToAddress([]byte("coinbase")),
-			Root:        common.BytesToHash([]byte("root")),
-			TxHash:      common.BytesToHash([]byte("txHash")),
-			ReceiptHash: common.BytesToHash([]byte("receiptHash")),
+			Root:        common.BytesToHash512([]byte("root")),
+			TxHash:      common.BytesToHash512([]byte("txHash")),
+			ReceiptHash: common.BytesToHash512([]byte("receiptHash")),
 			Bloom:       gqrltypes.BytesToBloom([]byte("bloom")),
 			GasLimit:    3,
 			GasUsed:     4,
@@ -277,9 +277,9 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			Number:      big.NewInt(1),
 			ParentHash:  common.BytesToHash([]byte("parent")),
 			Coinbase:    common.BytesToAddress([]byte("coinbase")),
-			Root:        common.BytesToHash([]byte("root")),
-			TxHash:      common.BytesToHash([]byte("txHash")),
-			ReceiptHash: common.BytesToHash([]byte("receiptHash")),
+			Root:        common.BytesToHash512([]byte("root")),
+			TxHash:      common.BytesToHash512([]byte("txHash")),
+			ReceiptHash: common.BytesToHash512([]byte("receiptHash")),
 			Bloom:       gqrltypes.BytesToBloom([]byte("bloom")),
 			GasLimit:    3,
 			GasUsed:     4,
@@ -350,9 +350,9 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			Number:      big.NewInt(1),
 			ParentHash:  common.BytesToHash([]byte("parent")),
 			Coinbase:    common.BytesToAddress([]byte("coinbase")),
-			Root:        common.BytesToHash([]byte("root")),
-			TxHash:      common.BytesToHash([]byte("txHash")),
-			ReceiptHash: common.BytesToHash([]byte("receiptHash")),
+			Root:        common.BytesToHash512([]byte("root")),
+			TxHash:      common.BytesToHash512([]byte("txHash")),
+			ReceiptHash: common.BytesToHash512([]byte("receiptHash")),
 			Bloom:       gqrltypes.BytesToBloom([]byte("bloom")),
 			GasLimit:    3,
 			GasUsed:     4,
@@ -542,9 +542,9 @@ var blockJson = `
   "prevRandao": "0xc1bcfb6dc83cdc106faad9870ab697dd6c7a5a05ca00b3a5f3c2e021b22e0747",
   "number": "0xe6f8db",
   "parentHash": "0x5749469a59b1207d4b6d42dd9e31c059aa1586fe070573bf6e5442a626726959",
-  "receiptsRoot": "0x3b131e70a5d2e013c5946d6bf0290732ad1d195b05abd72bc0bfb7ed4be202b0",
+  "receiptsRoot": "0x3b131e70a5d2e013c5946d6bf0290732ad1d195b05abd72bc0bfb7ed4be202b03b131e70a5d2e013c5946d6bf0290732ad1d195b05abd72bc0bfb7ed4be202b0",
   "size": "0x18ad",
-  "stateRoot": "0xdff0d06049e5a7d5b4249eb2aa4b7c626f7a957733913786912441b89d20a3e1",
+  "stateRoot": "0xdff0d06049e5a7d5b4249eb2aa4b7c626f7a957733913786912441b89d20a3e1dff0d06049e5a7d5b4249eb2aa4b7c626f7a957733913786912441b89d20a3e1",
   "timestamp": "0x62cf48c6",
   "transactions": [
     {
@@ -853,9 +853,9 @@ var blockJson = `
       "publicKey": ""
     }
   ],
-  "transactionsRoot": "0x46e27176677a4b37c1fa9bae97ffb48b86a316f9e6568b3320e10dd6954b5d1a",
+  "transactionsRoot": "0x46e27176677a4b37c1fa9bae97ffb48b86a316f9e6568b3320e10dd6954b5d1a46e27176677a4b37c1fa9bae97ffb48b86a316f9e6568b3320e10dd6954b5d1a",
   "withdrawals": [],
-  "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
+  "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b42156e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
 }
 `
 var blockNoTxJson = `
@@ -870,9 +870,9 @@ var blockNoTxJson = `
   "prevRandao": "0xc1bcfb6dc83cdc106faad9870ab697dd6c7a5a05ca00b3a5f3c2e021b22e0747",
   "number": "0xe6f8db",
   "parentHash": "0x5749469a59b1207d4b6d42dd9e31c059aa1586fe070573bf6e5442a626726959",
-  "receiptsRoot": "0x3b131e70a5d2e013c5946d6bf0290732ad1d195b05abd72bc0bfb7ed4be202b0",
+  "receiptsRoot": "0x3b131e70a5d2e013c5946d6bf0290732ad1d195b05abd72bc0bfb7ed4be202b03b131e70a5d2e013c5946d6bf0290732ad1d195b05abd72bc0bfb7ed4be202b0",
   "size": "0x18ad",
-  "stateRoot": "0xdff0d06049e5a7d5b4249eb2aa4b7c626f7a957733913786912441b89d20a3e1",
+  "stateRoot": "0xdff0d06049e5a7d5b4249eb2aa4b7c626f7a957733913786912441b89d20a3e1dff0d06049e5a7d5b4249eb2aa4b7c626f7a957733913786912441b89d20a3e1",
   "timestamp": "0x62cf48c6",
   "transactions": [
     "0x7d503dbb3661532e9bf51a23eeb284bb0d3a1cb99212108ceae70730a2617d7c",
@@ -890,9 +890,9 @@ var blockNoTxJson = `
     "0x42bfe585b3c4974206570b01e01e904ad8e3be8f6ae021acf645116549ef56b3",
     "0x03d033a7910eb2b5023ef9102805c06e30449b9926af32b47c6de3f5ccf45634"
   ],
-  "transactionsRoot": "0x46e27176677a4b37c1fa9bae97ffb48b86a316f9e6568b3320e10dd6954b5d1a",
+  "transactionsRoot": "0x46e27176677a4b37c1fa9bae97ffb48b86a316f9e6568b3320e10dd6954b5d1a46e27176677a4b37c1fa9bae97ffb48b86a316f9e6568b3320e10dd6954b5d1a",
   "withdrawals": [],
-  "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
+  "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b42156e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
 }
 `
 

@@ -191,7 +191,7 @@ func TestListenForNewNodes(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	// Setup bootnode.
 	notifier := &mock.MockStateNotifier{}
-	cfg := &Config{StateNotifier: notifier}
+	cfg := &Config{StateNotifier: notifier, PingInterval: testPingInterval, DisableLivenessCheck: true}
 	port := 2000
 	cfg.UDPPort = uint(port)
 	_, pkey := createAddrAndPrivKey(t)
@@ -221,10 +221,12 @@ func TestListenForNewNodes(t *testing.T) {
 	// setup other nodes.
 	cs := startup.NewClockSynchronizer()
 	cfg = &Config{
-		BootstrapNodeAddr:   []string{bootNode.String()},
-		Discv5BootStrapAddr: []string{bootNode.String()},
-		MaxPeers:            30,
-		ClockWaiter:         cs,
+		BootstrapNodeAddr:    []string{bootNode.String()},
+		Discv5BootStrapAddr:  []string{bootNode.String()},
+		MaxPeers:             30,
+		ClockWaiter:          cs,
+		PingInterval:         testPingInterval,
+		DisableLivenessCheck: true,
 	}
 	for i := 1; i <= 5; i++ {
 		h, pkey, ipAddr := createHost(t, port+i)

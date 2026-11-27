@@ -12,13 +12,14 @@ const (
 	maxDataPerTx = 1 << 17 // 128Kb
 )
 
-func randomHash() common.Hash {
-	b := make([]byte, 32)
+// randomStorageKey returns a random 512-bit storage slot key.
+func randomStorageKey() common.StorageKey {
+	b := make([]byte, common.Hash512Length)
 	_, err := rand.Read(b)
 	if err != nil {
 		panic(err)
 	}
-	return common.BytesToHash(b)
+	return common.BytesToHash512(b)
 }
 
 func randomAddress() common.Address {

@@ -21,6 +21,7 @@ const (
 	SyncCommitteeLength                   = 16            // SYNC_COMMITTEE_SIZE
 	MaxValidatorsPerCommittee             = 32            // Compiled SSZ limit for attestation bits, indices, and signatures.
 	RootLength                            = 32            // RootLength defines the byte length of a Merkle root.
+	ExecutionRootLength                   = 64            // ExecutionRootLength defines the byte length of an execution-layer Keccak-512 root (payload state root and receipts root).
 	RandaoRevealLength                    = 32            // RandaoRevealLength defines the byte length of a RANDAO hash-onion reveal.
 	RandaoCommitmentLength                = 32            // RandaoCommitmentLength defines the byte length of a RANDAO hash-onion commitment.
 	ExtendedSeedLength                    = walletcommon.ExtendedSeedSize
